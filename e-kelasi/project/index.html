@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>E-KELASI — Prototype produit</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { background: #f0eee9; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  #root { width: 100vw; height: 100vh; overflow: hidden; }
+
+  /* Selection inside artboards */
+  ::selection { background: rgba(224,112,30,0.25); }
+
+  /* Tweaks panel uses --brand for its accent — already inherits. */
+
+  /* Browser-window style override (the starter uses dark chrome; soften to match brand) */
+</style>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Starter components -->
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="browser-window.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<!-- App -->
+<script type="text/babel" src="app-shared.jsx"></script>
+<script type="text/babel" src="app-mobile.jsx"></script>
+<script type="text/babel" src="app-admin.jsx"></script>
+<script type="text/babel" src="app-diagrams.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect } = React;
+
+// ── Tweakable defaults (persisted on disk by host) ──
+const DEFAULTS = /*EDITMODE-BEGIN*/{
+  "primaryColor": "#E0701E",
+  "dark": false,
+  "cardStyle": "default",
+  "font": "bricolage",
+  "lang": "fr"
+}/*EDITMODE-END*/;
+
+// Apply tweak side effects to <html> so all artboards inherit
+function applyGlobals(t) {
+  const root = document.documentElement;
+  // primary color
+  root.style.setProperty('--brand', t.primaryColor);
+  // derived shades — naive but workable
+  const c = hexToRgb(t.primaryColor);
+  if (c) {
+    root.style.setProperty('--brand-soft', `rgba(${c.r},${c.g},${c.b},0.10)`);
+    const dark = mixHex(t.primaryColor, '#000000', 0.25);
+    const dark2 = mixHex(t.primaryColor, '#000000', 0.45);
+    const soft100 = mixHex(t.primaryColor, '#ffffff', 0.75);
+    const soft50  = mixHex(t.primaryColor, '#ffffff', 0.92);
+    root.style.setProperty('--brand-600', dark);
+    root.style.setProperty('--brand-700', dark2);
+    root.style.setProperty('--brand-100', soft100);
+    root.style.setProperty('--brand-50', soft50);
+  }
+  // theme + card style + font
+  root.setAttribute('data-theme', t.dark ? 'dark' : 'light');
+  root.setAttribute('data-card-style', t.cardStyle);
+  root.setAttribute('data-font', t.font);
+}
+
+function hexToRgb(hex) {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return null;
+  return { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) };
+}
+function mixHex(a, b, t) {
+  const ra = hexToRgb(a), rb = hexToRgb(b);
+  if (!ra || !rb) return a;
+  const m = (k1, k2) => Math.round(k1*(1-t) + k2*t).toString(16).padStart(2,'0');
+  return '#' + m(ra.r,rb.r) + m(ra.g,rb.g) + m(ra.b,rb.b);
+}
+
+// ── Browser chrome that respects theme ──
+function EKBrowser({ url = 'app.e-kelasi.com', width = 1100, height = 720, children }) {
+  return (
+    <div style={{
+      width, height, borderRadius: 10, overflow: 'hidden',
+      boxShadow: '0 24px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06)',
+      display: 'flex', flexDirection: 'column', background: '#fff',
+    }}>
+      <div style={{
+        height: 44, background: '#E8E2D6', padding: '0 14px',
+        display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #D5CCB8',
+      }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ width: 11, height: 11, borderRadius: '50%', background: '#ff5f57' }}/>
+          <div style={{ width: 11, height: 11, borderRadius: '50%', background: '#febc2e' }}/>
+          <div style={{ width: 11, height: 11, borderRadius: '50%', background: '#28c840' }}/>
+        </div>
+        <div style={{
+          flex: 1, height: 26, borderRadius: 6, background: '#fff',
+          display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px',
+          fontSize: 11.5, color: '#6B5D52', fontFamily: 'system-ui',
+          border: '1px solid #D5CCB8',
+        }}>
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M5 11h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM7 11V7a5 5 0 0 1 10 0v4" transform="scale(0.5)"/></svg>
+          <span>{url}</span>
+        </div>
+      </div>
+      <div style={{ flex: 1, background: '#fff', overflow: 'hidden' }}>{children}</div>
+    </div>
+  );
+}
+
+// ── Top-level App ──
+function App() {
+  const [t, setTweak] = useTweaks(DEFAULTS);
+
+  useEffect(() => { applyGlobals(t); }, [t]);
+
+  // Common props for every prototype/diagram
+  const common = { dark: t.dark, lang: t.lang };
+
+  return (
+    <>
+      <DesignCanvas minScale={0.05} maxScale={3}>
+
+        <DCSection id="parent-mobile" title={t.lang === 'en' ? 'Parent app · iOS · 7 screens' : "Application parent · iOS · 7 écrans"}
+          subtitle={t.lang === 'en'
+            ? 'Mobile prototype — tap inside any artboard to navigate.'
+            : "Prototype mobile — touchez à l'intérieur pour naviguer."}>
+
+          <DCArtboard id="m-welcome" label={t.lang === 'en' ? 'A · Welcome' : 'A · Bienvenue'} width={402} height={874}>
+            <IOSDevice dark={t.dark}><MobileParent initial="welcome" {...common} /></IOSDevice>
+          </DCArtboard>
+
+          <DCArtboard id="m-home" label={t.lang === 'en' ? 'B · Dashboard' : 'B · Tableau de bord'} width={402} height={874}>
+            <IOSDevice dark={t.dark}><MobileParent initial="home" {...common} /></IOSDevice>
+          </DCArtboard>
+
+          <DCArtboard id="m-grades" label={t.lang === 'en' ? 'C · Grades' : 'C · Notes'} width={402} height={874}>
+            <IOSDevice dark={t.dark}><MobileParent initial="grades" {...common} /></IOSDevice>
+          </DCArtboard>
+
+          <DCArtboard id="m-homework" label={t.lang === 'en' ? 'D · Homework' : 'D · Devoirs'} width={402} height={874}>
+            <IOSDevice dark={t.dark}><MobileParent initial="homework" {...common} /></IOSDevice>
+          </DCArtboard>
+
+          <DCArtboard id="m-messages" label={t.lang === 'en' ? 'E · Inbox' : 'E · Messagerie'} width={402} height={874}>
+            <IOSDevice dark={t.dark}><MobileParent initial="messages" {...common} /></IOSDevice>
+          </DCArtboard>
+
+          <DCArtboard id="m-thread" label={t.lang === 'en' ? 'F · Conversation' : 'F · Conversation'} width={402} height={874}>
+            <IOSDevice dark={t.dark}><MobileParent initial="thread" {...common} /></IOSDevice>
+          </DCArtboard>
+
+          <DCArtboard id="m-profile" label={t.lang === 'en' ? 'G · Profile & plan' : 'G · Profil & abonnement'} width={402} height={874}>
+            <IOSDevice dark={t.dark}><MobileParent initial="profile" {...common} /></IOSDevice>
+          </DCArtboard>
+
+          <DCArtboard id="m-notifs" label={t.lang === 'en' ? 'H · Notifications' : 'H · Notifications'} width={402} height={874}>
+            <IOSDevice dark={t.dark}><MobileParent initial="notifications" {...common} /></IOSDevice>
+          </DCArtboard>
+
+        </DCSection>
+
+        <DCSection id="admin-web" title={t.lang === 'en' ? 'Super admin console · Web · 5 screens' : 'Console super admin · Web · 5 écrans'}
+          subtitle={t.lang === 'en'
+            ? 'Web prototype — click the sidebar to switch screens inside any artboard.'
+            : "Prototype web — cliquez sur la sidebar pour changer d'écran."}>
+
+          <DCArtboard id="a-overview" label={t.lang === 'en' ? 'A · Overview' : "A · Vue d'ensemble"} width={1100} height={760}>
+            <EKBrowser url="admin.e-kelasi.com/overview" width={1100} height={760}>
+              <AdminWeb initial="overview" {...common} />
+            </EKBrowser>
+          </DCArtboard>
+
+          <DCArtboard id="a-schools" label={t.lang === 'en' ? 'B · Schools' : 'B · Écoles'} width={1100} height={760}>
+            <EKBrowser url="admin.e-kelasi.com/schools" width={1100} height={760}>
+              <AdminWeb initial="schools" {...common} />
+            </EKBrowser>
+          </DCArtboard>
+
+          <DCArtboard id="a-billing" label={t.lang === 'en' ? 'C · Billing' : 'C · Abonnements'} width={1100} height={760}>
+            <EKBrowser url="admin.e-kelasi.com/billing" width={1100} height={760}>
+              <AdminWeb initial="billing" {...common} />
+            </EKBrowser>
+          </DCArtboard>
+
+          <DCArtboard id="a-support" label={t.lang === 'en' ? 'D · Support' : 'D · Support'} width={1100} height={760}>
+            <EKBrowser url="admin.e-kelasi.com/support" width={1100} height={760}>
+              <AdminWeb initial="support" {...common} />
+            </EKBrowser>
+          </DCArtboard>
+
+          <DCArtboard id="a-security" label={t.lang === 'en' ? 'E · Security & logs' : 'E · Sécurité & logs'} width={1100} height={760}>
+            <EKBrowser url="admin.e-kelasi.com/security" width={1100} height={760}>
+              <AdminWeb initial="security" {...common} />
+            </EKBrowser>
+          </DCArtboard>
+
+        </DCSection>
+
+        <DCSection id="tech" title={t.lang === 'en' ? 'Technical architecture · Data' : 'Architecture & données'}
+          subtitle={t.lang === 'en' ? 'How the platform is built and what it stores.' : 'Comment la plateforme est construite et ce qu\'elle stocke.'}>
+
+          <DCArtboard id="d-arch" label={t.lang === 'en' ? 'A · System architecture' : 'A · Architecture système'} width={1280} height={720}>
+            <ArchitectureDiagram {...common} />
+          </DCArtboard>
+
+          <DCArtboard id="d-schema" label={t.lang === 'en' ? 'B · Database schema' : 'B · Schéma base de données'} width={1280} height={720}>
+            <DBSchemaDiagram {...common} />
+          </DCArtboard>
+
+        </DCSection>
+
+        <DCSection id="product" title={t.lang === 'en' ? 'Product strategy & business' : 'Produit & business'}
+          subtitle={t.lang === 'en' ? 'Personas, roadmap and how E-KELASI makes money.' : 'Personas, roadmap et modèle économique.'}>
+
+          <DCArtboard id="p-flows" label={t.lang === 'en' ? 'A · User flows · 4 personas' : 'A · Parcours · 4 personas'} width={1280} height={720}>
+            <UserFlowsDiagram {...common} />
+          </DCArtboard>
+
+          <DCArtboard id="p-roadmap" label={t.lang === 'en' ? 'B · MVP → v2 roadmap' : 'B · Roadmap MVP → v2'} width={1280} height={720}>
+            <RoadmapDiagram {...common} />
+          </DCArtboard>
+
+          <DCArtboard id="p-pricing" label={t.lang === 'en' ? 'C · Pricing tiers' : 'C · Tarifs'} width={1280} height={720}>
+            <PricingDiagram {...common} />
+          </DCArtboard>
+
+        </DCSection>
+
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label={t.lang === 'en' ? 'Brand' : 'Marque'}>
+          <TweakColor label={t.lang === 'en' ? 'Primary' : 'Couleur primaire'}
+            value={t.primaryColor}
+            options={['#E0701E', '#1D6650', '#3A6DBC', '#9747BB', '#B8475B']}
+            onChange={(v) => setTweak('primaryColor', v)} />
+          <TweakSelect label="Font"
+            value={t.font}
+            options={[
+              { label: 'Bricolage (warm)', value: 'bricolage' },
+              { label: 'Editorial serif',  value: 'editorial' },
+              { label: 'Geist geometric',  value: 'geometric' },
+              { label: 'Jakarta clean',    value: 'jakarta' },
+            ]}
+            onChange={(v) => setTweak('font', v)} />
+        </TweakSection>
+
+        <TweakSection label={t.lang === 'en' ? 'Appearance' : 'Apparence'}>
+          <TweakToggle label={t.lang === 'en' ? 'Dark mode' : 'Mode sombre'}
+            value={t.dark} onChange={(v) => setTweak('dark', v)} />
+          <TweakRadio label={t.lang === 'en' ? 'Card style' : 'Style de carte'}
+            value={t.cardStyle}
+            options={[
+              { label: t.lang === 'en' ? 'Default' : 'Défaut', value: 'default' },
+              { label: t.lang === 'en' ? 'Flat' : 'Plat',      value: 'flat' },
+              { label: t.lang === 'en' ? 'Lifted' : 'Ombré',   value: 'elevated' },
+              { label: t.lang === 'en' ? 'Outlined' : 'Bordé', value: 'outlined' },
+            ]}
+            onChange={(v) => setTweak('cardStyle', v)} />
+        </TweakSection>
+
+        <TweakSection label={t.lang === 'en' ? 'Language' : 'Langue'}>
+          <TweakRadio label={t.lang === 'en' ? 'Interface' : 'Interface'}
+            value={t.lang}
+            options={[
+              { label: 'Français', value: 'fr' },
+              { label: 'English',  value: 'en' },
+            ]}
+            onChange={(v) => setTweak('lang', v)} />
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

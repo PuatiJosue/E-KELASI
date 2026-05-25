@@ -1,0 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #E0701E;
+  --brand-600: #B85715;
+  --brand-700: #8F4310;
+  --brand-100: #F9DDB8;
+  --brand-50: #FDF3E7;
+  --brand-soft: rgba(224, 112, 30, 0.10);
+
+  --accent: #1D6650;
+  --accent-100: #D6EAE0;
+  --accent-50: #ECF6F1;
+
+  --success: #2D8659;
+  --warning: #C28728;
+  --danger: #C03A2B;
+  --info: #3A6DBC;
+
+  --bg: #FAF6EE;
+  --surface: #FFFFFF;
+  --surface-2: #F4EFE3;
+  --surface-3: #ECE5D2;
+  --ink: #1A1410;
+  --ink-2: #4A3F35;
+  --ink-3: #8A7C6E;
+  --ink-4: #B5A99A;
+  --border: #ECE3D2;
+  --border-strong: #D9CCB4;
+  --divider: rgba(74, 63, 53, 0.08);
+
+  --on-brand: #FFFFFF;
+
+  --font-display: 'Bricolage Grotesque', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  --card-bg: var(--surface);
+  --card-border: 1px solid var(--border);
+  --card-shadow: 0 1px 2px rgba(20, 16, 10, 0.04), 0 6px 18px rgba(20, 16, 10, 0.04);
+}
+
+[data-theme="dark"] {
+  --bg: #14110D;
+  --surface: #1E1A14;
+  --surface-2: #28221B;
+  --surface-3: #322A20;
+  --ink: #F5EFE3;
+  --ink-2: #C7B9A8;
+  --ink-3: #897C6C;
+  --ink-4: #5C5043;
+  --border: #2F2A20;
+  --border-strong: #3F382C;
+  --divider: rgba(245, 239, 227, 0.07);
+
+  --brand: #E89A4F;
+  --brand-600: #D88030;
+  --brand-700: #B45A14;
+  --brand-100: #4A2F14;
+  --brand-50: #2A1F12;
+  --brand-soft: rgba(232, 154, 79, 0.12);
+
+  --accent: #4FA286;
+  --accent-100: #1F3A30;
+  --accent-50: #15241D;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
+}
+
+::selection {
+  background: rgba(224, 112, 30, 0.25);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+@layer components {
+  .ek-card {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--card-shadow);
+  }
+
+  .ek-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] font-semibold text-sm transition;
+    padding: 10px 16px;
+  }
+  .ek-btn:active { transform: scale(0.98); }
+
+  .ek-btn-primary {
+    background: var(--brand);
+    color: var(--on-brand);
+  }
+  .ek-btn-primary:hover { background: var(--brand-600); }
+
+  .ek-btn-ghost { color: var(--ink-2); }
+  .ek-btn-ghost:hover { background: var(--surface-2); }
+
+  .ek-btn-outline {
+    border: 1px solid var(--border-strong);
+    color: var(--ink);
+    background: var(--surface);
+  }
+  .ek-btn-outline:hover { background: var(--surface-2); }
+
+  .ek-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full font-semibold;
+    padding: 4px 10px;
+    font-size: 12px;
+    background: var(--surface-2);
+    color: var(--ink-2);
+  }
+  .ek-chip.brand { background: var(--brand-soft); color: var(--brand-600); }
+  .ek-chip.success { background: var(--accent-100); color: var(--accent); }
+  .ek-chip.warn { background: rgba(194, 135, 40, 0.13); color: var(--warning); }
+  .ek-chip.danger { background: rgba(192, 58, 43, 0.10); color: var(--danger); }
+  .ek-chip.info { background: rgba(58, 109, 188, 0.10); color: var(--info); }
+}
+
+.ek-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.ek-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }

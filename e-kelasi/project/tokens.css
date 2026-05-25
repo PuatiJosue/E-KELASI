@@ -1,0 +1,181 @@
+/* E-KELASI — Design tokens
+   Warm educational premium palette. Light + dark. Tweakable primary + card style + font.
+   ─────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* ── Brand ────────────────────────────────────────────── */
+  --brand: #E0701E;           /* warm amber orange */
+  --brand-600: #B85715;
+  --brand-700: #8F4310;
+  --brand-100: #F9DDB8;
+  --brand-50:  #FDF3E7;
+  --brand-soft: rgba(224,112,30,0.10);
+
+  /* secondary accent — forest, for academic-success signals */
+  --accent: #1D6650;
+  --accent-100: #D6EAE0;
+  --accent-50: #ECF6F1;
+
+  /* status */
+  --success: #2D8659;
+  --warning: #C28728;
+  --danger:  #C03A2B;
+  --info:    #3A6DBC;
+
+  /* ── Light theme (default) ─────────────────────────────── */
+  --bg:        #FAF6EE;       /* warm cream canvas */
+  --surface:   #FFFFFF;       /* card */
+  --surface-2: #F4EFE3;       /* nested / muted */
+  --surface-3: #ECE5D2;       /* deeper muted */
+  --ink:       #1A1410;       /* primary text */
+  --ink-2:     #4A3F35;       /* secondary text */
+  --ink-3:     #8A7C6E;       /* tertiary text */
+  --ink-4:     #B5A99A;       /* placeholder / disabled */
+  --border:    #ECE3D2;
+  --border-strong: #D9CCB4;
+  --divider:   rgba(74,63,53,0.08);
+
+  --on-brand: #FFFFFF;
+
+  /* ── Typography ────────────────────────────────────────── */
+  --font-display: 'Bricolage Grotesque', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── Radii & shadows ──────────────────────────────────── */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  /* Card style — switched by [data-card-style] attribute */
+  --card-bg: var(--surface);
+  --card-border: 1px solid var(--border);
+  --card-shadow: 0 1px 2px rgba(20,16,10,0.04), 0 6px 18px rgba(20,16,10,0.04);
+}
+
+/* Card style variants */
+[data-card-style="flat"] {
+  --card-shadow: none;
+  --card-border: 1px solid var(--border);
+}
+[data-card-style="elevated"] {
+  --card-shadow: 0 1px 2px rgba(20,16,10,0.06), 0 8px 28px rgba(20,16,10,0.08);
+  --card-border: 1px solid transparent;
+}
+[data-card-style="outlined"] {
+  --card-shadow: none;
+  --card-border: 1.5px solid var(--border-strong);
+}
+
+/* ── Dark theme ──────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:        #14110D;
+  --surface:   #1E1A14;
+  --surface-2: #28221B;
+  --surface-3: #322A20;
+  --ink:       #F5EFE3;
+  --ink-2:     #C7B9A8;
+  --ink-3:     #897C6C;
+  --ink-4:     #5C5043;
+  --border:    #2F2A20;
+  --border-strong: #3F382C;
+  --divider:   rgba(245,239,227,0.07);
+
+  --brand: #E89A4F;
+  --brand-600: #D88030;
+  --brand-700: #B45A14;
+  --brand-100: #4A2F14;
+  --brand-50:  #2A1F12;
+  --brand-soft: rgba(232,154,79,0.12);
+
+  --accent: #4FA286;
+  --accent-100: #1F3A30;
+  --accent-50: #15241D;
+}
+[data-theme="dark"][data-card-style="elevated"] {
+  --card-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px rgba(0,0,0,0.35);
+}
+
+/* ── Font family tweak ───────────────────────────────── */
+[data-font="bricolage"]   { --font-display: 'Bricolage Grotesque', system-ui, sans-serif; --font-body: 'Plus Jakarta Sans', system-ui, sans-serif; }
+[data-font="editorial"]   { --font-display: 'Instrument Serif', Georgia, serif; --font-body: 'DM Sans', system-ui, sans-serif; }
+[data-font="geometric"]   { --font-display: 'Geist', system-ui, sans-serif; --font-body: 'Geist', system-ui, sans-serif; }
+[data-font="jakarta"]     { --font-display: 'Plus Jakarta Sans', system-ui, sans-serif; --font-body: 'Plus Jakarta Sans', system-ui, sans-serif; }
+
+/* ── Reset + base ────────────────────────────────────── */
+.ek-app *, .ek-app *::before, .ek-app *::after { box-sizing: border-box; }
+.ek-app {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.005em;
+}
+.ek-app h1, .ek-app h2, .ek-app h3, .ek-app h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--ink);
+}
+.ek-app p, .ek-app span, .ek-app div, .ek-app button, .ek-app input, .ek-app label { margin: 0; }
+.ek-app button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; padding: 0; }
+.ek-app input, .ek-app textarea { font-family: inherit; color: inherit; }
+.ek-app a { color: inherit; text-decoration: none; }
+
+/* ── Reusable atoms ──────────────────────────────────── */
+.ek-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--card-shadow);
+}
+.ek-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background .15s, transform .08s, box-shadow .15s;
+}
+.ek-btn:active { transform: scale(0.98); }
+.ek-btn-primary { background: var(--brand); color: var(--on-brand); }
+.ek-btn-primary:hover { background: var(--brand-600); }
+.ek-btn-ghost { color: var(--ink-2); }
+.ek-btn-ghost:hover { background: var(--surface-2); }
+.ek-btn-outline {
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  background: var(--surface);
+}
+.ek-btn-outline:hover { background: var(--surface-2); }
+
+.ek-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+.ek-chip.brand { background: var(--brand-soft); color: var(--brand-600); }
+.ek-chip.success { background: var(--accent-100); color: var(--accent); }
+.ek-chip.warn { background: rgba(194,135,40,0.13); color: var(--warning); }
+.ek-chip.danger { background: rgba(192,58,43,0.10); color: var(--danger); }
+.ek-chip.info { background: rgba(58,109,188,0.10); color: var(--info); }
+[data-theme="dark"] .ek-chip.success { color: #6EBF95; }
+[data-theme="dark"] .ek-chip.warn { color: #E0AE5C; }
+[data-theme="dark"] .ek-chip.danger { color: #DB6E5E; }
+[data-theme="dark"] .ek-chip.info { color: #6E9CDC; }
+
+/* mute scrollbars inside artboards (canvas already does this for .dc-card) */
+.ek-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.ek-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
