@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "E-KELASI",
+    "slug": "e-kelasi",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "ekelasi",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#FAF6EE"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ekelasi.parent"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FAF6EE"
+      },
+      "package": "com.ekelasi.parent"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
