@@ -1,6 +1,7 @@
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import Svg, { Path } from "react-native-svg";
 
 import { Avatar } from "@/components/Avatar";
@@ -10,6 +11,7 @@ import { useTheme, fonts, radii } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { MOCK } from "@/lib/mock";
+import { getChild, type Child } from "@/lib/db";
 
 const GROUPS = [
   {
@@ -43,11 +45,28 @@ export default function Profile() {
   const tr = useT();
   const router = useRouter();
   const { session, signOut } = useAuth();
+  const [child, setChild] = useState<Child | null>(null);
+
+  useEffect(() => {
+    getChild().then(setChild).catch(() => {});
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
     router.replace("/");
   };
+
+  // Mettre à jour la 2e ligne "Enfants & écoles" avec le compte réel
+  const groupsWithChild = GROUPS.map((g) =>
+    g.title.fr === "Compte"
+      ? {
+          ...g,
+          items: g.items.map((it) =>
+            it.fr === "Enfants & écoles" ? { ...it, detail: child ? "1" : "—" } : it
+          ),
+        }
+      : g
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
@@ -111,7 +130,7 @@ export default function Profile() {
 
         {/* Settings groups */}
         <View style={{ paddingHorizontal: 20, gap: 10 }}>
-          {GROUPS.map((g, i) => (
+          {groupsWithChild.map((g, i) => (
             <SettingsGroup key={i} group={g} />
           ))}
 

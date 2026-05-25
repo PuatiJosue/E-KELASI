@@ -27,11 +27,12 @@ export default function Welcome() {
     return null;
   }
 
-  const start = () => {
-    setBusy(true);
-    signInDemo();
-    router.replace("/(tabs)");
+  const startTrial = () => {
+    // Pour l'essai gratuit on créera un compte plus tard (signup).
+    // Pour l'instant on va sur Login.
+    router.push("/login");
   };
+  const haveAccount = () => router.push("/login");
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top", "bottom"]}>
@@ -97,12 +98,12 @@ export default function Welcome() {
         </View>
 
         <View style={{ paddingHorizontal: 24, paddingBottom: 12, gap: 10 }}>
-          <Button onPress={start} disabled={busy} style={{ paddingVertical: 16, borderRadius: 14 }}>
+          <Button onPress={startTrial} disabled={busy} style={{ paddingVertical: 16, borderRadius: 14 }}>
             <Text style={{ color: t.onBrand, fontSize: 15.5, fontWeight: "700", fontFamily: fonts.bodyBold }}>
               {tr({ fr: "Commencer l'essai gratuit · 14 jours", en: "Start free trial · 14 days" })}
             </Text>
           </Button>
-          <Button variant="ghost" onPress={start} disabled={busy}>
+          <Button variant="ghost" onPress={haveAccount} disabled={busy}>
             <Text style={{ color: t.ink2, fontSize: 14, fontWeight: "600", fontFamily: fonts.body }}>
               {tr({ fr: "J'ai déjà un compte", en: "I already have an account" })}
             </Text>

@@ -1,12 +1,14 @@
-import { View, Text, ScrollView, Pressable } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
 import { T } from "@/lib/i18n";
-import { MOCK, type Notification } from "@/lib/mock";
+import { type Notification } from "@/lib/mock";
+import { listNotifications } from "@/lib/db";
 
 const ICON_BY_KIND: Record<Notification["kind"], string> = {
   grade: "award",
@@ -19,6 +21,11 @@ const ICON_BY_KIND: Record<Notification["kind"], string> = {
 export default function NotificationsScreen() {
   const t = useTheme();
   const router = useRouter();
+  const [notifs, setNotifs] = useState<Notification[] | null>(null);
+
+  useEffect(() => {
+    listNotifications().then(setNotifs).catch(() => setNotifs([]));
+  }, []);
 
   const colorByKind: Record<Notification["kind"], string> = {
     grade: t.accent,
@@ -41,13 +48,7 @@ export default function NotificationsScreen() {
       >
         <Pressable
           onPress={() => router.back()}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          style={{ width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" }}
         >
           <Icon name="chevL" size={20} color={t.ink2} />
         </Pressable>
@@ -61,38 +62,50 @@ export default function NotificationsScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20, gap: 8 }}>
-        {MOCK.notifs.map((n, i) => (
-          <Card
-            key={i}
-            style={{
-              padding: 14,
-              flexDirection: "row",
-              alignItems: "flex-start",
-              gap: 12,
-              borderLeftWidth: i < 2 ? 3 : 0,
-              borderLeftColor: t.brand,
-            }}
-          >
-            <View
+      {notifs === null ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color={t.brand} />
+        </View>
+      ) : notifs.length === 0 ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <Text style={{ color: t.ink3, fontSize: 13, fontFamily: fonts.body, textAlign: "center" }}>
+            <T fr="Aucune notification." en="No notifications." />
+          </Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20, gap: 8 }}>
+          {notifs.map((n, i) => (
+            <Card
+              key={i}
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                backgroundColor: colorByKind[n.kind] + "22",
-                alignItems: "center",
-                justifyContent: "center",
+                padding: 14,
+                flexDirection: "row",
+                alignItems: "flex-start",
+                gap: 12,
+                borderLeftWidth: i < 2 ? 3 : 0,
+                borderLeftColor: t.brand,
               }}
             >
-              <Icon name={ICON_BY_KIND[n.kind]} size={16} color={colorByKind[n.kind]} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13.5, color: t.ink, fontWeight: i < 2 ? "600" : "500", fontFamily: i < 2 ? fonts.bodyBold : fonts.body }}>{n.text}</Text>
-              <Text style={{ fontSize: 11, color: t.ink3, marginTop: 2, fontFamily: fonts.body }}>{n.time}</Text>
-            </View>
-          </Card>
-        ))}
-      </ScrollView>
+              <View
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  backgroundColor: colorByKind[n.kind] + "22",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon name={ICON_BY_KIND[n.kind]} size={16} color={colorByKind[n.kind]} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13.5, color: t.ink, fontWeight: i < 2 ? "600" : "500", fontFamily: i < 2 ? fonts.bodyBold : fonts.body }}>{n.text}</Text>
+                <Text style={{ fontSize: 11, color: t.ink3, marginTop: 2, fontFamily: fonts.body }}>{n.time}</Text>
+              </View>
+            </Card>
+          ))}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

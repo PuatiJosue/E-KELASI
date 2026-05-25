@@ -1,13 +1,14 @@
-import { View, Text, ScrollView, Pressable } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Card, Chip } from "@/components/Card";
 import { GradeRing } from "@/components/Charts";
 import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
-import { MOCK } from "@/lib/mock";
+import { type Subject } from "@/lib/mock";
+import { getChild, listSubjects, type Child } from "@/lib/db";
 
 const PERIODS = [
   { id: "t1", fr: "T1", en: "T1" },
@@ -20,6 +21,23 @@ export default function Grades() {
   const t = useTheme();
   const tr = useT();
   const [period, setPeriod] = useState<(typeof PERIODS)[number]["id"]>("t2");
+  const [child, setChild] = useState<Child | null>(null);
+  const [subjects, setSubjects] = useState<Subject[] | null>(null);
+
+  useEffect(() => {
+    Promise.all([getChild(), listSubjects()]).then(([c, s]) => {
+      setChild(c);
+      setSubjects(s);
+    });
+  }, []);
+
+  if (!child || !subjects) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={t.brand} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
@@ -64,15 +82,14 @@ export default function Grades() {
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingBottom: 20, gap: 14 }}>
-          {/* big avg */}
           <Card style={{ padding: 18, flexDirection: "row", alignItems: "center", gap: 16 }}>
-            <GradeRing value={MOCK.child.avg} size={72} stroke={7} />
+            <GradeRing value={child.avg} size={72} stroke={7} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 11, color: t.ink3, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", fontFamily: fonts.body }}>
                 <T fr="Moyenne T2" en="Term 2 average" />
               </Text>
               <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 2 }}>
-                <Text style={{ fontSize: 32, fontWeight: "700", color: t.ink, fontFamily: fonts.display, letterSpacing: -0.8 }}>{MOCK.child.avg}</Text>
+                <Text style={{ fontSize: 32, fontWeight: "700", color: t.ink, fontFamily: fonts.display, letterSpacing: -0.8 }}>{child.avg}</Text>
                 <Text style={{ fontSize: 14, color: t.ink3, fontFamily: fonts.body }}>/20</Text>
               </View>
               <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -82,15 +99,14 @@ export default function Grades() {
                   label={`+0.4 ${tr({ fr: "vs T1", en: "vs T1" })}`}
                 />
                 <Text style={{ fontSize: 11, color: t.ink3, fontFamily: fonts.body }}>
-                  <T fr="Classement" en="Rank" /> {MOCK.child.rank}/{MOCK.child.total}
+                  <T fr="Classement" en="Rank" /> {child.rank}/{child.total}
                 </Text>
               </View>
             </View>
           </Card>
 
-          {/* by subject */}
           <Card style={{ padding: 4 }}>
-            {MOCK.subjects.map((s, i) => (
+            {subjects.map((s, i) => (
               <View
                 key={s.name}
                 style={{
@@ -99,20 +115,11 @@ export default function Grades() {
                   gap: 12,
                   paddingVertical: 12,
                   paddingHorizontal: 14,
-                  borderBottomWidth: i < MOCK.subjects.length - 1 ? 1 : 0,
+                  borderBottomWidth: i < subjects.length - 1 ? 1 : 0,
                   borderBottomColor: t.divider,
                 }}
               >
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 11,
-                    backgroundColor: s.color + "22",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+                <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: s.color + "22", alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ color: s.color, fontSize: 11, fontWeight: "700", fontFamily: fonts.displayMedium }}>{s.short}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
@@ -126,13 +133,14 @@ export default function Grades() {
                     <Text style={{ fontSize: 16, fontWeight: "700", color: t.ink, fontFamily: fonts.display }}>{s.grade.toFixed(1)}</Text>
                     <Text style={{ fontSize: 10, color: t.ink3, fontWeight: "600", fontFamily: fonts.body }}>/20</Text>
                   </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-                    <Icon name={s.trend >= 0 ? "arrowUp" : "arrowDn"} size={10} color={s.trend >= 0 ? t.accent : t.danger} />
-                    <Text style={{ fontSize: 10.5, color: s.trend >= 0 ? t.accent : t.danger, fontWeight: "600", fontFamily: fonts.bodyBold }}>
-                      {s.trend >= 0 ? "+" : ""}
-                      {s.trend.toFixed(1)}
-                    </Text>
-                  </View>
+                  {s.trend !== 0 && (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+                      <Icon name={s.trend >= 0 ? "arrowUp" : "arrowDn"} size={10} color={s.trend >= 0 ? t.accent : t.danger} />
+                      <Text style={{ fontSize: 10.5, color: s.trend >= 0 ? t.accent : t.danger, fontWeight: "600", fontFamily: fonts.bodyBold }}>
+                        {s.trend >= 0 ? "+" : ""}{s.trend.toFixed(1)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             ))}
