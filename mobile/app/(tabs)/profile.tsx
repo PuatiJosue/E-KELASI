@@ -112,6 +112,7 @@ export default function Profile() {
               })}
             </Text>
             <Pressable
+              onPress={() => router.push("/subscribe")}
               style={{
                 marginTop: 14,
                 paddingHorizontal: 14,

@@ -296,6 +296,45 @@ export async function getThread(conversationId: string): Promise<{
   }
 }
 
+// ── Send a message in a conversation ─────────────────────────────────
+export async function sendMessage(conversationId: string, body: string): Promise<ThreadMessage | null> {
+  if (!isLiveMode || !supabase) {
+    // Mode démo : on simule juste un message ajouté côté UI
+    return {
+      id: `demo-${Date.now()}`,
+      body,
+      fromMe: true,
+      createdAt: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+    };
+  }
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ conversation_id: conversationId, sender_id: user.id, body })
+      .select("id, body, sender_id, created_at")
+      .single();
+    if (error || !data) return null;
+
+    // Met à jour last_message_at de la conversation
+    await supabase
+      .from("conversations")
+      .update({ last_message_at: data.created_at })
+      .eq("id", conversationId);
+
+    return {
+      id: data.id,
+      body: data.body,
+      fromMe: data.sender_id === user.id,
+      createdAt: fmtTime(new Date(data.created_at)),
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ── Notifications ────────────────────────────────────────────────────
 export async function listNotifications(): Promise<Notification[]> {
   if (!isLiveMode || !supabase) return MOCK.notifs;

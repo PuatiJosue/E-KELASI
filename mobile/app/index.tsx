@@ -27,11 +27,7 @@ export default function Welcome() {
     return null;
   }
 
-  const startTrial = () => {
-    // Pour l'essai gratuit on créera un compte plus tard (signup).
-    // Pour l'instant on va sur Login.
-    router.push("/login");
-  };
+  const startTrial = () => router.push("/signup");
   const haveAccount = () => router.push("/login");
 
   return (
