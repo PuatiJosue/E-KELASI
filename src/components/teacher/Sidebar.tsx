@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
+import { LogoutButton } from "@/components/LogoutButton";
 import { T } from "@/lib/i18n";
 
 type NavItem = { id: string; href: string; icon: string; fr: string; en: string };
@@ -125,13 +126,13 @@ export function TeacherSidebar() {
           </div>
         </div>
 
-        <div style={{ marginTop: 10, padding: "10px 8px", display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ marginTop: 10, padding: "10px 8px", display: "flex", alignItems: "center", gap: 8 }}>
           <Avatar name="Ousmane Bâ" size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>M. Ousmane Bâ</div>
             <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>Mathématiques</div>
           </div>
-          <Icon name="settings" size={14} style={{ color: "var(--ink-3)" }} />
+          <LogoutButton />
         </div>
       </div>
     </div>

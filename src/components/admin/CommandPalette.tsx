@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
+import { signOutAction } from "@/app/login/signout";
 
 type Cmd = {
   id: string;
@@ -48,7 +49,7 @@ export function CommandPalette() {
       { id: "act-invite",  label: "Inviter une école",     hint: "Action",    icon: "plus",       group: "Actions", run: () => router.push("/schools") },
       { id: "act-sync",    label: "Synchroniser Stripe",   hint: "Action",    icon: "refresh",    group: "Actions", run: () => router.push("/billing") },
       { id: "act-export",  label: "Exporter les logs",     hint: "Action",    icon: "download",   group: "Actions", run: () => router.push("/security") },
-      { id: "act-logout",  label: "Se déconnecter",        hint: "Action",    icon: "lock",       group: "Actions", run: () => router.push("/login") },
+      { id: "act-logout",  label: "Se déconnecter",        hint: "Action",    icon: "lock",       group: "Actions", run: () => { signOutAction(); } },
     ],
     [router]
   );
