@@ -6,6 +6,7 @@ import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import type { TeacherSubject } from "@/lib/teacher-db";
 import { addBookAction } from "@/app/(teacher)/teacher/library/actions";
+import { CoverPicker } from "./CoverPicker";
 
 const LEVELS = ["", "6e", "5e", "4e", "3e", "2nd", "1ère", "Tle"];
 
@@ -18,7 +19,7 @@ export function AddBookButton({ subjects }: { subjects: TeacherSubject[] }) {
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [description, setDescription] = useState("");
-  const [coverUrl, setCoverUrl] = useState("");
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [subjectId, setSubjectId] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
 
@@ -30,7 +31,7 @@ export function AddBookButton({ subjects }: { subjects: TeacherSubject[] }) {
         title: title.trim(),
         author: author.trim(),
         description: description.trim() || null,
-        coverUrl: coverUrl.trim() || null,
+        coverUrl: coverUrl,
         subjectId: subjectId || null,
         gradeLevel: gradeLevel || null,
       });
@@ -39,7 +40,7 @@ export function AddBookButton({ subjects }: { subjects: TeacherSubject[] }) {
         setTitle("");
         setAuthor("");
         setDescription("");
-        setCoverUrl("");
+        setCoverUrl(null);
         setSubjectId("");
         setGradeLevel("");
         router.refresh();
@@ -121,13 +122,8 @@ export function AddBookButton({ subjects }: { subjects: TeacherSubject[] }) {
                   style={{ ...inputStyle, fontFamily: "inherit" }}
                 />
               </Field>
-              <Field label={<T fr="URL de couverture (optionnelle)" en="Cover URL (optional)" />}>
-                <input
-                  value={coverUrl}
-                  onChange={(e) => setCoverUrl(e.target.value)}
-                  placeholder="https://…/cover.jpg"
-                  style={inputStyle}
-                />
+              <Field label={<T fr="Couverture (optionnelle)" en="Cover (optional)" />}>
+                <CoverPicker value={coverUrl} onChange={setCoverUrl} />
               </Field>
             </div>
 
