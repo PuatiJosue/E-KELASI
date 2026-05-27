@@ -27,6 +27,7 @@ export async function loginAction(formData: FormData) {
 
   const role = profile?.role;
   if (role === "teacher") redirect("/teacher/dashboard");
+  if (role === "school_admin") redirect("/school/overview");
   if (role === "super_admin") redirect("/overview");
   // parent → cette console n'est pas pour eux, mais on évite le crash
   redirect("/overview");

@@ -41,16 +41,17 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/team") ||
     path.startsWith("/settings");
   const isTeacherRoute = path.startsWith("/teacher");
+  const isSchoolRoute = path.startsWith("/school");
 
   // Gate : ces routes demandent une session.
-  if ((isAdminRoute || isTeacherRoute) && !user) {
+  if ((isAdminRoute || isTeacherRoute || isSchoolRoute) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // Cross-role : prof qui essaye /admin → renvoyé sur /teacher, et inversement.
-  if (user && (isAdminRoute || isTeacherRoute)) {
+  // Cross-role : empêche un user d'accéder à un espace qui n'est pas le sien.
+  if (user && (isAdminRoute || isTeacherRoute || isSchoolRoute)) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -58,14 +59,20 @@ export async function middleware(request: NextRequest) {
       .maybeSingle();
     const role = profile?.role;
 
-    if (isAdminRoute && role && role !== "super_admin") {
+    const homeByRole: Record<string, string> = {
+      super_admin: "/overview",
+      teacher: "/teacher/dashboard",
+      school_admin: "/school/overview",
+    };
+
+    const allowed =
+      (isAdminRoute && role === "super_admin") ||
+      (isTeacherRoute && (role === "teacher" || role === "super_admin")) ||
+      (isSchoolRoute && (role === "school_admin" || role === "super_admin"));
+
+    if (!allowed && role) {
       const url = request.nextUrl.clone();
-      url.pathname = role === "teacher" ? "/teacher/dashboard" : "/login";
-      return NextResponse.redirect(url);
-    }
-    if (isTeacherRoute && role && role !== "teacher" && role !== "super_admin") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
+      url.pathname = homeByRole[role] ?? "/login";
       return NextResponse.redirect(url);
     }
   }
