@@ -10,17 +10,16 @@ import { T } from "@/lib/i18n";
 type NavItem = { id: string; href: string; icon: string; fr: string; en: string };
 
 const NAV: NavItem[] = [
-  { id: "overview", href: "/overview", icon: "pieChart",   fr: "Vue d'ensemble", en: "Overview" },
-  { id: "schools",  href: "/schools",  icon: "school",     fr: "Écoles",         en: "Schools" },
-  { id: "billing",  href: "/billing",  icon: "creditcard", fr: "Abonnements",    en: "Subscriptions" },
-  { id: "payments", href: "/payments", icon: "dollar",     fr: "Mobile Money",   en: "Mobile Money" },
-  { id: "support",  href: "/support",  icon: "chat",       fr: "Support",        en: "Support" },
-  { id: "security", href: "/security", icon: "shield",     fr: "Sécurité & logs", en: "Security & logs" },
+  { id: "dashboard", href: "/teacher/dashboard", icon: "home",       fr: "Tableau de bord", en: "Dashboard" },
+  { id: "classes",   href: "/teacher/classes",   icon: "users",      fr: "Mes classes",     en: "My classes" },
+  { id: "grades",    href: "/teacher/grades",    icon: "chart",      fr: "Saisir notes",    en: "Enter grades" },
+  { id: "homework",  href: "/teacher/homework",  icon: "book",       fr: "Devoirs",         en: "Homework" },
+  { id: "messages",  href: "/teacher/messages",  icon: "chat",       fr: "Messagerie",      en: "Inbox" },
 ];
 
-const ORG: NavItem[] = [
-  { id: "team",     href: "/team",     icon: "users",    fr: "Équipe E-KELASI", en: "E-KELASI team" },
-  { id: "settings", href: "/settings", icon: "settings", fr: "Paramètres",      en: "Settings" },
+const SEC: NavItem[] = [
+  { id: "profile",  href: "/teacher/profile",  icon: "user",     fr: "Mon profil",  en: "My profile" },
+  { id: "settings", href: "/teacher/settings", icon: "settings", fr: "Paramètres",  en: "Settings" },
 ];
 
 function NavGroup({ label, items }: { label: { fr: string; en: string }; items: NavItem[] }) {
@@ -59,9 +58,7 @@ function NavGroup({ label, items }: { label: { fr: string; en: string }; items: 
               }}
             >
               <Icon name={it.icon} size={16} stroke={on ? 2 : 1.7} />
-              <span>
-                <T fr={it.fr} en={it.en} />
-              </span>
+              <span><T fr={it.fr} en={it.en} /></span>
             </Link>
           );
         })}
@@ -70,7 +67,7 @@ function NavGroup({ label, items }: { label: { fr: string; en: string }; items: 
   );
 }
 
-export function AdminSidebar() {
+export function TeacherSidebar() {
   return (
     <div
       style={{
@@ -96,81 +93,42 @@ export function AdminSidebar() {
             textTransform: "uppercase",
           }}
         >
-          <T fr="Console admin" en="Admin console" />
+          <T fr="Espace professeur" en="Teacher space" />
         </div>
       </div>
 
-      <button
-        type="button"
-        style={{
-          margin: "4px 4px 0",
-          padding: "10px 12px",
-          borderRadius: 10,
-          background: "var(--surface-2)",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          border: "1px solid var(--border)",
-          cursor: "pointer",
-        }}
-      >
-        <div
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: 7,
-            background: "var(--ink)",
-            color: "var(--surface)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 700,
-            fontSize: 11,
-          }}
-        >
-          EK
-        </div>
-        <div style={{ flex: 1, textAlign: "left", minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>
-            E-KELASI <span style={{ color: "var(--ink-3)", fontWeight: 500 }}>·</span> Prod
-          </div>
-          <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>app.e-kelasi.com</div>
-        </div>
-        <Icon name="chevD" size={14} style={{ color: "var(--ink-3)" }} />
-      </button>
-
-      <NavGroup label={{ fr: "Plateforme", en: "Platform" }} items={NAV} />
-      <NavGroup label={{ fr: "Organisation", en: "Organization" }} items={ORG} />
+      <NavGroup label={{ fr: "Enseignement", en: "Teaching" }} items={NAV} />
+      <NavGroup label={{ fr: "Mon compte", en: "Account" }} items={SEC} />
 
       <div style={{ marginTop: "auto" }}>
-        <div className="ek-card" style={{ padding: 12, background: "var(--brand-soft)", border: "none" }}>
+        <div className="ek-card" style={{ padding: 12, background: "var(--accent-50)", border: "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Icon name="sparkle" size={14} style={{ color: "var(--brand-600)" }} />
+            <Icon name="sparkle" size={14} style={{ color: "var(--accent)" }} />
             <span
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: "var(--brand-600)",
+                color: "var(--accent)",
                 letterSpacing: "0.04em",
                 textTransform: "uppercase",
               }}
             >
-              <T fr="Bêta" en="Beta" />
+              <T fr="Astuce" en="Tip" />
             </span>
           </div>
           <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 6, lineHeight: 1.4 }}>
             <T
-              fr="Modèle IA de prédiction de churn maintenant disponible."
-              en="AI churn-prediction model is now live."
+              fr="Tu peux saisir plusieurs notes d'un coup depuis Saisir notes."
+              en="You can enter multiple grades at once from Enter grades."
             />
           </div>
         </div>
 
         <div style={{ marginTop: 10, padding: "10px 8px", display: "flex", alignItems: "center", gap: 10 }}>
-          <Avatar name="Yann Mbaye" size={30} />
+          <Avatar name="Ousmane Bâ" size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>Yann Mbaye</div>
-            <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>Super Admin</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>M. Ousmane Bâ</div>
+            <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>Mathématiques</div>
           </div>
           <Icon name="settings" size={14} style={{ color: "var(--ink-3)" }} />
         </div>

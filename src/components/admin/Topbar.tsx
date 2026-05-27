@@ -8,6 +8,7 @@ const LABELS: Record<string, { fr: string; en: string }> = {
   overview: { fr: "Vue d'ensemble",            en: "Overview" },
   schools:  { fr: "Écoles partenaires",        en: "Partner schools" },
   billing:  { fr: "Abonnements & paiements",   en: "Subscriptions & billing" },
+  payments: { fr: "Paiements Mobile Money",    en: "Mobile Money payments" },
   support:  { fr: "Support & tickets",         en: "Support & tickets" },
   security: { fr: "Sécurité & journaux",       en: "Security & logs" },
   team:     { fr: "Équipe E-KELASI",           en: "E-KELASI team" },

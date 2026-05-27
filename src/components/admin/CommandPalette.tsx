@@ -40,6 +40,7 @@ export function CommandPalette() {
       { id: "go-overview", label: "Vue d'ensemble",        hint: "Dashboard", icon: "pieChart",   group: "Pages",   run: () => router.push("/overview") },
       { id: "go-schools",  label: "Écoles partenaires",    hint: "Schools",   icon: "school",     group: "Pages",   run: () => router.push("/schools") },
       { id: "go-billing",  label: "Abonnements & paiements", hint: "Billing", icon: "creditcard", group: "Pages",   run: () => router.push("/billing") },
+      { id: "go-payments", label: "Mobile Money",            hint: "Payments", icon: "dollar",   group: "Pages",   run: () => router.push("/payments") },
       { id: "go-support",  label: "Support & tickets",     hint: "Support",   icon: "chat",       group: "Pages",   run: () => router.push("/support") },
       { id: "go-security", label: "Sécurité & journaux",   hint: "Security",  icon: "shield",     group: "Pages",   run: () => router.push("/security") },
       { id: "go-team",     label: "Équipe E-KELASI",       hint: "Team",      icon: "users",      group: "Pages",   run: () => router.push("/team") },

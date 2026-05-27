@@ -11,6 +11,7 @@ import { useStripe } from "@stripe/stripe-react-native";
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/Button";
+import { MobileMoneySheet } from "@/components/MobileMoneySheet";
 import { useTheme, fonts, radii } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { PLANS, type PlanId } from "@/lib/plans";
@@ -25,6 +26,9 @@ export default function Subscribe() {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [selected, setSelected] = useState<PlanId>("famille");
   const [busy, setBusy] = useState(false);
+  const [mmOpen, setMmOpen] = useState(false);
+
+  const currentPlan = PLANS.find((p) => p.id === selected)!;
 
   const subscribe = async () => {
     const plan = PLANS.find((p) => p.id === selected);
@@ -155,27 +159,89 @@ export default function Subscribe() {
           })}
         </View>
 
-        <Button
+        {/* Section moyens de paiement */}
+        <Text style={{ marginTop: 28, fontSize: 11, color: t.ink3, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", fontFamily: fonts.body }}>
+          <T fr="Moyen de paiement" en="Payment method" />
+        </Text>
+
+        {/* Mobile Money — pertinent pour l'Afrique francophone */}
+        <Pressable
+          onPress={() => setMmOpen(true)}
+          style={{
+            marginTop: 10,
+            padding: 16,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: t.border,
+            backgroundColor: t.surface,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "#FF660022", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 22 }}>📱</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
+              <T fr="Mobile Money" en="Mobile Money" />
+            </Text>
+            <Text style={{ fontSize: 12, color: t.ink3, marginTop: 2, fontFamily: fonts.body }}>
+              Orange · MTN · Airtel · Wave · M-Pesa
+            </Text>
+          </View>
+          <Icon name="chevR" size={18} color={t.ink4} />
+        </Pressable>
+
+        {/* Stripe (carte) */}
+        <Pressable
           onPress={subscribe}
           disabled={busy}
-          style={{ marginTop: 24, paddingVertical: 16, borderRadius: 14, opacity: busy ? 0.6 : 1 }}
+          style={{
+            marginTop: 10,
+            padding: 16,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: t.border,
+            backgroundColor: t.surface,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            opacity: busy ? 0.6 : 1,
+          }}
         >
-          {busy ? (
-            <ActivityIndicator color={t.onBrand} />
-          ) : (
-            <Text style={{ color: t.onBrand, fontSize: 15.5, fontWeight: "700", fontFamily: fonts.bodyBold }}>
-              <T fr="Démarrer l'essai gratuit 14 jours" en="Start free 14-day trial" />
+          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "#6772E522", alignItems: "center", justifyContent: "center" }}>
+            <Icon name="creditcard" size={20} color="#6772E5" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
+              <T fr="Carte bancaire" en="Credit / Debit Card" />
             </Text>
-          )}
-        </Button>
+            <Text style={{ fontSize: 12, color: t.ink3, marginTop: 2, fontFamily: fonts.body }}>
+              Visa · Mastercard · Apple Pay · Google Pay
+            </Text>
+          </View>
+          {busy ? <ActivityIndicator color={t.brand} /> : <Icon name="chevR" size={18} color={t.ink4} />}
+        </Pressable>
 
-        <Text style={{ marginTop: 14, textAlign: "center", fontSize: 11, color: t.ink3, fontFamily: fonts.body, lineHeight: 16 }}>
+        <Text style={{ marginTop: 18, textAlign: "center", fontSize: 11, color: t.ink3, fontFamily: fonts.body, lineHeight: 16 }}>
           <T
-            fr="Sans engagement · annulable depuis le profil"
-            en="No commitment · cancel anytime from profile"
+            fr="Essai 14 jours · sans engagement · annulable depuis le profil"
+            en="14-day trial · no commitment · cancel anytime from profile"
           />
         </Text>
       </ScrollView>
+
+      <MobileMoneySheet
+        visible={mmOpen}
+        onClose={(paid) => {
+          setMmOpen(false);
+          if (paid) router.replace("/(tabs)/profile");
+        }}
+        plan={currentPlan.id}
+        amountCents={currentPlan.priceCents}
+        currency="EUR"
+      />
     </SafeAreaView>
   );
 }

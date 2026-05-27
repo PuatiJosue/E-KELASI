@@ -91,6 +91,84 @@ export async function listTicketsByStatus(): Promise<Record<string, Ticket[]>> {
   return MOCK_TICKETS;
 }
 
+// ── Mobile Money payments ────────────────────────────────────────────
+export type MobileMoneyRow = {
+  id: string;
+  parentName: string;
+  senderPhone: string;
+  plan: string;
+  provider: string;
+  amountCents: number;
+  currency: string;
+  reference: string;
+  status: "pending" | "validated" | "rejected";
+  createdAt: string;
+};
+
+function fmtMMDate(d: Date): string {
+  const now = new Date();
+  const diffMin = Math.round((now.getTime() - d.getTime()) / 60000);
+  if (diffMin < 60) return `Il y a ${diffMin} min`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `Il y a ${diffH} h`;
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+export async function listPendingMobileMoney(): Promise<MobileMoneyRow[]> {
+  if (!isLiveMode()) return [];
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("mobile_money_payments")
+      .select("id, plan, provider, amount_cents, currency, sender_phone, reference, status, created_at, profiles!mobile_money_payments_parent_id_fkey(full_name)")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    if (error || !data) return [];
+    return data.map((r: any) => ({
+      id: r.id,
+      parentName: r.profiles?.full_name ?? "?",
+      senderPhone: r.sender_phone,
+      plan: r.plan,
+      provider: r.provider,
+      amountCents: r.amount_cents,
+      currency: r.currency,
+      reference: r.reference,
+      status: r.status,
+      createdAt: fmtMMDate(new Date(r.created_at)),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function listProcessedMobileMoney(limit = 20): Promise<MobileMoneyRow[]> {
+  if (!isLiveMode()) return [];
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("mobile_money_payments")
+      .select("id, plan, provider, amount_cents, currency, sender_phone, reference, status, validated_at, profiles!mobile_money_payments_parent_id_fkey(full_name)")
+      .in("status", ["validated", "rejected"])
+      .order("validated_at", { ascending: false })
+      .limit(limit);
+    if (error || !data) return [];
+    return data.map((r: any) => ({
+      id: r.id,
+      parentName: r.profiles?.full_name ?? "?",
+      senderPhone: r.sender_phone,
+      plan: r.plan,
+      provider: r.provider,
+      amountCents: r.amount_cents,
+      currency: r.currency,
+      reference: r.reference,
+      status: r.status,
+      createdAt: fmtMMDate(new Date(r.validated_at)),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ── Security ──────────────────────────────────────────────────────────
 export async function listAuditLogs(limit = 50): Promise<LogEvent[]> {
   if (!isLiveMode()) return MOCK_LOGS;
