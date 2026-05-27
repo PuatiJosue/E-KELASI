@@ -52,6 +52,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="library"
+        options={{
+          title: tr({ fr: "Livres", en: "Library" }),
+          tabBarIcon: ({ color }) => <Icon name="bookmark" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="messages"
         options={{
           title: tr({ fr: "Messages", en: "Messages" }),

@@ -14,6 +14,7 @@ const NAV: NavItem[] = [
   { id: "classes",   href: "/teacher/classes",   icon: "users",      fr: "Mes classes",     en: "My classes" },
   { id: "grades",    href: "/teacher/grades",    icon: "chart",      fr: "Saisir notes",    en: "Enter grades" },
   { id: "homework",  href: "/teacher/homework",  icon: "book",       fr: "Devoirs",         en: "Homework" },
+  { id: "library",   href: "/teacher/library",   icon: "bookmark",   fr: "Bibliothèque",    en: "Library" },
   { id: "messages",  href: "/teacher/messages",  icon: "chat",       fr: "Messagerie",      en: "Inbox" },
 ];
 

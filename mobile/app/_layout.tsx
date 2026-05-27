@@ -31,7 +31,7 @@ function AuthGate() {
 
   useEffect(() => {
     if (loading) return;
-    const inAuthGroup = segments[0] === "(tabs)" || segments[0] === "thread" || segments[0] === "notifications";
+    const inAuthGroup = segments[0] === "(tabs)" || segments[0] === "thread" || segments[0] === "notifications" || segments[0] === "book";
     if (!session && inAuthGroup) {
       router.replace("/");
     } else if (session && (segments.length === 0 || segments[0] === undefined)) {
@@ -103,6 +103,7 @@ export default function RootLayout() {
             <Stack.Screen name="subscribe" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="thread" options={{ animation: "slide_from_right" }} />
+            <Stack.Screen name="book" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="notifications" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
           </Stack>
         </AuthProvider>

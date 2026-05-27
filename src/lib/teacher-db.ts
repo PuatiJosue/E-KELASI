@@ -186,6 +186,48 @@ export async function listStudentsInClass(className: string): Promise<StudentRow
   }
 }
 
+// ── Library ─────────────────────────────────────────────────────────
+export type LibraryBookRow = {
+  id: string;
+  title: string;
+  author: string;
+  description: string | null;
+  coverUrl: string | null;
+  subjectName: string | null;
+  subjectColor: string | null;
+  gradeLevel: string | null;
+  addedBy: string;
+  mine: boolean;
+  createdAt: string;
+};
+
+export async function listSchoolLibrary(): Promise<LibraryBookRow[]> {
+  if (!isLiveMode()) return [];
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data } = await supabase
+      .from("library_books")
+      .select("id, title, author, description, cover_url, grade_level, added_by, created_at, subjects(name, color), profiles(full_name)")
+      .order("created_at", { ascending: false });
+    return (data ?? []).map((b: any) => ({
+      id: b.id,
+      title: b.title,
+      author: b.author,
+      description: b.description,
+      coverUrl: b.cover_url,
+      subjectName: b.subjects?.name ?? null,
+      subjectColor: b.subjects?.color ?? null,
+      gradeLevel: b.grade_level,
+      addedBy: b.profiles?.full_name ?? "?",
+      mine: user ? b.added_by === user.id : false,
+      createdAt: new Date(b.created_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" }),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function listTeacherRecentGrades(limit = 10): Promise<GradeRow[]> {
   if (!isLiveMode()) return [];
   try {

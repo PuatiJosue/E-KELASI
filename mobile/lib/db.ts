@@ -335,6 +335,79 @@ export async function sendMessage(conversationId: string, body: string): Promise
   }
 }
 
+// ── Library ──────────────────────────────────────────────────────────
+export type LibraryBook = {
+  id: string;
+  title: string;
+  author: string;
+  description: string | null;
+  coverUrl: string | null;
+  subjectName: string | null;
+  subjectColor: string | null;
+  gradeLevel: string | null;
+  addedBy: string;
+  publishedYear: number | null;
+};
+
+const DEMO_BOOKS: LibraryBook[] = [
+  {
+    id: "demo-1",
+    title: "Le Petit Prince",
+    author: "Antoine de Saint-Exupéry",
+    description: "Un classique intemporel sur l'amitié et l'imagination.",
+    coverUrl: "https://images-na.ssl-images-amazon.com/images/I/71OZY035QKL.jpg",
+    subjectName: "Français",
+    subjectColor: "#9747BB",
+    gradeLevel: "5e",
+    addedBy: "Mme Camara",
+    publishedYear: 1943,
+  },
+  {
+    id: "demo-2",
+    title: "Le théorème du perroquet",
+    author: "Denis Guedj",
+    description: "Un roman policier qui raconte l'histoire des mathématiques.",
+    coverUrl: null,
+    subjectName: "Mathématiques",
+    subjectColor: "#3A6DBC",
+    gradeLevel: "5e",
+    addedBy: "M. Ousmane Bâ",
+    publishedYear: 1998,
+  },
+];
+
+export async function listLibrary(): Promise<LibraryBook[]> {
+  if (!isLiveMode || !supabase) return DEMO_BOOKS;
+  try {
+    const { data } = await supabase
+      .from("library_books")
+      .select(
+        "id, title, author, description, cover_url, grade_level, published_year, subjects(name, color), profiles(full_name)"
+      )
+      .order("created_at", { ascending: false });
+    if (!data) return [];
+    return data.map((b: any) => ({
+      id: b.id,
+      title: b.title,
+      author: b.author,
+      description: b.description,
+      coverUrl: b.cover_url,
+      subjectName: b.subjects?.name ?? null,
+      subjectColor: b.subjects?.color ?? null,
+      gradeLevel: b.grade_level,
+      addedBy: b.profiles?.full_name ?? "?",
+      publishedYear: b.published_year,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getBook(id: string): Promise<LibraryBook | null> {
+  const all = await listLibrary();
+  return all.find((b) => b.id === id) ?? null;
+}
+
 // ── Notifications ────────────────────────────────────────────────────
 export async function listNotifications(): Promise<Notification[]> {
   if (!isLiveMode || !supabase) return MOCK.notifs;

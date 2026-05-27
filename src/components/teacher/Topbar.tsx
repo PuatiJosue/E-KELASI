@@ -9,6 +9,7 @@ const LABELS: Record<string, { fr: string; en: string }> = {
   classes:   { fr: "Mes classes",     en: "My classes" },
   grades:    { fr: "Saisie des notes", en: "Enter grades" },
   homework:  { fr: "Devoirs",         en: "Homework" },
+  library:   { fr: "Bibliothèque",    en: "Library" },
   messages:  { fr: "Messagerie",      en: "Inbox" },
   profile:   { fr: "Mon profil",      en: "My profile" },
   settings:  { fr: "Paramètres",      en: "Settings" },
