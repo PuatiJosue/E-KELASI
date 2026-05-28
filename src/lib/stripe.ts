@@ -8,6 +8,6 @@ export function stripe(): Stripe {
   if (_client) return _client;
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
-  _client = new Stripe(key, { apiVersion: "2024-09-30.acacia" });
+  _client = new Stripe(key, { apiVersion: "2025-02-24.acacia" });
   return _client;
 }

@@ -54,12 +54,14 @@ export function Icon({
   name,
   size = 20,
   stroke = 1.7,
+  color,
   style,
   className,
 }: {
   name: string;
   size?: number;
   stroke?: number;
+  color?: string;
   style?: CSSProperties;
   className?: string;
 }) {
@@ -75,7 +77,7 @@ export function Icon({
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
-      style={{ flexShrink: 0, ...style }}
+      style={{ flexShrink: 0, ...(color ? { color } : {}), ...style }}
     >
       <path d={d} />
     </svg>

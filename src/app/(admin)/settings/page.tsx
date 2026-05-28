@@ -111,7 +111,7 @@ export default function SettingsPage() {
           action={<button className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>Exporter</button>}
         />
         <Row
-          label={<span style={{ color: "var(--danger)" }}>Supprimer l'organisation</span>}
+          label={<span style={{ color: "var(--danger)" }}>Supprimer l&apos;organisation</span>}
           value="Action irréversible — supprime toutes les données."
           action={
             <button

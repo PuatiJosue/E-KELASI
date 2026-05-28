@@ -7,6 +7,9 @@ export type Json =
   | Json[]
 
 export type Database = {
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -247,6 +250,76 @@ export type Database = {
           },
         ]
       }
+      library_books: {
+        Row: {
+          added_by: string
+          author: string
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          grade_level: string | null
+          id: string
+          isbn: string | null
+          published_year: number | null
+          school_id: string
+          subject_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          added_by: string
+          author: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          grade_level?: string | null
+          id?: string
+          isbn?: string | null
+          published_year?: number | null
+          school_id: string
+          subject_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string
+          author?: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          grade_level?: string | null
+          id?: string
+          isbn?: string | null
+          published_year?: number | null
+          school_id?: string
+          subject_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_books_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_books_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_books_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           body: string
@@ -283,6 +356,75 @@ export type Database = {
           {
             foreignKeyName: "messages_sender_id_fkey"
             columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mobile_money_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          id: string
+          parent_id: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          provider: Database["public"]["Enums"]["mm_provider"]
+          reference: string
+          rejection_reason: string | null
+          screenshot_url: string | null
+          sender_phone: string
+          status: Database["public"]["Enums"]["mm_status"]
+          updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          currency?: string
+          id?: string
+          parent_id: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          provider: Database["public"]["Enums"]["mm_provider"]
+          reference: string
+          rejection_reason?: string | null
+          screenshot_url?: string | null
+          sender_phone: string
+          status?: Database["public"]["Enums"]["mm_status"]
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          parent_id?: string
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          provider?: Database["public"]["Enums"]["mm_provider"]
+          reference?: string
+          rejection_reason?: string | null
+          screenshot_url?: string | null
+          sender_phone?: string
+          status?: Database["public"]["Enums"]["mm_status"]
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mobile_money_payments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mobile_money_payments_validated_by_fkey"
+            columns: ["validated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -482,6 +624,44 @@ export type Database = {
           },
           {
             foreignKeyName: "school_staff_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_tokens: {
+        Row: {
+          created_at: string
+          device_name: string | null
+          expo_token: string
+          id: string
+          last_seen_at: string
+          platform: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_name?: string | null
+          expo_token: string
+          id?: string
+          last_seen_at?: string
+          platform: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_name?: string | null
+          expo_token?: string
+          id?: string
+          last_seen_at?: string
+          platform?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -754,6 +934,8 @@ export type Database = {
     Enums: {
       homework_status: "todo" | "inprogress" | "done" | "late"
       log_severity: "info" | "warn" | "critical"
+      mm_provider: "orange" | "airtel" | "mtn" | "mpesa" | "wave"
+      mm_status: "pending" | "validated" | "rejected"
       notification_kind:
         | "grade"
         | "message"
@@ -905,6 +1087,8 @@ export const Constants = {
     Enums: {
       homework_status: ["todo", "inprogress", "done", "late"],
       log_severity: ["info", "warn", "critical"],
+      mm_provider: ["orange", "airtel", "mtn", "mpesa", "wave"],
+      mm_status: ["pending", "validated", "rejected"],
       notification_kind: [
         "grade",
         "message",
