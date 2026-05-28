@@ -8,7 +8,7 @@ import { Avatar } from "@/components/Avatar";
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
 import { useTheme, fonts, radii } from "@/lib/theme";
-import { T, useT } from "@/lib/i18n";
+import { T, useT, useLang, useSetLang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { MOCK } from "@/lib/mock";
 import { getChild, type Child } from "@/lib/db";
@@ -43,6 +43,8 @@ const GROUPS = [
 export default function Profile() {
   const t = useTheme();
   const tr = useT();
+  const lang = useLang();
+  const setLang = useSetLang();
   const router = useRouter();
   const { session, signOut } = useAuth();
   const [child, setChild] = useState<Child | null>(null);
@@ -127,6 +129,35 @@ export default function Profile() {
               </Text>
             </Pressable>
           </View>
+        </View>
+
+        {/* Language toggle */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 10 }}>
+          <Text style={{ fontSize: 11, color: t.ink3, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", paddingHorizontal: 4, paddingBottom: 8, fontFamily: fonts.body }}>
+            <T fr="Langue" en="Language" />
+          </Text>
+          <Card style={{ padding: 6, flexDirection: "row", gap: 6 }}>
+            {(["fr", "en"] as const).map((l) => {
+              const on = lang === l;
+              return (
+                <Pressable
+                  key={l}
+                  onPress={() => setLang(l)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    borderRadius: 10,
+                    backgroundColor: on ? t.brand : "transparent",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: on ? t.onBrand : t.ink2, fontFamily: fonts.bodyBold }}>
+                    {l === "fr" ? "🇫🇷  Français" : "🇬🇧  English"}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </Card>
         </View>
 
         {/* Settings groups */}

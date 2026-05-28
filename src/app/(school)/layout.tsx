@@ -1,11 +1,12 @@
 import { LangProvider } from "@/lib/i18n";
+import { getLang } from "@/lib/lang";
 import { SchoolSidebar } from "@/components/school/Sidebar";
 import { SchoolTopbar } from "@/components/school/Topbar";
 import { getMySchool } from "@/lib/school-db";
 
 export default async function SchoolLayout({ children }: { children: React.ReactNode }) {
   const school = await getMySchool();
-  const lang = "fr" as const;
+  const lang = getLang();
 
   return (
     <LangProvider value={lang}>

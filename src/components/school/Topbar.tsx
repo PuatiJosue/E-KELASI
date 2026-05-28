@@ -2,7 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/Icon";
-import { T } from "@/lib/i18n";
+import { T, useLang } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import type { MySchool } from "@/lib/school-db";
 
 const LABELS: Record<string, { fr: string; en: string }> = {
@@ -15,6 +16,7 @@ const LABELS: Record<string, { fr: string; en: string }> = {
 };
 
 export function SchoolTopbar({ school }: { school: MySchool | null }) {
+  const lang = useLang();
   const pathname = usePathname() ?? "";
   const key = pathname.split("/").filter(Boolean)[1] ?? "overview";
   const label = LABELS[key] ?? LABELS.overview;
@@ -39,6 +41,7 @@ export function SchoolTopbar({ school }: { school: MySchool | null }) {
         <T fr={label.fr} en={label.en} />
       </div>
       <div style={{ flex: 1 }} />
+      <LanguageToggle current={lang} />
       <button
         type="button"
         style={{

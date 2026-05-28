@@ -1,12 +1,12 @@
 import { LangProvider } from "@/lib/i18n";
+import { getLang } from "@/lib/lang";
 import { AdminSidebar } from "@/components/admin/Sidebar";
 import { AdminTopbar } from "@/components/admin/Topbar";
 import { TweaksPanel } from "@/components/admin/TweaksPanel";
 import { CommandPalette } from "@/components/admin/CommandPalette";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  // Hard-coded `fr` for now — wire to a cookie / user preference later.
-  const lang = "fr" as const;
+  const lang = getLang();
 
   return (
     <LangProvider value={lang}>

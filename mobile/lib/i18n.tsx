@@ -1,28 +1,47 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Text, type TextProps } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type Lang = "fr" | "en";
-const LangCtx = createContext<Lang>("fr");
 
-export function LangProvider({ value, children }: { value: Lang; children: ReactNode }) {
-  return <LangCtx.Provider value={value}>{children}</LangCtx.Provider>;
+const STORAGE_KEY = "ek-lang";
+
+type LangContextValue = {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+};
+
+const LangCtx = createContext<LangContextValue>({ lang: "fr", setLang: () => {} });
+
+export function LangProvider({ value = "fr", children }: { value?: Lang; children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(value);
+
+  // Charge la préférence stockée au démarrage
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((stored) => {
+        if (stored === "fr" || stored === "en") setLangState(stored);
+      })
+      .catch(() => {});
+  }, []);
+
+  const setLang = (l: Lang) => {
+    setLangState(l);
+    AsyncStorage.setItem(STORAGE_KEY, l).catch(() => {});
+  };
+
+  return <LangCtx.Provider value={{ lang, setLang }}>{children}</LangCtx.Provider>;
 }
 
-export const useLang = () => useContext(LangCtx);
+export const useLang = (): Lang => useContext(LangCtx).lang;
+export const useSetLang = () => useContext(LangCtx).setLang;
 
-/** Pick the right localized string. */
 export function useT() {
   const lang = useLang();
   return ({ fr, en }: { fr: string; en: string }) => (lang === "en" ? en : fr);
 }
 
-/** Inline localized text. Use inside a parent <Text> only if you don't pass props. */
 export function T({ fr, en, ...rest }: { fr: string; en: string } & TextProps) {
   const lang = useLang();
   return <Text {...rest}>{lang === "en" ? en : fr}</Text>;
-}
-
-/** When you need the raw string (not wrapped in <Text>), e.g. for icon names. */
-export function tStr(lang: Lang, fr: string, en: string) {
-  return lang === "en" ? en : fr;
 }

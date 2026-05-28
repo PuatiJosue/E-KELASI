@@ -2,7 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/Icon";
-import { T } from "@/lib/i18n";
+import { T, useLang } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 const LABELS: Record<string, { fr: string; en: string }> = {
   dashboard: { fr: "Tableau de bord", en: "Dashboard" },
@@ -16,6 +17,7 @@ const LABELS: Record<string, { fr: string; en: string }> = {
 };
 
 export function TeacherTopbar() {
+  const lang = useLang();
   const pathname = usePathname() ?? "";
   const parts = pathname.split("/").filter(Boolean); // ['teacher', 'grades', ...]
   const key = parts[1] ?? "dashboard";

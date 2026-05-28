@@ -2,7 +2,8 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
-import { T } from "@/lib/i18n";
+import { T, useLang } from "@/lib/i18n";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 const LABELS: Record<string, { fr: string; en: string }> = {
   overview: { fr: "Vue d'ensemble",            en: "Overview" },
@@ -17,6 +18,7 @@ const LABELS: Record<string, { fr: string; en: string }> = {
 
 export function AdminTopbar() {
   const router = useRouter();
+  const lang = useLang();
   const pathname = usePathname() ?? "";
   const key = pathname.split("/").filter(Boolean)[0] ?? "overview";
   const label = LABELS[key] ?? LABELS.overview;
@@ -41,6 +43,7 @@ export function AdminTopbar() {
         <T fr={label.fr} en={label.en} />
       </div>
       <div style={{ flex: 1 }} />
+      <LanguageToggle current={lang} />
       <button
         type="button"
         onClick={() => {
