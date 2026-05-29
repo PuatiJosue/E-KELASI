@@ -22,7 +22,7 @@ export default async function SecurityPage() {
         }
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+      <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
         <KPI
           label={<T fr="Statut système" en="System status" />}
           value={

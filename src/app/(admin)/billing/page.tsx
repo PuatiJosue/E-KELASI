@@ -29,7 +29,7 @@ export default async function BillingPage() {
         }
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+      <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
         <KPI label={<T fr="MRR" en="MRR" />} value="€39 400" delta="+6.5%" sub="Stripe" />
         <KPI label={<T fr="ARR" en="ARR" />} value="€472 800" delta="+5.8%" sub={<T fr="annualisé" en="annualized" />} />
         <KPI label={<T fr="ARPU" en="ARPU" />} value="€9.12" delta="+0.4" sub={<T fr="par parent" en="per parent" />} />
@@ -42,7 +42,7 @@ export default async function BillingPage() {
         />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 14 }}>
+      <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 14 }}>
         <div className="ek-card" style={{ padding: 0 }}>
           <div
             style={{
@@ -68,6 +68,8 @@ export default async function BillingPage() {
               <T fr="Voir tout" en="View all" /> →
             </button>
           </div>
+          <div className="ek-tablewrap">
+          <div style={{ minWidth: 520 }}>
           {payments.map((tx, i) => (
             <div
               key={i}
@@ -113,6 +115,8 @@ export default async function BillingPage() {
               <div style={{ color: "var(--ink-3)", textAlign: "right", fontSize: 11.5 }}>{tx.date}</div>
             </div>
           ))}
+          </div>
+          </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

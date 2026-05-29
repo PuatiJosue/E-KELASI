@@ -57,7 +57,8 @@ export function SecurityLogTable({ events }: { events: LogEvent[] }) {
           </button>
         ))}
       </div>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11.5 }}>
+      <div className="ek-tablewrap" style={{ fontFamily: "var(--font-mono)", fontSize: 11.5 }}>
+        <div style={{ minWidth: 640 }}>
         {filtered.length === 0 && (
           <div
             style={{
@@ -119,6 +120,7 @@ export function SecurityLogTable({ events }: { events: LogEvent[] }) {
             </span>
           </div>
         ))}
+        </div>
       </div>
     </div>
   );

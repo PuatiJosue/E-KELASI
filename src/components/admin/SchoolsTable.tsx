@@ -109,6 +109,8 @@ export function SchoolsTable({
       </div>
 
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="ek-tablewrap">
+        <div style={{ minWidth: 720 }}>
         <div
           style={{
             display: "grid",
@@ -196,6 +198,8 @@ export function SchoolsTable({
             </div>
           </div>
         ))}
+        </div>
+        </div>
       </div>
     </>
   );

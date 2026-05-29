@@ -61,7 +61,7 @@ export function MRRChart({
   const yTicks = [0, max * 0.25, max * 0.5, max * 0.75, max];
 
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block", maxWidth: "100%" }}>
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block", width: "100%", maxWidth: w, height: "auto" }}>
       <defs>
         <linearGradient id="mrr-grad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.25" />

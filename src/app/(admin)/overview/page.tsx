@@ -46,7 +46,7 @@ export default async function OverviewPage() {
         }
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+      <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
         <KPI
           label={<T fr="MRR" en="MRR" />}
           value={kpis.mrr}
@@ -78,7 +78,7 @@ export default async function OverviewPage() {
         />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
+      <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
         <div className="ek-card" style={{ padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
@@ -162,7 +162,7 @@ export default async function OverviewPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 14 }}>
+      <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 14 }}>
         <div className="ek-card" style={{ padding: 0 }}>
           <div
             style={{

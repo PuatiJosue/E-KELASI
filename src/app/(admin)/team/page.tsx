@@ -28,6 +28,8 @@ export default function TeamPage() {
       />
 
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="ek-tablewrap">
+        <div style={{ minWidth: 640 }}>
         <div
           style={{
             display: "grid",
@@ -72,6 +74,8 @@ export default function TeamPage() {
             <div></div>
           </div>
         ))}
+        </div>
+        </div>
       </div>
     </div>
   );

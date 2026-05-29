@@ -111,6 +111,7 @@ h1, h2, h3, h4 {
   .ek-btn {
     @apply inline-flex items-center justify-center gap-2 rounded-[10px] font-semibold text-sm transition;
     padding: 10px 16px;
+    white-space: nowrap;
   }
   .ek-btn:active { transform: scale(0.98); }
 
@@ -201,3 +202,24 @@ h1, h2, h3, h4 {
   /* Hide elements too wide for phones (inline display is overridden). */
   .ek-hide-mobile { display: none !important; }
 }
+
+/* ── Responsive content grids ─────────────────────────────────────────
+   Pages set grid-template-columns inline; these classes override it
+   below the breakpoints (hence !important) so cards/columns stack. */
+@media (max-width: 900px) {
+  .ek-stack-md { grid-template-columns: 1fr !important; }
+  .ek-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  /* Kanban: swipe horizontally through columns instead of cramming 4. */
+  .ek-kanban {
+    grid-template-columns: none !important;
+    grid-auto-flow: column;
+    grid-auto-columns: 80vw;
+    overflow-x: auto;
+  }
+}
+@media (max-width: 560px) {
+  .ek-kpi-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Wrap wide tables so they scroll horizontally instead of breaking layout. */
+.ek-tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

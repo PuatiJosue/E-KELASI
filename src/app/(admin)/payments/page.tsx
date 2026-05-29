@@ -52,7 +52,8 @@ export default async function PaymentsPage() {
             <T fr="Aucune demande en attente." en="No pending requests." />
           </div>
         ) : (
-          <div>
+          <div className="ek-tablewrap">
+          <div style={{ minWidth: 780 }}>
             <div
               style={{
                 display: "grid",
@@ -114,6 +115,7 @@ export default async function PaymentsPage() {
               </div>
             ))}
           </div>
+          </div>
         )}
       </div>
 
@@ -129,7 +131,9 @@ export default async function PaymentsPage() {
             <T fr="Aucun paiement traité." en="No processed payments." />
           </div>
         ) : (
-          processed.map((p, i) => (
+          <div className="ek-tablewrap">
+          <div style={{ minWidth: 720 }}>
+          {processed.map((p, i) => (
             <div
               key={p.id}
               style={{
@@ -165,7 +169,9 @@ export default async function PaymentsPage() {
                 )}
               </div>
             </div>
-          ))
+          ))}
+          </div>
+          </div>
         )}
       </div>
     </div>

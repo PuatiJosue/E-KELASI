@@ -95,6 +95,7 @@ export function TicketBoard({ tickets }: { tickets: Record<string, Ticket[]> }) 
       </div>
 
       <div
+        className="ek-kanban"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
