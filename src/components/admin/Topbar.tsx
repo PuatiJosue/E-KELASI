@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T, useLang } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { MobileMenuButton } from "@/components/Shell";
 
 const LABELS: Record<string, { fr: string; en: string }> = {
   overview: { fr: "Vue d'ensemble",            en: "Overview" },
@@ -36,7 +37,8 @@ export function AdminTopbar() {
         flexShrink: 0,
       }}
     >
-      <div style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 600 }}>
+      <MobileMenuButton />
+      <div className="ek-hide-mobile" style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 600 }}>
         <T fr="Plateforme" en="Platform" /> <span style={{ color: "var(--ink-4)" }}>/</span>
       </div>
       <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.01em" }}>
@@ -46,6 +48,7 @@ export function AdminTopbar() {
       <LanguageToggle current={lang} />
       <button
         type="button"
+        className="ek-hide-mobile"
         onClick={() => {
           const ev = new KeyboardEvent("keydown", { key: "k", metaKey: true });
           window.dispatchEvent(ev);
@@ -116,7 +119,9 @@ export function AdminTopbar() {
         style={{ height: 34, padding: "0 12px", fontSize: 12.5 }}
       >
         <Icon name="plus" size={14} stroke={2.5} />
-        <T fr="Inviter une école" en="Invite a school" />
+        <span className="ek-hide-mobile">
+          <T fr="Inviter une école" en="Invite a school" />
+        </span>
       </button>
     </div>
   );

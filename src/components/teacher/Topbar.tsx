@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T, useLang } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { MobileMenuButton } from "@/components/Shell";
 
 const LABELS: Record<string, { fr: string; en: string }> = {
   dashboard: { fr: "Tableau de bord", en: "Dashboard" },
@@ -36,7 +37,8 @@ export function TeacherTopbar() {
         flexShrink: 0,
       }}
     >
-      <div style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 600 }}>
+      <MobileMenuButton />
+      <div className="ek-hide-mobile" style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 600 }}>
         <T fr="Enseignement" en="Teaching" /> <span style={{ color: "var(--ink-4)" }}>/</span>
       </div>
       <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.01em" }}>

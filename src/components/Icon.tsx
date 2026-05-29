@@ -46,6 +46,7 @@ const PATHS: Record<string, string> = {
     "M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6zM19 3l.6 1.8L21 5l-1.4.6L19 7l-.6-1.8L17 5l1.8-.6zM5 17l.6 1.8L7 19l-1.4.6L5 21l-.6-1.8L3 19l1.8-.6z",
   zap: "M13 2L3 14h7v8l10-12h-7z",
   lock: "M5 11h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM7 11V7a5 5 0 0 1 10 0v4",
+  menu: "M3 6h18M3 12h18M3 18h18",
 };
 
 export type IconName = keyof typeof PATHS;
