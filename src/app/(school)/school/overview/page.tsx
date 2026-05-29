@@ -36,13 +36,13 @@ export default async function SchoolOverview() {
         }
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+      <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
         <KPI label={<T fr="Élèves" en="Students" />} value={String(kpis.students)} sub={<T fr={`${kpis.classes} classes`} en={`${kpis.classes} classes`} />} />
         <KPI label={<T fr="Professeurs" en="Teachers" />} value={String(kpis.teachers)} sub={<T fr="dans votre école" en="in your school" />} />
         <KPI label={<T fr="Parents abonnés" en="Paying parents" />} value={String(kpis.parentsPaying)} accent="var(--accent)" sub={<T fr="essai + actifs" en="trial + active" />} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
+      <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
         <KPI label={<T fr="Notes saisies ce mois" en="Grades this month" />} value={String(kpis.gradesThisMonth)} sub={<T fr="par tous les profs" en="by all teachers" />} />
         <KPI label={<T fr="Devoirs actifs" en="Active homework" />} value={String(kpis.homeworkActive)} accent="var(--brand-600)" sub={<T fr="à rendre" en="pending" />} />
       </div>

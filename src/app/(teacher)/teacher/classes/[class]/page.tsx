@@ -34,6 +34,8 @@ export default async function ClassDetail({ params }: { params: { class: string 
       />
 
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="ek-tablewrap">
+        <div style={{ minWidth: 480 }}>
         <div
           style={{
             display: "grid",
@@ -91,6 +93,8 @@ export default async function ClassDetail({ params }: { params: { class: string 
             <T fr="Aucun élève dans cette classe." en="No students in this class." />
           </div>
         )}
+        </div>
+        </div>
       </div>
     </div>
   );

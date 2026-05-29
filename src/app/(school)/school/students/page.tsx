@@ -65,6 +65,8 @@ export default async function SchoolStudents() {
             <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{c}</div>
             <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{grouped[c].length} élèves</div>
           </div>
+          <div className="ek-tablewrap">
+          <div style={{ minWidth: 520 }}>
           {grouped[c].map((s, i) => (
             <div
               key={s.id}
@@ -97,6 +99,8 @@ export default async function SchoolStudents() {
               </div>
             </div>
           ))}
+          </div>
+          </div>
         </div>
       ))}
 

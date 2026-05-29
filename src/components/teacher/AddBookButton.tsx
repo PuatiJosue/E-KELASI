@@ -92,7 +92,7 @@ export function AddBookButton({ subjects }: { subjects: TeacherSubject[] }) {
               <Field label={<T fr="Auteur" en="Author" />}>
                 <input value={author} onChange={(e) => setAuthor(e.target.value)} required placeholder="Antoine de Saint-Exupéry" style={inputStyle} />
               </Field>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <Field label={<T fr="Matière (optionnel)" en="Subject (optional)" />}>
                   <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} style={inputStyle}>
                     <option value="">— Aucune —</option>

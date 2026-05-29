@@ -31,6 +31,8 @@ export default async function HomeworkListPage() {
       />
 
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="ek-tablewrap">
+        <div style={{ minWidth: 680 }}>
         <div
           style={{
             display: "grid",
@@ -83,6 +85,8 @@ export default async function HomeworkListPage() {
             );
           })
         )}
+        </div>
+        </div>
       </div>
     </div>
   );

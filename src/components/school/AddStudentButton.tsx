@@ -66,7 +66,7 @@ export function AddStudentButton() {
               <Field label={<T fr="Nom complet" en="Full name" />}>
                 <input value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="Mamadou Ndoye" style={inputStyle} />
               </Field>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <Field label={<T fr="Classe" en="Class" />}>
                   <input value={className} onChange={(e) => setClassName(e.target.value)} required placeholder="5ème B" style={inputStyle} />
                 </Field>

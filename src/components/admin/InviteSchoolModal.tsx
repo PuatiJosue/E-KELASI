@@ -87,7 +87,7 @@ function InviteSchoolModal({ onClose }: { onClose: () => void }) {
 
         <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <Field label={<T fr="Nom de l'école" en="School name" />} name="name" required placeholder="Lycée Jean-Mermoz" />
-          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 12 }}>
+          <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 12 }}>
             <Field label={<T fr="Ville" en="City" />} name="city" required placeholder="Dakar" />
             <Field label={<T fr="Pays (ISO)" en="Country (ISO)" />} name="country_code" required placeholder="SN" maxLength={2} />
           </div>

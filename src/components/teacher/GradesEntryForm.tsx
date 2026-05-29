@@ -80,7 +80,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
   return (
     <>
       <div className="ek-card" style={{ padding: 18 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 0.8fr 0.8fr 1fr", gap: 12 }}>
+        <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 0.8fr 0.8fr 1fr", gap: 12 }}>
           <Selector label={<T fr="Classe" en="Class" />} value={className} onChange={onChangeClass} options={classes.map((c) => ({ value: c, label: c }))} />
           <Selector
             label={<T fr="Matière" en="Subject" />}
@@ -132,6 +132,8 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
           </div>
         )}
 
+        <div className="ek-tablewrap">
+        <div style={{ minWidth: 480 }}>
         {students.length === 0 ? (
           <div style={{ padding: 32, textAlign: "center", color: "var(--ink-3)", fontSize: 12 }}>
             <T fr="Aucun élève dans cette classe." en="No students in this class." />
@@ -184,6 +186,8 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
             </div>
           ))
         )}
+        </div>
+        </div>
       </div>
     </>
   );

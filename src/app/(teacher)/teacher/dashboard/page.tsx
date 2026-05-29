@@ -47,14 +47,14 @@ export default async function TeacherDashboard() {
         }
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+      <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
         <KPI label={<T fr="Mes classes" en="My classes" />} value={String(classes.length)} sub={<T fr="cette année" en="this year" />} />
         <KPI label={<T fr="Total élèves" en="Total students" />} value={String(school?.totalStudents ?? 0)} sub={school?.name ?? ""} />
         <KPI label={<T fr="Notes saisies" en="Grades entered" />} value={String(recentGrades.length)} sub={<T fr="dernières en date" en="latest" />} />
         <KPI label={<T fr="Devoirs en cours" en="Homework active" />} value={String(todoCount)} accent="var(--brand-600)" sub={<T fr="à rendre" en="pending" />} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 14 }}>
+      <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 14 }}>
         {/* Recent grades */}
         <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--divider)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

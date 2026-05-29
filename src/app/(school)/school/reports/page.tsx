@@ -45,6 +45,8 @@ export default async function SchoolReports() {
             <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{c}</div>
             <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{grouped[c].length} bulletins</div>
           </div>
+          <div className="ek-tablewrap">
+          <div style={{ minWidth: 480 }}>
           {grouped[c].map((s, i) => (
             <Link
               key={s.id}
@@ -69,6 +71,8 @@ export default async function SchoolReports() {
               </div>
             </Link>
           ))}
+          </div>
+          </div>
         </div>
       ))}
 

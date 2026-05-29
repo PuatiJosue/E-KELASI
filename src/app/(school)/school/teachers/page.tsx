@@ -21,6 +21,8 @@ export default async function SchoolTeachers() {
       />
 
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="ek-tablewrap">
+        <div style={{ minWidth: 620 }}>
         <div
           style={{
             display: "grid",
@@ -71,6 +73,8 @@ export default async function SchoolTeachers() {
             </div>
           ))
         )}
+        </div>
+        </div>
       </div>
     </div>
   );
