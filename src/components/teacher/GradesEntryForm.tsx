@@ -29,6 +29,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
   const [students, setStudents] = useState<StudentRow[]>(initialStudents);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [sendPdf, setSendPdf] = useState(false);
 
   const filledCount = Object.values(scores).filter((s) => s.trim() !== "").length;
 
@@ -66,10 +67,14 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
         coefficient: parseFloat(coefficient),
         gradedAt,
         items,
+        sendPdf,
       });
       if (res.ok) {
-        setSuccess(`${items.length} note${items.length > 1 ? "s" : ""} enregistrée${items.length > 1 ? "s" : ""}.`);
+        const base = `${items.length} note${items.length > 1 ? "s" : ""} enregistrée${items.length > 1 ? "s" : ""}.`;
+        const pdfPart = sendPdf && res.pdfsSent ? ` ${res.pdfsSent} bulletin${res.pdfsSent > 1 ? "s" : ""} PDF envoyé${res.pdfsSent > 1 ? "s" : ""}.` : "";
+        setSuccess(base + pdfPart);
         setScores({});
+        setSendPdf(false);
         router.refresh();
       } else {
         setError(res.message);
@@ -101,7 +106,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
       </div>
 
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--divider)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--divider)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
               <T fr="Notes des élèves" en="Student grades" />
@@ -110,15 +115,26 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
               {filledCount}/{students.length} <T fr="notes saisies" en="grades entered" />
             </div>
           </div>
-          <button
-            onClick={onSubmit}
-            disabled={pending || filledCount === 0}
-            className="ek-btn ek-btn-primary"
-            style={{ height: 36, fontSize: 13, opacity: pending || filledCount === 0 ? 0.5 : 1 }}
-          >
-            <Icon name="check" size={14} stroke={2.5} />
-            {pending ? "Envoi…" : `Enregistrer ${filledCount > 0 ? `(${filledCount})` : ""}`}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--ink-2)", cursor: "pointer", userSelect: "none" }}>
+              <input
+                type="checkbox"
+                checked={sendPdf}
+                onChange={(e) => setSendPdf(e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: "var(--brand)" }}
+              />
+              <T fr="Envoyer aussi le bulletin PDF aux parents" en="Also send PDF report to parents" />
+            </label>
+            <button
+              onClick={onSubmit}
+              disabled={pending || filledCount === 0}
+              className="ek-btn ek-btn-primary"
+              style={{ height: 36, fontSize: 13, opacity: pending || filledCount === 0 ? 0.5 : 1 }}
+            >
+              <Icon name="check" size={14} stroke={2.5} />
+              {pending ? "Envoi…" : `Enregistrer ${filledCount > 0 ? `(${filledCount})` : ""}`}
+            </button>
+          </div>
         </div>
 
         {success && (

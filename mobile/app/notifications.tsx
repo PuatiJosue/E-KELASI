@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -101,6 +101,22 @@ export default function NotificationsScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 13.5, color: t.ink, fontWeight: i < 2 ? "600" : "500", fontFamily: i < 2 ? fonts.bodyBold : fonts.body }}>{n.text}</Text>
                 <Text style={{ fontSize: 11, color: t.ink3, marginTop: 2, fontFamily: fonts.body }}>{n.time}</Text>
+                {n.fileUrl ? (
+                  <Pressable
+                    onPress={() => Linking.openURL(n.fileUrl!)}
+                    style={{
+                      marginTop: 8, alignSelf: "flex-start",
+                      paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8,
+                      backgroundColor: t.brandSoft,
+                      flexDirection: "row", alignItems: "center", gap: 6,
+                    }}
+                  >
+                    <Icon name="download" size={13} color={t.brand600} />
+                    <Text style={{ fontSize: 12, color: t.brand600, fontWeight: "600", fontFamily: fonts.bodyBold }}>
+                      <T fr="Télécharger le bulletin" en="Download report" />
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             </Card>
           ))}

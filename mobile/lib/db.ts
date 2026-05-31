@@ -416,7 +416,7 @@ export async function listNotifications(): Promise<Notification[]> {
     if (!user) return [];
     const { data } = await supabase
       .from("notifications")
-      .select("kind, body, created_at")
+      .select("kind, body, payload, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -425,6 +425,7 @@ export async function listNotifications(): Promise<Notification[]> {
       kind: n.kind as Notification["kind"],
       text: n.body,
       time: fmtAgo(new Date(n.created_at)),
+      fileUrl: n.payload?.file_url,
     }));
   } catch {
     return MOCK.notifs;

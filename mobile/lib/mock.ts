@@ -45,5 +45,5 @@ export const MOCK = {
 export type Homework = (typeof MOCK.homework)[number];
 export type Grade = (typeof MOCK.grades)[number];
 export type Message = (typeof MOCK.messages)[number];
-export type Notification = (typeof MOCK.notifs)[number];
+export type Notification = (typeof MOCK.notifs)[number] & { fileUrl?: string };
 export type Subject = (typeof MOCK.subjects)[number];
