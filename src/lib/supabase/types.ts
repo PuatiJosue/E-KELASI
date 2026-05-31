@@ -631,6 +631,27 @@ export type Database = {
           },
         ]
       }
+      plan_prices: {
+        Row: {
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          amount_cents: number
+          currency: string
+          updated_at: string
+        }
+        Insert: {
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          amount_cents: number
+          currency?: string
+          updated_at?: string
+        }
+        Update: {
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          amount_cents?: number
+          currency?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       push_tokens: {
         Row: {
           created_at: string
