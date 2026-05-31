@@ -79,7 +79,13 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: 18, textAlign: "center", fontSize: 12, color: "var(--ink-3)" }}>
+        <div style={{ marginTop: 14, textAlign: "center", fontSize: 12 }}>
+          <Link href="/forgot-password" style={{ color: "var(--brand-600)", fontWeight: 600 }}>
+            Mot de passe oublié ?
+          </Link>
+        </div>
+
+        <div style={{ marginTop: 8, textAlign: "center", fontSize: 12, color: "var(--ink-3)" }}>
           <Link href="/overview" style={{ color: "var(--brand-600)", fontWeight: 600 }}>
             Continuer sans connexion (démo) →
           </Link>
