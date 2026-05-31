@@ -15,9 +15,15 @@ function service() {
   );
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function inviteTeacherAction(args: { email: string; fullName: string }): Promise<Result> {
-  if (!args.email || !args.fullName) return { ok: false, message: "Nom et email requis." };
-  if (!isLiveMode()) return { ok: true, message: `Invitation simulée envoyée à ${args.email}.` };
+  const email = (args.email ?? "").trim().toLowerCase();
+  const fullName = (args.fullName ?? "").trim();
+  if (!email || !fullName) return { ok: false, message: "Nom et email requis." };
+  if (!EMAIL_RE.test(email)) return { ok: false, message: "Email invalide." };
+  if (fullName.length > 120 || email.length > 254) return { ok: false, message: "Champs trop longs." };
+  if (!isLiveMode()) return { ok: true, message: `Invitation simulée envoyée à ${email}.` };
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -34,8 +40,8 @@ export async function inviteTeacherAction(args: { email: string; fullName: strin
 
   // Création du user via service role (nécessite la clé service_role)
   const admin = service();
-  const { data: created, error: createErr } = await admin.auth.admin.inviteUserByEmail(args.email, {
-    data: { full_name: args.fullName },
+  const { data: created, error: createErr } = await admin.auth.admin.inviteUserByEmail(email, {
+    data: { full_name: fullName },
     redirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/login`,
   });
 
@@ -44,10 +50,11 @@ export async function inviteTeacherAction(args: { email: string; fullName: strin
   if (createErr && !userId) {
     if (createErr.message.toLowerCase().includes("already") || createErr.message.toLowerCase().includes("exist")) {
       const { data: existing } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-      const found = existing?.users?.find((u) => u.email?.toLowerCase() === args.email.toLowerCase());
+      const found = existing?.users?.find((u) => u.email?.toLowerCase() === email);
       if (found) userId = found.id;
     } else {
-      return { ok: false, message: createErr.message };
+      console.warn("[invite-teacher] createUser error:", createErr.message);
+      return { ok: false, message: "Invitation impossible. Réessaie plus tard." };
     }
   }
 
@@ -56,8 +63,8 @@ export async function inviteTeacherAction(args: { email: string; fullName: strin
   // Profil
   await admin.from("profiles").upsert({
     id: userId,
-    email: args.email,
-    full_name: args.fullName,
+    email,
+    full_name: fullName,
     role: "teacher",
     locale: "fr",
   });
@@ -66,8 +73,11 @@ export async function inviteTeacherAction(args: { email: string; fullName: strin
   const { error: staffErr } = await admin
     .from("school_staff")
     .upsert({ school_id: staff.school_id, user_id: userId, role: "teacher" }, { onConflict: "school_id,user_id" });
-  if (staffErr) return { ok: false, message: staffErr.message };
+  if (staffErr) {
+    console.warn("[invite-teacher] staff upsert error:", staffErr.message);
+    return { ok: false, message: "Liaison à l'école échouée." };
+  }
 
   revalidatePath("/school/teachers");
-  return { ok: true, message: `Invitation envoyée à ${args.email}.` };
+  return { ok: true, message: `Invitation envoyée à ${email}.` };
 }

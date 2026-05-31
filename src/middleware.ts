@@ -4,8 +4,15 @@ import { createServerClient } from "@supabase/ssr";
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  // No-op if Supabase isn't configured (demo mode).
+  // Fail-closed: en production, on refuse de servir des routes protégées si Supabase
+  // n'est pas configuré (sinon toute l'app deviendrait accessible sans auth).
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (process.env.NODE_ENV === "production") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
+    // Dev/démo : on laisse passer pour pouvoir naviguer sans base.
     return response;
   }
 
