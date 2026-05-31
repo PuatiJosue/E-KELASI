@@ -51,7 +51,7 @@ export default async function OverviewPage() {
           label={<T fr="MRR" en="MRR" />}
           value={kpis.mrr}
           delta="+6.5%"
-          sub={<T fr="vs avril · €37 000" en="vs April · €37,000" />}
+          sub={<T fr="vs avril · $37 000" en="vs April · $37,000" />}
           trend={<Sparkline values={[28, 30.2, 32.5, 34, 37, 39.4]} w={140} h={26} color="var(--brand)" />}
         />
         <KPI

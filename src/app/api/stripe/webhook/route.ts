@@ -37,7 +37,7 @@ async function upsertSubscription(sub: Stripe.Subscription) {
       plan: planFromMetadata(sub),
       status: sub.status as any,
       amount_cents: amountCents,
-      currency: (item?.price?.currency ?? "eur").toUpperCase(),
+      currency: (item?.price?.currency ?? "usd").toUpperCase(),
       current_period_start: new Date((sub as any).current_period_start * 1000).toISOString(),
       current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
       canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,

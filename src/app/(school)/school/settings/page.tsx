@@ -16,7 +16,7 @@ export default async function SchoolSettings() {
         </div>
         <Row label="Nom" value={school?.name ?? "—"} />
         <Row label="Ville" value={`${school?.city ?? "—"}, ${school?.countryCode ?? ""}`} />
-        <Row label="Plan" value={school?.plan === "pro" ? "Pro · €120/mois" : "Standard · €80/mois"} />
+        <Row label="Plan" value={school?.plan === "pro" ? "Pro · $120/mois" : "Standard · $80/mois"} />
         <Row label="Statut" value={school?.status ?? "—"} last />
       </div>
 

@@ -7,7 +7,7 @@ export type PlanId = "essentiel" | "famille" | "premium";
 export type Plan = {
   id: PlanId;
   name: { fr: string; en: string };
-  price: string; // EUR/mois affiché
+  price: string; // USD/mois affiché
   priceCents: number;
   features: { fr: string; en: string }[];
   highlighted?: boolean;
@@ -18,7 +18,7 @@ export const PLANS: Plan[] = [
   {
     id: "essentiel",
     name: { fr: "Essentiel", en: "Essential" },
-    price: "9€/mois",
+    price: "$9/mois",
     priceCents: 900,
     features: [
       { fr: "1 enfant suivi", en: "1 child tracked" },
@@ -31,7 +31,7 @@ export const PLANS: Plan[] = [
   {
     id: "famille",
     name: { fr: "Famille", en: "Family" },
-    price: "19€/mois",
+    price: "$19/mois",
     priceCents: 1900,
     features: [
       { fr: "Jusqu'à 3 enfants", en: "Up to 3 children" },
@@ -45,7 +45,7 @@ export const PLANS: Plan[] = [
   {
     id: "premium",
     name: { fr: "Premium", en: "Premium" },
-    price: "29€/mois",
+    price: "$29/mois",
     priceCents: 2900,
     features: [
       { fr: "Enfants illimités", en: "Unlimited children" },

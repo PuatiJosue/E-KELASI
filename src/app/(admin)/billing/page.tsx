@@ -30,9 +30,9 @@ export default async function BillingPage() {
       />
 
       <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-        <KPI label={<T fr="MRR" en="MRR" />} value="€39 400" delta="+6.5%" sub="Stripe" />
-        <KPI label={<T fr="ARR" en="ARR" />} value="€472 800" delta="+5.8%" sub={<T fr="annualisé" en="annualized" />} />
-        <KPI label={<T fr="ARPU" en="ARPU" />} value="€9.12" delta="+0.4" sub={<T fr="par parent" en="per parent" />} />
+        <KPI label={<T fr="MRR" en="MRR" />} value="$39 400" delta="+6.5%" sub="Stripe" />
+        <KPI label={<T fr="ARR" en="ARR" />} value="$472 800" delta="+5.8%" sub={<T fr="annualisé" en="annualized" />} />
+        <KPI label={<T fr="ARPU" en="ARPU" />} value="$9.12" delta="+0.4" sub={<T fr="par parent" en="per parent" />} />
         <KPI
           label={<T fr="Échecs paiement" en="Failed payments" />}
           value="14"

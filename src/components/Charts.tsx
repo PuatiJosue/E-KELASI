@@ -81,7 +81,7 @@ export function MRRChart({
               strokeDasharray={i === 0 ? "0" : "3 4"}
             />
             <text x={pad.l - 8} y={y + 3} textAnchor="end" fontSize="10" fill="var(--ink-3)">
-              €{Math.round(t / 1000)}k
+              ${Math.round(t / 1000)}k
             </text>
           </g>
         );

@@ -23,18 +23,18 @@ export function isLiveMode() {
 
 // ── Formatting helpers ────────────────────────────────────────────────
 function currencySymbol(cur: string): string {
-  const c = (cur || "EUR").toUpperCase();
-  if (c === "EUR") return "€";
+  const c = (cur || "USD").toUpperCase();
   if (c === "USD") return "$";
+  if (c === "EUR") return "€";
   if (c === "GBP") return "£";
   return c + " ";
 }
 
-function fmtMoney(cents: number, currency = "EUR"): string {
+function fmtMoney(cents: number, currency = "USD"): string {
   return `${currencySymbol(currency)}${(cents / 100).toFixed(2)}`;
 }
 
-function fmtMoneyKpi(cents: number, currency = "EUR"): string {
+function fmtMoneyKpi(cents: number, currency = "USD"): string {
   return `${currencySymbol(currency)}${Math.round(cents / 100).toLocaleString("fr-FR")}`;
 }
 
@@ -124,7 +124,7 @@ export type Overview = {
 const MOCK_OVERVIEW: Overview = {
   mrr12m: MOCK_MRR_12M,
   topSchools: MOCK_TOP_SCHOOLS,
-  kpis: { mrr: "€39 400", parents: "4 320", churn: "2.4%", schools: "18" },
+  kpis: { mrr: "$39 400", parents: "4 320", churn: "2.4%", schools: "18" },
 };
 
 export async function getOverview(): Promise<Overview> {

@@ -6,22 +6,22 @@ export const MOCK_MRR_12M = [18, 19.2, 21, 22.5, 24, 26.5, 28, 30.2, 32.5, 34, 3
 );
 
 export const MOCK_TOP_SCHOOLS = [
-  { name: "Lycée Albert-Camus",   city: "Dakar, SN",    parents: 312, mrr: "€3 120", growth: "+8%" },
-  { name: "École Sainte-Thérèse", city: "Montréal, CA", parents: 286, mrr: "€2 860", growth: "+12%" },
-  { name: "Institut Lumière",     city: "Abidjan, CI",  parents: 224, mrr: "€2 240", growth: "+5%" },
-  { name: "Collège Saint-Joseph", city: "Lyon, FR",     parents: 198, mrr: "€1 980", growth: "+3%" },
-  { name: "École les Acacias",    city: "Yaoundé, CM",  parents: 156, mrr: "€1 560", growth: "+18%" },
+  { name: "Lycée Albert-Camus",   city: "Dakar, SN",    parents: 312, mrr: "$3 120", growth: "+8%" },
+  { name: "École Sainte-Thérèse", city: "Montréal, CA", parents: 286, mrr: "$2 860", growth: "+12%" },
+  { name: "Institut Lumière",     city: "Abidjan, CI",  parents: 224, mrr: "$2 240", growth: "+5%" },
+  { name: "Collège Saint-Joseph", city: "Lyon, FR",     parents: 198, mrr: "$1 980", growth: "+3%" },
+  { name: "École les Acacias",    city: "Yaoundé, CM",  parents: 156, mrr: "$1 560", growth: "+18%" },
 ];
 
 export const MOCK_SCHOOLS = [
-  { name: "Lycée Albert-Camus",   city: "Dakar, SN",    plan: "Pro",      parents: 312, teachers: 48, mrr: "€3 120", status: "active",     since: "Sept 2024" },
-  { name: "École Sainte-Thérèse", city: "Montréal, CA", plan: "Pro",      parents: 286, teachers: 36, mrr: "€2 860", status: "active",     since: "Janv 2025" },
-  { name: "Institut Lumière",     city: "Abidjan, CI",  plan: "Standard", parents: 224, teachers: 31, mrr: "€2 240", status: "active",     since: "Mars 2025" },
-  { name: "Collège Saint-Joseph", city: "Lyon, FR",     plan: "Standard", parents: 198, teachers: 28, mrr: "€1 980", status: "active",     since: "Sept 2025" },
-  { name: "École les Acacias",    city: "Yaoundé, CM",  plan: "Standard", parents: 156, teachers: 22, mrr: "€1 560", status: "trial",      since: "Mai 2026" },
+  { name: "Lycée Albert-Camus",   city: "Dakar, SN",    plan: "Pro",      parents: 312, teachers: 48, mrr: "$3 120", status: "active",     since: "Sept 2024" },
+  { name: "École Sainte-Thérèse", city: "Montréal, CA", plan: "Pro",      parents: 286, teachers: 36, mrr: "$2 860", status: "active",     since: "Janv 2025" },
+  { name: "Institut Lumière",     city: "Abidjan, CI",  plan: "Standard", parents: 224, teachers: 31, mrr: "$2 240", status: "active",     since: "Mars 2025" },
+  { name: "Collège Saint-Joseph", city: "Lyon, FR",     plan: "Standard", parents: 198, teachers: 28, mrr: "$1 980", status: "active",     since: "Sept 2025" },
+  { name: "École les Acacias",    city: "Yaoundé, CM",  plan: "Standard", parents: 156, teachers: 22, mrr: "$1 560", status: "trial",      since: "Mai 2026" },
   { name: "Lycée Lumière",        city: "Casablanca, MA", plan: "Pro",    parents: 0,   teachers: 0,  mrr: "—",      status: "onboarding", since: "Mai 2026" },
-  { name: "École Tunis-Centre",   city: "Tunis, TN",    plan: "Standard", parents: 89,  teachers: 14, mrr: "€890",   status: "active",     since: "Nov 2025" },
-  { name: "Collège Mermoz",       city: "Nouakchott, MR", plan: "Standard", parents: 132, teachers: 19, mrr: "€1 320", status: "active",   since: "Avr 2025" },
+  { name: "École Tunis-Centre",   city: "Tunis, TN",    plan: "Standard", parents: 89,  teachers: 14, mrr: "$890",   status: "active",     since: "Nov 2025" },
+  { name: "Collège Mermoz",       city: "Nouakchott, MR", plan: "Standard", parents: 132, teachers: 19, mrr: "$1 320", status: "active",   since: "Avr 2025" },
 ];
 
 export type PaymentRow = {
@@ -33,13 +33,13 @@ export type PaymentRow = {
 };
 
 export const MOCK_PAYMENTS: PaymentRow[] = [
-  { parent: "Fatou Diallo",  plan: "Famille",   amount: "€19.00", status: "paid",     date: "24 mai 14:12" },
-  { parent: "Karim Benali",  plan: "Essentiel", amount: "€9.00",  status: "paid",     date: "24 mai 12:40" },
-  { parent: "Sophie Roux",   plan: "Premium",   amount: "€29.00", status: "paid",     date: "24 mai 11:08" },
-  { parent: "Antoine Mboma", plan: "Essentiel", amount: "€9.00",  status: "failed",   date: "24 mai 09:32" },
-  { parent: "Aïcha Traoré",  plan: "Famille",   amount: "€19.00", status: "paid",     date: "24 mai 08:15" },
-  { parent: "Marc Dupont",   plan: "Essentiel", amount: "€9.00",  status: "refunded", date: "23 mai 18:48" },
-  { parent: "Léa Robert",    plan: "Famille",   amount: "€19.00", status: "paid",     date: "23 mai 16:20" },
+  { parent: "Fatou Diallo",  plan: "Famille",   amount: "$19.00", status: "paid",     date: "24 mai 14:12" },
+  { parent: "Karim Benali",  plan: "Essentiel", amount: "$9.00",  status: "paid",     date: "24 mai 12:40" },
+  { parent: "Sophie Roux",   plan: "Premium",   amount: "$29.00", status: "paid",     date: "24 mai 11:08" },
+  { parent: "Antoine Mboma", plan: "Essentiel", amount: "$9.00",  status: "failed",   date: "24 mai 09:32" },
+  { parent: "Aïcha Traoré",  plan: "Famille",   amount: "$19.00", status: "paid",     date: "24 mai 08:15" },
+  { parent: "Marc Dupont",   plan: "Essentiel", amount: "$9.00",  status: "refunded", date: "23 mai 18:48" },
+  { parent: "Léa Robert",    plan: "Famille",   amount: "$19.00", status: "paid",     date: "23 mai 16:20" },
 ];
 
 export type Ticket = {

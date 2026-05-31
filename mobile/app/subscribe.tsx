@@ -240,7 +240,7 @@ export default function Subscribe() {
         }}
         plan={currentPlan.id}
         amountCents={currentPlan.priceCents}
-        currency="EUR"
+        currency="USD"
       />
     </SafeAreaView>
   );

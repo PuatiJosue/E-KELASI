@@ -28,7 +28,7 @@ Ce qui ne peut pas être fait depuis le code et qu'il faut configurer
 
 ## 2. Stripe (dashboard)
 
-- Créer 3 **Prices** récurrents (essentiel, famille, premium) → noter les `price_xxx`.
+- Créer 3 **Prices** récurrents **en USD** (essentiel $9, famille $19, premium $29) → noter les `price_xxx`.
 - Mode **Live** : utiliser les clés `sk_live_...` / `pk_live_...` (jamais les `_test` en prod).
 - **Webhooks → Endpoints** : ajouter `https://ton-domaine.com/api/stripe/webhook`
   avec les événements : `customer.subscription.*`, `invoice.payment_succeeded`,
