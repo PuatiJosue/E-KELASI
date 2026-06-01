@@ -120,7 +120,8 @@ export async function getSchoolKpis(): Promise<SchoolKpis> {
       const { count } = await supabase
         .from("grades")
         .select("*", { count: "exact", head: true })
-        .gte("created_at", monthStart.toISOString());
+        .gte("created_at", monthStart.toISOString())
+        .is("archived_at", null);
       gradesThisMonth = count ?? 0;
     }
 
@@ -128,7 +129,8 @@ export async function getSchoolKpis(): Promise<SchoolKpis> {
     const { count: hw } = await supabase
       .from("homework")
       .select("*", { count: "exact", head: true })
-      .in("status", ["todo", "inprogress"]);
+      .in("status", ["todo", "inprogress"])
+      .is("archived_at", null);
 
     // parents payants : count subscriptions actives liées à des élèves de l'école
     const { data: links } = await supabase
@@ -205,7 +207,8 @@ export async function listSchoolStudents(): Promise<SchoolStudentRow[]> {
       supabase
         .from("grades")
         .select("student_id, score, max_score, coefficient")
-        .in("student_id", ids),
+        .in("student_id", ids)
+        .is("archived_at", null),
     ]);
 
     return students.map((s: any) => {
@@ -268,6 +271,7 @@ export async function getStudentReportData(studentId: string) {
       .from("grades")
       .select("kind, score, max_score, coefficient, graded_at, comment, subjects(name, short_name)")
       .eq("student_id", studentId)
+      .is("archived_at", null)
       .order("graded_at", { ascending: false });
 
     // moyenne par matière

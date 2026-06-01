@@ -164,7 +164,8 @@ export async function listStudentsInClass(className: string): Promise<StudentRow
     const { data: grades } = await supabase
       .from("grades")
       .select("student_id, score, max_score, coefficient")
-      .in("student_id", ids);
+      .in("student_id", ids)
+      .is("archived_at", null);
 
     return students.map((s: any) => {
       const gs = (grades ?? []).filter((g: any) => g.student_id === s.id);
@@ -238,6 +239,7 @@ export async function listTeacherRecentGrades(limit = 10): Promise<GradeRow[]> {
       .from("grades")
       .select("id, kind, score, max_score, coefficient, graded_at, students(full_name), subjects(name)")
       .eq("teacher_id", user.id)
+      .is("archived_at", null)
       .order("graded_at", { ascending: false })
       .limit(limit);
     return (data ?? []).map((g: any) => ({
@@ -265,6 +267,7 @@ export async function listTeacherHomework(): Promise<HomeworkRow[]> {
       .from("homework")
       .select("id, title, class_name, due_at, status, subjects(name)")
       .eq("teacher_id", user.id)
+      .is("archived_at", null)
       .order("due_at", { ascending: false });
     return (data ?? []).map((h: any) => ({
       id: h.id,

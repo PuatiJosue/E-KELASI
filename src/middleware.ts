@@ -47,6 +47,7 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/security") ||
     path.startsWith("/team") ||
     path.startsWith("/plans") ||
+    path.startsWith("/year-archive") ||
     path.startsWith("/settings");
   const isTeacherRoute = path.startsWith("/teacher");
   const isSchoolRoute = path.startsWith("/school");

@@ -137,6 +137,7 @@ export type Database = {
       }
       grades: {
         Row: {
+          archived_at: string | null
           coefficient: number
           comment: string | null
           created_at: string
@@ -150,6 +151,7 @@ export type Database = {
           teacher_id: string | null
         }
         Insert: {
+          archived_at?: string | null
           coefficient?: number
           comment?: string | null
           created_at?: string
@@ -163,6 +165,7 @@ export type Database = {
           teacher_id?: string | null
         }
         Update: {
+          archived_at?: string | null
           coefficient?: number
           comment?: string | null
           created_at?: string
@@ -201,6 +204,7 @@ export type Database = {
       }
       homework: {
         Row: {
+          archived_at: string | null
           class_name: string
           created_at: string
           description: string | null
@@ -212,6 +216,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          archived_at?: string | null
           class_name: string
           created_at?: string
           description?: string | null
@@ -223,6 +228,7 @@ export type Database = {
           title: string
         }
         Update: {
+          archived_at?: string | null
           class_name?: string
           created_at?: string
           description?: string | null
@@ -737,6 +743,7 @@ export type Database = {
       }
       students: {
         Row: {
+          avatar_url: string | null
           birth_date: string | null
           class_name: string | null
           created_at: string
@@ -746,6 +753,7 @@ export type Database = {
           school_id: string
         }
         Insert: {
+          avatar_url?: string | null
           birth_date?: string | null
           class_name?: string | null
           created_at?: string
@@ -755,6 +763,7 @@ export type Database = {
           school_id: string
         }
         Update: {
+          avatar_url?: string | null
           birth_date?: string | null
           class_name?: string | null
           created_at?: string
@@ -951,6 +960,14 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       is_super_admin: { Args: never; Returns: boolean }
+      archive_year: {
+        Args: { cutoff: string }
+        Returns: { grades_count: number; homework_count: number }[]
+      }
+      set_student_avatar: {
+        Args: { p_student_id: string; p_avatar_url: string }
+        Returns: void
+      }
     }
     Enums: {
       homework_status: "todo" | "inprogress" | "done" | "late"

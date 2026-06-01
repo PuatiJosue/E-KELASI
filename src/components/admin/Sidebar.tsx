@@ -20,9 +20,10 @@ const NAV: NavItem[] = [
 ];
 
 const ORG: NavItem[] = [
-  { id: "team",     href: "/team",     icon: "users",      fr: "Équipe E-KELASI", en: "E-KELASI team" },
-  { id: "plans",    href: "/plans",    icon: "creditcard", fr: "Plans & prix",    en: "Plans & pricing" },
-  { id: "settings", href: "/settings", icon: "settings",   fr: "Paramètres",      en: "Settings" },
+  { id: "team",          href: "/team",          icon: "users",      fr: "Équipe E-KELASI", en: "E-KELASI team" },
+  { id: "plans",         href: "/plans",         icon: "creditcard", fr: "Plans & prix",    en: "Plans & pricing" },
+  { id: "year-archive",  href: "/year-archive",  icon: "refresh",    fr: "Archive annuelle", en: "Year archive" },
+  { id: "settings",      href: "/settings",      icon: "settings",   fr: "Paramètres",      en: "Settings" },
 ];
 
 function NavGroup({ label, items }: { label: { fr: string; en: string }; items: NavItem[] }) {

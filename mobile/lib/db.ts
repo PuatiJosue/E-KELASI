@@ -95,7 +95,8 @@ export async function getChild(): Promise<Child> {
     const { data: grades } = await supabase
       .from("grades")
       .select("score, max_score, coefficient")
-      .eq("student_id", studentId);
+      .eq("student_id", studentId)
+      .is("archived_at", null);
     let avg = 0;
     if (grades && grades.length > 0) {
       const weighted = grades.reduce((acc: number, g: any) => acc + (g.score / g.max_score) * 20 * g.coefficient, 0);
@@ -127,7 +128,8 @@ export async function listSubjects(): Promise<Subject[]> {
     const { data: grades } = await supabase
       .from("grades")
       .select("subject_id, score, max_score, coefficient")
-      .eq("student_id", child.id);
+      .eq("student_id", child.id)
+      .is("archived_at", null);
     return subjects.map((s: any) => {
       const gs = (grades ?? []).filter((g: any) => g.subject_id === s.id);
       let avg = 0;
@@ -152,6 +154,7 @@ export async function listGrades(limit = 20): Promise<Grade[]> {
       .from("grades")
       .select("kind, score, max_score, coefficient, graded_at, subjects(name), profiles(full_name)")
       .eq("student_id", child.id)
+      .is("archived_at", null)
       .order("graded_at", { ascending: false })
       .limit(limit);
     if (!data) return MOCK.grades;
@@ -178,6 +181,7 @@ export async function listHomework(): Promise<Homework[]> {
       .from("homework")
       .select("title, due_at, status, subjects(name), profiles(full_name)")
       .eq("class_name", child.grade)
+      .is("archived_at", null)
       .order("due_at", { ascending: true });
     if (!data) return MOCK.homework;
     return data.map((h: any) => ({

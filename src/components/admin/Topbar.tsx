@@ -13,9 +13,10 @@ const LABELS: Record<string, { fr: string; en: string }> = {
   payments: { fr: "Paiements Mobile Money",    en: "Mobile Money payments" },
   support:  { fr: "Support & tickets",         en: "Support & tickets" },
   security: { fr: "Sécurité & journaux",       en: "Security & logs" },
-  team:     { fr: "Équipe E-KELASI",           en: "E-KELASI team" },
-  plans:    { fr: "Plans & tarifs",            en: "Plans & pricing" },
-  settings: { fr: "Paramètres",                en: "Settings" },
+  team:           { fr: "Équipe E-KELASI",           en: "E-KELASI team" },
+  plans:          { fr: "Plans & tarifs",            en: "Plans & pricing" },
+  "year-archive": { fr: "Archive annuelle",          en: "Year archive" },
+  settings:       { fr: "Paramètres",                en: "Settings" },
 };
 
 export function AdminTopbar() {

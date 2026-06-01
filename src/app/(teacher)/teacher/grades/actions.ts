@@ -149,6 +149,7 @@ async function sendReportPdfs(opts: {
         .select("score, max_score, coefficient, graded_at, kind, subject_id, subjects(name)")
         .eq("student_id", studentId)
         .gte("graded_at", yearStart)
+        .is("archived_at", null)
         .order("graded_at", { ascending: true });
 
       // Groupage par matière
