@@ -567,6 +567,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           avatar_url: string | null
           created_at: string
           email: string
@@ -578,6 +579,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: string | null
           avatar_url?: string | null
           created_at?: string
           email: string
@@ -589,6 +591,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: string | null
           avatar_url?: string | null
           created_at?: string
           email?: string
@@ -657,6 +660,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      teacher_access_codes: {
+        Row: {
+          code: string
+          school_id: string
+          full_name: string
+          address: string | null
+          created_by: string | null
+          created_at: string
+          redeemed_by: string | null
+          redeemed_at: string | null
+        }
+        Insert: {
+          code: string
+          school_id: string
+          full_name: string
+          address?: string | null
+          created_by?: string | null
+          created_at?: string
+          redeemed_by?: string | null
+          redeemed_at?: string | null
+        }
+        Update: {
+          code?: string
+          school_id?: string
+          full_name?: string
+          address?: string | null
+          created_by?: string | null
+          created_at?: string
+          redeemed_by?: string | null
+          redeemed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_access_codes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_tokens: {
         Row: {
