@@ -29,6 +29,13 @@ async function upsertSubscription(sub: Stripe.Subscription) {
   const item = sub.items.data[0];
   const amountCents = item?.price?.unit_amount ?? 0;
 
+  // Robustesse multi-versions API Stripe : depuis ~2024, current_period_start/end
+  // ont migré de l'objet Subscription vers l'item. On lit l'un ou l'autre.
+  const tsToIso = (ts: unknown): string | null =>
+    typeof ts === "number" && Number.isFinite(ts) ? new Date(ts * 1000).toISOString() : null;
+  const periodStart = tsToIso((sub as any).current_period_start ?? (item as any)?.current_period_start);
+  const periodEnd = tsToIso((sub as any).current_period_end ?? (item as any)?.current_period_end);
+
   await supabase.from("subscriptions").upsert(
     {
       parent_id: parentId,
@@ -38,8 +45,8 @@ async function upsertSubscription(sub: Stripe.Subscription) {
       status: sub.status as any,
       amount_cents: amountCents,
       currency: (item?.price?.currency ?? "usd").toUpperCase(),
-      current_period_start: new Date((sub as any).current_period_start * 1000).toISOString(),
-      current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
+      current_period_start: periodStart,
+      current_period_end: periodEnd,
       canceled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
     },
     { onConflict: "stripe_subscription_id" }
@@ -48,7 +55,15 @@ async function upsertSubscription(sub: Stripe.Subscription) {
 
 async function recordPayment(invoice: Stripe.Invoice, status: "paid" | "failed") {
   const supabase = service();
-  const subId = (invoice as any).subscription as string | null;
+  // Robustesse multi-versions : l'ID d'abonnement sur la facture a changé d'emplacement
+  // selon la version API (top-level `subscription`, puis `parent.subscription_details`,
+  // sinon au niveau des lignes).
+  const inv = invoice as any;
+  const subId: string | null =
+    (typeof inv.subscription === "string" ? inv.subscription : inv.subscription?.id) ??
+    inv.parent?.subscription_details?.subscription ??
+    inv.lines?.data?.find((l: any) => l.subscription)?.subscription ??
+    null;
   if (!subId) return;
   const { data: sub } = await supabase
     .from("subscriptions")

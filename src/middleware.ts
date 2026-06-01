@@ -49,8 +49,11 @@ export async function middleware(request: NextRequest) {
     path.startsWith("/plans") ||
     path.startsWith("/year-archive") ||
     path.startsWith("/settings");
-  const isTeacherRoute = path.startsWith("/teacher");
-  const isSchoolRoute = path.startsWith("/school");
+  // Attention : matcher "/teacher/" (avec slash) et pas "/teacher" tout court,
+  // sinon "/teacher-signup" (page publique d'inscription prof) serait pris pour
+  // une route protégée et renverrait vers /login.
+  const isTeacherRoute = path === "/teacher" || path.startsWith("/teacher/");
+  const isSchoolRoute = path === "/school" || path.startsWith("/school/");
 
   // Gate : ces routes demandent une session.
   if ((isAdminRoute || isTeacherRoute || isSchoolRoute) && !user) {

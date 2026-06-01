@@ -26,7 +26,7 @@ export default function LoginPage() {
             marginBottom: 4,
           }}
         >
-          Console super admin
+          Espace E-KELASI
         </h1>
         <p
           style={{
