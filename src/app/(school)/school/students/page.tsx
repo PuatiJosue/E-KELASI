@@ -80,7 +80,7 @@ export default async function SchoolStudents() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Avatar name={s.fullName} size={32} />
+                <Avatar name={s.fullName} url={s.avatarUrl} size={32} />
                 <span style={{ fontWeight: 600, color: "var(--ink)" }}>{s.fullName}</span>
               </div>
               <div style={{ color: "var(--ink-3)", fontSize: 11.5 }}>

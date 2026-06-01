@@ -12,12 +12,34 @@ const TINTS: Array<[string, string]> = [
 export function Avatar({
   name = "?",
   size = 36,
+  url,
   style,
 }: {
   name?: string;
   size?: number;
+  url?: string | null;
   style?: CSSProperties;
 }) {
+  // Photo dispo → on l'affiche en cercle
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt={name}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          objectFit: "cover",
+          background: "var(--surface-2)",
+          flexShrink: 0,
+          ...style,
+        }}
+      />
+    );
+  }
+
+  // Sinon : initiales colorées (fallback)
   const initials = String(name)
     .split(" ")
     .map((s) => s[0])

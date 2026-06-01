@@ -14,6 +14,7 @@ export type Child = {
   avg: number;
   rank: number;
   total: number;
+  avatarUrl?: string | null;
 };
 
 export type Thread = {
@@ -84,7 +85,7 @@ export async function getChild(): Promise<Child> {
   try {
     const { data: links } = await supabase
       .from("parent_links")
-      .select("students(id, full_name, class_name, grade_level, schools(name))")
+      .select("students(id, full_name, class_name, grade_level, avatar_url, schools(name))")
       .limit(1)
       .single();
     if (!links || !(links as any).students) return DEMO_CHILD;
@@ -112,6 +113,7 @@ export async function getChild(): Promise<Child> {
       avg,
       rank: MOCK.child.rank,
       total: MOCK.child.total,
+      avatarUrl: s.avatar_url ?? null,
     };
   } catch {
     return DEMO_CHILD;

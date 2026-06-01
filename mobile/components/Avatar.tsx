@@ -1,4 +1,4 @@
-import { View, Text, type ViewStyle } from "react-native";
+import { View, Text, Image, type ViewStyle } from "react-native";
 import { fonts } from "@/lib/theme";
 
 const TINTS: Array<[string, string]> = [
@@ -13,12 +13,28 @@ const TINTS: Array<[string, string]> = [
 export function Avatar({
   name = "?",
   size = 36,
+  url,
   style,
 }: {
   name?: string;
   size?: number;
+  url?: string | null;
   style?: ViewStyle;
 }) {
+  // Si on a une URL photo → on l'affiche en cercle
+  if (url) {
+    return (
+      <Image
+        source={{ uri: url }}
+        style={[
+          { width: size, height: size, borderRadius: size / 2, backgroundColor: "#ECE3D2" },
+          style as any,
+        ]}
+      />
+    );
+  }
+
+  // Sinon : initiales colorées (fallback)
   const initials = String(name)
     .split(" ")
     .map((s) => s[0])

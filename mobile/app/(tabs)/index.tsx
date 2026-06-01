@@ -1,6 +1,6 @@
 // Home / Dashboard — greeting, child hero, recent grades, homework, messages preview.
 
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -54,7 +54,7 @@ export default function Home() {
         <HeaderGreeting parentName={parentName} onBell={() => router.push("/notifications")} />
 
         <View style={{ padding: 20, paddingTop: 12, gap: 14 }}>
-          <ChildHero child={child} />
+          <ChildHero child={child} onAvatarChange={(url) => setChild((c) => (c ? { ...c, avatarUrl: url } : c))} />
 
           <SectionTitle
             title={{ fr: "Nouvelles notes", en: "New grades" }}
@@ -180,8 +180,20 @@ function HeaderGreeting({ parentName, onBell }: { parentName: string; onBell: ()
   );
 }
 
-function ChildHero({ child }: { child: Child }) {
+function ChildHero({ child, onAvatarChange }: { child: Child; onAvatarChange?: (url: string) => void }) {
   const t = useTheme();
+  const [uploading, setUploading] = useState(false);
+
+  const onPickPhoto = async () => {
+    if (uploading) return;
+    setUploading(true);
+    const { pickAndUploadChildPhoto } = await import("@/lib/studentPhoto");
+    const res = await pickAndUploadChildPhoto(child.id);
+    setUploading(false);
+    if (res.ok) onAvatarChange?.(res.url);
+    else if (res.error !== "Annulé.") Alert.alert("Photo", res.error);
+  };
+
   return (
     <View
       style={{
@@ -209,7 +221,17 @@ function ChildHero({ child }: { child: Child }) {
         <Path d="M3 10l9-5 9 5-9 5-9-5zM5 12v6c0 1 3 3 7 3s7-2 7-3v-6" />
       </Svg>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <Avatar name={child.name} size={52} style={{ backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 2, borderColor: "rgba(255,255,255,0.3)" }} />
+        <Pressable onPress={onPickPhoto} disabled={uploading} style={{ opacity: uploading ? 0.6 : 1 }}>
+          <Avatar
+            name={child.name}
+            url={child.avatarUrl}
+            size={52}
+            style={{ backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 2, borderColor: "rgba(255,255,255,0.3)" }}
+          />
+          {uploading && (
+            <ActivityIndicator size="small" color="white" style={{ position: "absolute", top: 16, left: 16 }} />
+          )}
+        </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 11, color: "white", opacity: 0.85, fontWeight: "600", letterSpacing: 0.6, textTransform: "uppercase", fontFamily: fonts.body }}>
             <T fr="Mon enfant" en="My child" />

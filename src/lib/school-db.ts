@@ -39,6 +39,7 @@ export type SchoolStudentRow = {
   gradeLevel: string;
   parentNames: string[];
   avg: number | null;
+  avatarUrl: string | null;
 };
 
 export type ClassWithAvg = {
@@ -192,7 +193,7 @@ export async function listSchoolStudents(): Promise<SchoolStudentRow[]> {
     if (!school) return [];
     const { data: students } = await supabase
       .from("students")
-      .select("id, full_name, class_name, grade_level")
+      .select("id, full_name, class_name, grade_level, avatar_url")
       .eq("school_id", school.id)
       .order("class_name")
       .order("full_name");
@@ -230,6 +231,7 @@ export async function listSchoolStudents(): Promise<SchoolStudentRow[]> {
         gradeLevel: s.grade_level,
         parentNames: ps,
         avg,
+        avatarUrl: s.avatar_url ?? null,
       };
     });
   } catch {
