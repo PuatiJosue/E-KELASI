@@ -8,6 +8,7 @@ export type TeacherProfile = {
   id: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
 };
 
 export type TeacherSchool = {
@@ -59,14 +60,18 @@ export type TeacherSubject = {
 
 export async function getTeacherProfile(): Promise<TeacherProfile | null> {
   if (!isLiveMode()) {
-    return { id: "demo-teacher", name: "M. Ousmane Bâ", email: "ousmane.ba@ekelasi.demo" };
+    return { id: "demo-teacher", name: "M. Ousmane Bâ", email: "ousmane.ba@ekelasi.demo", avatarUrl: null };
   }
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data } = await supabase.from("profiles").select("full_name, email").eq("id", user.id).maybeSingle();
+  const { data } = await supabase
+    .from("profiles")
+    .select("full_name, email, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
   if (!data) return null;
-  return { id: user.id, name: data.full_name, email: data.email };
+  return { id: user.id, name: data.full_name, email: data.email, avatarUrl: data.avatar_url };
 }
 
 export async function getTeacherSchool(): Promise<TeacherSchool | null> {

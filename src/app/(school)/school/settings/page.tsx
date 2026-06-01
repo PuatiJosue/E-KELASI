@@ -1,14 +1,40 @@
 import { PageHeader } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
+import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
 import { T } from "@/lib/i18n";
 import { getMySchool } from "@/lib/school-db";
+import { createClient } from "@/lib/supabase/server";
+import { isLiveMode } from "@/lib/db";
+
+async function getMyProfile() {
+  if (!isLiveMode()) return { name: "Direction", email: "direction@ekelasi.demo", avatarUrl: null };
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase.from("profiles").select("full_name, email, avatar_url").eq("id", user.id).maybeSingle();
+  if (!data) return null;
+  return { name: data.full_name, email: data.email, avatarUrl: data.avatar_url };
+}
 
 export default async function SchoolSettings() {
-  const school = await getMySchool();
+  const [school, me] = await Promise.all([getMySchool(), getMyProfile()]);
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxWidth: 760 }}>
       <PageHeader title={{ fr: "Paramètres", en: "Settings" }} />
+
+      <div className="ek-card" style={{ padding: 24, display: "flex", alignItems: "center", gap: 20 }}>
+        <ProfileAvatarUploader currentUrl={me?.avatarUrl ?? null} name={me?.name ?? "?"} size={72} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11.5, color: "var(--ink-3)", fontWeight: 600 }}>
+            <T fr="MON PROFIL" en="MY PROFILE" />
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)", marginTop: 4 }}>
+            {me?.name ?? "—"}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--ink-3)", marginTop: 2 }}>{me?.email ?? ""}</div>
+        </div>
+      </div>
 
       <div className="ek-card" style={{ padding: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>

@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/KPI";
-import { Avatar } from "@/components/Avatar";
+import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
 import { T } from "@/lib/i18n";
 import { getTeacherProfile, getTeacherSchool, listTeacherClasses } from "@/lib/teacher-db";
 
@@ -14,8 +14,8 @@ export default async function TeacherProfilePage() {
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxWidth: 760 }}>
       <PageHeader title={{ fr: "Mon profil", en: "My profile" }} />
 
-      <div className="ek-card" style={{ padding: 24, display: "flex", alignItems: "center", gap: 16 }}>
-        <Avatar name={profile?.name ?? "?"} size={64} />
+      <div className="ek-card" style={{ padding: 24, display: "flex", alignItems: "center", gap: 20 }}>
+        <ProfileAvatarUploader currentUrl={profile?.avatarUrl ?? null} name={profile?.name ?? "?"} size={72} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
             {profile?.name ?? "—"}
