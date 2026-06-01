@@ -12,6 +12,7 @@ import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { isLiveMode } from "@/lib/supabase";
+import { pinToPassword, isValidPin } from "@/lib/pin";
 
 export default function Login() {
   const t = useTheme();
@@ -19,18 +20,22 @@ export default function Login() {
   const router = useRouter();
   const { signIn, signInDemo } = useAuth();
 
-  const [email, setEmail] = useState(isLiveMode ? "fatou.diallo@exemple.com" : "");
-  const [password, setPassword] = useState(isLiveMode ? "demo1234" : "");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async () => {
     setError(null);
+    if (!isValidPin(password)) {
+      setError(tr({ fr: "Le code doit faire 4 chiffres.", en: "PIN must be 4 digits." }));
+      return;
+    }
     setBusy(true);
-    const res = await signIn(email.trim(), password);
+    const res = await signIn(email.trim(), pinToPassword(password));
     setBusy(false);
     if (!res.ok) {
-      setError(res.error ?? tr({ fr: "Échec de connexion", en: "Login failed" }));
+      setError(res.error ?? tr({ fr: "Email ou code incorrect.", en: "Incorrect email or PIN." }));
       return;
     }
     router.replace("/(tabs)");
@@ -78,12 +83,14 @@ export default function Login() {
               icon="mail"
             />
             <Field
-              label={tr({ fr: "Mot de passe", en: "Password" })}
+              label={tr({ fr: "Code à 4 chiffres", en: "4-digit PIN" })}
               value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
+              onChangeText={(v) => setPassword(v.replace(/\D/g, "").slice(0, 4))}
+              placeholder="••••"
               secureTextEntry
-              autoComplete="password"
+              keyboardType="number-pad"
+              maxLength={4}
+              autoComplete="off"
               icon="lock"
             />
             <Pressable style={{ alignSelf: "flex-end", marginTop: -4 }}>
@@ -108,7 +115,7 @@ export default function Login() {
 
           <Button
             onPress={onSubmit}
-            disabled={busy || !email || !password}
+            disabled={busy || !email || !isValidPin(password)}
             style={{ marginTop: 24, paddingVertical: 16, borderRadius: 14, opacity: busy ? 0.6 : 1 }}
           >
             <Text style={{ color: t.onBrand, fontSize: 15.5, fontWeight: "700", fontFamily: fonts.bodyBold }}>

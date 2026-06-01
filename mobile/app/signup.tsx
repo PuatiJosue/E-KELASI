@@ -14,6 +14,7 @@ import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { supabase, isLiveMode } from "@/lib/supabase";
+import { pinToPassword, isValidPin } from "@/lib/pin";
 
 export default function Signup() {
   const t = useTheme();
@@ -29,7 +30,7 @@ export default function Signup() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const canSubmit = email && password.length >= 8 && fullName;
+  const canSubmit = email && isValidPin(password) && fullName;
 
   const onSubmit = async () => {
     setError(null);
@@ -47,9 +48,14 @@ export default function Signup() {
 
     setBusy(true);
     try {
+      if (!isValidPin(password)) {
+        setError(tr({ fr: "Le code doit faire 4 chiffres.", en: "PIN must be 4 digits." }));
+        setBusy(false);
+        return;
+      }
       const { data, error: signErr } = await supabase.auth.signUp({
         email: email.trim(),
-        password,
+        password: pinToPassword(password),
         options: {
           data: { full_name: fullName, phone: phone || null },
         },
@@ -155,12 +161,14 @@ export default function Signup() {
               icon="bell"
             />
             <Field
-              label={tr({ fr: "Mot de passe (8 caractères min)", en: "Password (8 chars min)" })}
+              label={tr({ fr: "Code à 4 chiffres", en: "4-digit PIN" })}
               value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
+              onChangeText={(v) => setPassword(v.replace(/\D/g, "").slice(0, 4))}
+              placeholder="••••"
               secureTextEntry
-              autoComplete="new-password"
+              keyboardType="number-pad"
+              maxLength={4}
+              autoComplete="off"
               icon="lock"
             />
           </View>
