@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "E-KELASI — Console admin",
-  description: "Plateforme de suivi scolaire — console super admin.",
+  title: "E-KELASI — Suivi scolaire",
+  description: "E-KELASI — la plateforme de suivi scolaire qui relie écoles, professeurs et parents.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

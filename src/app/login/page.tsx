@@ -92,11 +92,6 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <div style={{ marginTop: 8, textAlign: "center", fontSize: 12, color: "var(--ink-3)" }}>
-          <Link href="/overview" style={{ color: "var(--brand-600)", fontWeight: 600 }}>
-            Continuer sans connexion (démo) →
-          </Link>
-        </div>
       </div>
     </div>
   );
