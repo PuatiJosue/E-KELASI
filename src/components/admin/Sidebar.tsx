@@ -73,7 +73,13 @@ function NavGroup({ label, items }: { label: { fr: string; en: string }; items: 
   );
 }
 
-export function AdminSidebar() {
+export function AdminSidebar({
+  userName = "—",
+  userRole = "Super Admin",
+}: {
+  userName?: string;
+  userRole?: string;
+}) {
   return (
     <div
       style={{
@@ -170,10 +176,10 @@ export function AdminSidebar() {
         </div>
 
         <div style={{ marginTop: 10, padding: "10px 8px", display: "flex", alignItems: "center", gap: 8 }}>
-          <Avatar name="Yann Mbaye" size={30} />
+          <Avatar name={userName} size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>Yann Mbaye</div>
-            <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>Super Admin</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</div>
+            <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>{userRole}</div>
           </div>
           <LogoutButton />
         </div>
