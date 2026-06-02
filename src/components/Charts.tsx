@@ -46,7 +46,7 @@ export function MRRChart({
   h?: number;
   labels?: string[];
 }) {
-  const max = Math.max(...values) * 1.1;
+  const max = Math.max(...values) * 1.1 || 1; // évite la division par zéro si tout est à 0
   const pad = { l: 36, r: 16, t: 16, b: 28 };
   const cw = w - pad.l - pad.r;
   const ch = h - pad.t - pad.b;
@@ -114,7 +114,7 @@ export function Donut({
 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const total = segments.reduce((a, s) => a + s.value, 0);
+  const total = segments.reduce((a, s) => a + s.value, 0) || 1; // évite NaN si aucun segment
   let off = 0;
   return (
     <svg

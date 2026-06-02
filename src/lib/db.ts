@@ -110,9 +110,12 @@ export async function listSchools(): Promise<SchoolRow[]> {
 }
 
 // ── Overview ──────────────────────────────────────────────────────────
+export type PlanSlice = { plan: "essentiel" | "famille" | "premium"; count: number };
+
 export type Overview = {
   mrr12m: number[];
   topSchools: typeof MOCK_TOP_SCHOOLS;
+  planDistribution: PlanSlice[];
   kpis: {
     mrr: string;
     parents: string;
@@ -124,6 +127,11 @@ export type Overview = {
 const MOCK_OVERVIEW: Overview = {
   mrr12m: MOCK_MRR_12M,
   topSchools: MOCK_TOP_SCHOOLS,
+  planDistribution: [
+    { plan: "essentiel", count: 2820 },
+    { plan: "famille", count: 1120 },
+    { plan: "premium", count: 380 },
+  ],
   kpis: { mrr: "$39 400", parents: "4 320", churn: "2.4%", schools: "18" },
 };
 
@@ -134,7 +142,7 @@ export async function getOverview(): Promise<Overview> {
     const [{ data: subs }, { count: parentsCount }, { count: schoolsCount }] = await Promise.all([
       supabase
         .from("subscriptions")
-        .select("amount_cents, status, created_at, canceled_at, school_id, schools(name, city)"),
+        .select("amount_cents, status, created_at, canceled_at, school_id, plan, schools(name, city)"),
       supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "parent"),
       supabase.from("schools").select("*", { count: "exact", head: true }),
     ]);
@@ -179,9 +187,20 @@ export async function getOverview(): Promise<Overview> {
       .slice(0, 5)
       .map((x) => ({ name: x.name, city: x.city, parents: x.parents, mrr: fmtMoneyKpi(x.mrrCents), growth: "—" }));
 
+    // Répartition réelle des plans (abonnements actifs uniquement).
+    const planCounts: Record<string, number> = { essentiel: 0, famille: 0, premium: 0 };
+    for (const s of active) {
+      if (s.plan && s.plan in planCounts) planCounts[s.plan] += 1;
+    }
+    const planDistribution: PlanSlice[] = (["essentiel", "famille", "premium"] as const).map(
+      (plan) => ({ plan, count: planCounts[plan] })
+    );
+
     return {
-      mrr12m: mrr12m.some((v) => v > 0) ? mrr12m : MOCK_MRR_12M,
-      topSchools: topSchools.length ? topSchools : MOCK_TOP_SCHOOLS,
+      // Données RÉELLES — pas de repli sur la démo : une base vide affiche des zéros.
+      mrr12m,
+      topSchools,
+      planDistribution,
       kpis: {
         mrr: fmtMoneyKpi(mrrCents),
         parents: (parentsCount ?? 0).toLocaleString("fr-FR"),

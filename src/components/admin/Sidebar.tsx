@@ -144,7 +144,7 @@ export function AdminSidebar({
           <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>
             E-KELASI <span style={{ color: "var(--ink-3)", fontWeight: 500 }}>·</span> Prod
           </div>
-          <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>app.e-kelasi.com</div>
+          <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>e-kelasi.vercel.app</div>
         </div>
         <Icon name="chevD" size={14} style={{ color: "var(--ink-3)" }} />
       </button>
@@ -153,29 +153,6 @@ export function AdminSidebar({
       <NavGroup label={{ fr: "Organisation", en: "Organization" }} items={ORG} />
 
       <div style={{ marginTop: "auto" }}>
-        <div className="ek-card" style={{ padding: 12, background: "var(--brand-soft)", border: "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Icon name="sparkle" size={14} style={{ color: "var(--brand-600)" }} />
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: "var(--brand-600)",
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-              }}
-            >
-              <T fr="Bêta" en="Beta" />
-            </span>
-          </div>
-          <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 6, lineHeight: 1.4 }}>
-            <T
-              fr="Modèle IA de prédiction de churn maintenant disponible."
-              en="AI churn-prediction model is now live."
-            />
-          </div>
-        </div>
-
         <div style={{ marginTop: 10, padding: "10px 8px", display: "flex", alignItems: "center", gap: 8 }}>
           <Avatar name={userName} size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
