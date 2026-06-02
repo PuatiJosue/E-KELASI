@@ -1,32 +1,72 @@
 import { PageHeader } from "@/components/KPI";
-import { Icon } from "@/components/Icon";
+import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
 import { T } from "@/lib/i18n";
+import { createClient } from "@/lib/supabase/server";
+import { isLiveMode } from "@/lib/db";
 
-function SettingCard({
-  title,
-  desc,
-  children,
-}: {
-  title: { fr: string; en: string };
-  desc?: { fr: string; en: string };
-  children: React.ReactNode;
-}) {
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: "Super Admin",
+  school_admin: "Direction",
+  teacher: "Professeur",
+};
+
+async function getMyProfile() {
+  if (!isLiveMode()) return { name: "Super Admin", email: "admin@ekelasi.demo", role: "super_admin", avatarUrl: null };
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("profiles")
+    .select("full_name, email, role, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!data) return null;
+  return { name: data.full_name, email: data.email, role: data.role, avatarUrl: data.avatar_url };
+}
+
+export default async function SettingsPage() {
+  const me = await getMyProfile();
+
   return (
-    <div className="ek-card" style={{ padding: 20 }}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
-        <T fr={title.fr} en={title.en} />
-      </div>
-      {desc && (
-        <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 4, marginBottom: 14 }}>
-          <T fr={desc.fr} en={desc.en} />
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxWidth: 760 }}>
+      <PageHeader
+        title={{ fr: "Paramètres", en: "Settings" }}
+        sub={{ fr: "Ton profil et ton compte.", en: "Your profile and account." }}
+      />
+
+      <div className="ek-card" style={{ padding: 24, display: "flex", alignItems: "center", gap: 20 }}>
+        <ProfileAvatarUploader currentUrl={me?.avatarUrl ?? null} name={me?.name ?? "?"} size={72} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11.5, color: "var(--ink-3)", fontWeight: 600 }}>
+            <T fr="MON PROFIL" en="MY PROFILE" />
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)", marginTop: 4 }}>
+            {me?.name ?? "—"}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--ink-3)", marginTop: 2 }}>{me?.email ?? ""}</div>
         </div>
-      )}
-      <div style={{ marginTop: desc ? 0 : 14 }}>{children}</div>
+      </div>
+
+      <div className="ek-card" style={{ padding: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
+          <T fr="Compte" en="Account" />
+        </div>
+        <Row label={<T fr="Nom" en="Name" />} value={me?.name ?? "—"} />
+        <Row label="Email" value={me?.email ?? "—"} />
+        <Row label={<T fr="Rôle" en="Role" />} value={ROLE_LABELS[me?.role ?? ""] ?? me?.role ?? "—"} last />
+      </div>
+
+      <div style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.5 }}>
+        <T
+          fr="Astuce : clique sur ta photo pour la changer. Pour modifier ton mot de passe, déconnecte-toi puis utilise « Mot de passe oublié »."
+          en="Tip: click your photo to change it. To change your password, sign out and use “Forgot password”."
+        />
+      </div>
     </div>
   );
 }
 
-function Row({ label, value, action }: { label: React.ReactNode; value?: React.ReactNode; action?: React.ReactNode }) {
+function Row({ label, value, last }: { label: React.ReactNode; value: React.ReactNode; last?: boolean }) {
   return (
     <div
       style={{
@@ -34,100 +74,12 @@ function Row({ label, value, action }: { label: React.ReactNode; value?: React.R
         alignItems: "center",
         justifyContent: "space-between",
         padding: "10px 0",
-        borderBottom: "1px solid var(--divider)",
+        borderBottom: last ? "none" : "1px solid var(--divider)",
         gap: 12,
       }}
     >
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{label}</div>
-        {value && <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>{value}</div>}
-      </div>
-      {action}
-    </div>
-  );
-}
-
-export default function SettingsPage() {
-  return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxWidth: 880 }}>
-      <PageHeader
-        title={{ fr: "Paramètres", en: "Settings" }}
-        sub={{
-          fr: "Configuration de l'organisation E-KELASI",
-          en: "E-KELASI organization configuration",
-        }}
-      />
-
-      <SettingCard
-        title={{ fr: "Organisation", en: "Organization" }}
-        desc={{ fr: "Identité publique et facturation.", en: "Public identity and billing." }}
-      >
-        <Row label="Nom" value="E-KELASI SAS" action={<button className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>Modifier</button>} />
-        <Row label="Domaine" value="app.e-kelasi.com" action={<button className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>Modifier</button>} />
-        <Row label="SIRET" value="892 471 305 00018" action={<button className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>Modifier</button>} />
-      </SettingCard>
-
-      <SettingCard
-        title={{ fr: "Intégrations", en: "Integrations" }}
-        desc={{ fr: "Stripe, Resend, S3, et autres services.", en: "Stripe, Resend, S3, and other services." }}
-      >
-        <Row
-          label={<><Icon name="creditcard" size={14} style={{ verticalAlign: -2 }} /> Stripe</>}
-          value="Connecté · acct_1Q…7Xq"
-          action={<span className="ek-chip success">Actif</span>}
-        />
-        <Row
-          label={<><Icon name="mail" size={14} style={{ verticalAlign: -2 }} /> Resend</>}
-          value="API key configurée"
-          action={<span className="ek-chip success">Actif</span>}
-        />
-        <Row
-          label={<><Icon name="upload" size={14} style={{ verticalAlign: -2 }} /> AWS S3</>}
-          value="bucket ekelasi-uploads-prod"
-          action={<span className="ek-chip success">Actif</span>}
-        />
-        <Row
-          label={<><Icon name="sparkle" size={14} style={{ verticalAlign: -2 }} /> OpenAI</>}
-          value="Pour la prédiction de churn"
-          action={<span className="ek-chip warn">Bêta</span>}
-        />
-      </SettingCard>
-
-      <SettingCard
-        title={{ fr: "Sécurité", en: "Security" }}
-        desc={{ fr: "Authentification, sessions, audit.", en: "Authentication, sessions, audit." }}
-      >
-        <Row label="2FA obligatoire" value="Activé pour tous les admins" action={<span className="ek-chip success">On</span>} />
-        <Row label="Durée de session" value="12 heures" action={<button className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>Modifier</button>} />
-        <Row label="Logs d'audit" value="Conservation 90 jours" action={<button className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>Modifier</button>} />
-      </SettingCard>
-
-      <SettingCard
-        title={{ fr: "Danger", en: "Danger zone" }}
-      >
-        <Row
-          label="Exporter toutes les données"
-          value="JSON + CSV (RGPD article 20)"
-          action={<button className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>Exporter</button>}
-        />
-        <Row
-          label={<span style={{ color: "var(--danger)" }}>Supprimer l&apos;organisation</span>}
-          value="Action irréversible — supprime toutes les données."
-          action={
-            <button
-              className="ek-btn"
-              style={{
-                height: 30,
-                fontSize: 12,
-                background: "rgba(192,58,43,0.1)",
-                color: "var(--danger)",
-              }}
-            >
-              Supprimer
-            </button>
-          }
-        />
-      </SettingCard>
+      <div style={{ fontSize: 12, color: "var(--ink-3)" }}>{label}</div>
+      <div style={{ fontSize: 13.5, color: "var(--ink)", fontWeight: 600 }}>{value}</div>
     </div>
   );
 }

@@ -77,7 +77,7 @@ export async function listSchools(): Promise<SchoolRow[]> {
       supabase.from("school_staff").select("school_id, role"),
       supabase.from("subscriptions").select("school_id, amount_cents, status"),
     ]);
-    if (error || !schools) return MOCK_SCHOOLS;
+    if (error || !schools) return [];
 
     const teachers = new Map<string, number>();
     for (const s of staff ?? []) {
@@ -105,7 +105,7 @@ export async function listSchools(): Promise<SchoolRow[]> {
       since: new Date(s.joined_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" }),
     }));
   } catch {
-    return MOCK_SCHOOLS;
+    return [];
   }
 }
 
@@ -133,6 +133,18 @@ const MOCK_OVERVIEW: Overview = {
     { plan: "premium", count: 380 },
   ],
   kpis: { mrr: "$39 400", parents: "4 320", churn: "2.4%", schools: "18" },
+};
+
+// État réel par défaut quand une requête échoue en prod : du vide, jamais du faux.
+const EMPTY_OVERVIEW: Overview = {
+  mrr12m: new Array(12).fill(0),
+  topSchools: [],
+  planDistribution: [
+    { plan: "essentiel", count: 0 },
+    { plan: "famille", count: 0 },
+    { plan: "premium", count: 0 },
+  ],
+  kpis: { mrr: "$0", parents: "0", churn: "0.0%", schools: "0" },
 };
 
 export async function getOverview(): Promise<Overview> {
@@ -209,7 +221,7 @@ export async function getOverview(): Promise<Overview> {
       },
     };
   } catch {
-    return MOCK_OVERVIEW;
+    return EMPTY_OVERVIEW;
   }
 }
 
@@ -223,7 +235,7 @@ export async function listRecentPayments(): Promise<PaymentRow[]> {
       .select("amount_cents, currency, status, paid_at, created_at, profiles(full_name), subscriptions(plan)")
       .order("created_at", { ascending: false })
       .limit(20);
-    if (error || !data) return MOCK_PAYMENTS;
+    if (error || !data) return [];
     return data.map((p: any) => ({
       parent: p.profiles?.full_name ?? "—",
       plan: planLabel(p.subscriptions?.plan ?? "essentiel"),
@@ -232,7 +244,7 @@ export async function listRecentPayments(): Promise<PaymentRow[]> {
       date: fmtDateTime(new Date(p.paid_at ?? p.created_at)),
     }));
   } catch {
-    return MOCK_PAYMENTS;
+    return [];
   }
 }
 
@@ -263,7 +275,7 @@ export async function listTicketsByStatus(): Promise<Record<string, Ticket[]>> {
     }
     return grouped;
   } catch {
-    return MOCK_TICKETS;
+    return { new: [], pending: [], waiting: [], resolved: [] };
   }
 }
 
@@ -364,6 +376,6 @@ export async function listAuditLogs(limit = 50): Promise<LogEvent[]> {
       ts: new Date(r.created_at).toISOString().slice(11, 19),
     }));
   } catch {
-    return MOCK_LOGS;
+    return [];
   }
 }

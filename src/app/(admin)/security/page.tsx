@@ -6,6 +6,8 @@ import { SecurityLogTable } from "@/components/admin/SecurityLogTable";
 
 export default async function SecurityPage() {
   const events = await listAuditLogs(50);
+  const critical = events.filter((e) => e.sev === "critical").length;
+  const warnings = events.filter((e) => e.sev === "warn").length;
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
@@ -30,33 +32,21 @@ export default async function SecurityPage() {
               <span style={{ color: "var(--accent)" }}>●</span> Healthy
             </>
           }
-          sub={<T fr="Uptime 99.98% · 30j" en="Uptime 99.98% · 30d" />}
         />
         <KPI
-          label={<T fr="Sessions actives" en="Active sessions" />}
-          value="4 312"
-          sub={<T fr="parents · profs · admins" en="parents · teachers · admins" />}
+          label={<T fr="Événements récents" en="Recent events" />}
+          value={String(events.length)}
+          sub={<T fr="journal d'audit" en="audit log" />}
         />
         <KPI
-          label={<T fr="Alertes ouvertes" en="Open alerts" />}
-          value="3"
-          accent="var(--warning)"
-          sub={<T fr="1 critique · 2 warnings" en="1 critical · 2 warnings" />}
+          label={<T fr="Critiques" en="Critical" />}
+          value={String(critical)}
+          accent={critical > 0 ? "var(--danger)" : "var(--ink)"}
         />
         <KPI
-          label={<T fr="RGPD" en="GDPR" />}
-          value={
-            <>
-              <Icon
-                name="check"
-                size={20}
-                stroke={3}
-                style={{ verticalAlign: -3, color: "var(--accent)" }}
-              />{" "}
-              Compliant
-            </>
-          }
-          sub={<T fr="Audit Q1 2026 passé" en="Q1 2026 audit passed" />}
+          label={<T fr="Avertissements" en="Warnings" />}
+          value={String(warnings)}
+          accent={warnings > 0 ? "var(--warning)" : "var(--ink)"}
         />
       </div>
 

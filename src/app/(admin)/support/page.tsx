@@ -13,8 +13,8 @@ export default async function SupportPage() {
       <PageHeader
         title={{ fr: "Support & tickets", en: "Support & tickets" }}
         sub={{
-          fr: `${total} tickets actifs · temps de réponse moyen : 1h 12min`,
-          en: `${total} active tickets · avg. response 1h 12m`,
+          fr: `${total} ticket(s) actif(s)`,
+          en: `${total} active ticket(s)`,
         }}
         right={
           <>
