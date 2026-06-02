@@ -89,7 +89,8 @@ export function AdminSidebar({
         display: "flex",
         flexDirection: "column",
         gap: 16,
-        overflow: "hidden",
+        overflowY: "auto",
+        minHeight: 0,
       }}
     >
       <div style={{ padding: "4px 8px 0" }}>
