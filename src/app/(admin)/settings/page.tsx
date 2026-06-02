@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
+import { ProfileEditForm } from "./ProfileEditForm";
 import { T } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
@@ -48,12 +49,10 @@ export default async function SettingsPage() {
       </div>
 
       <div className="ek-card" style={{ padding: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
-          <T fr="Compte" en="Account" />
+        <ProfileEditForm initialName={me?.name ?? ""} initialEmail={me?.email ?? ""} />
+        <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 12 }}>
+          <T fr="Rôle" en="Role" /> : {ROLE_LABELS[me?.role ?? ""] ?? me?.role ?? "—"}
         </div>
-        <Row label={<T fr="Nom" en="Name" />} value={me?.name ?? "—"} />
-        <Row label="Email" value={me?.email ?? "—"} />
-        <Row label={<T fr="Rôle" en="Role" />} value={ROLE_LABELS[me?.role ?? ""] ?? me?.role ?? "—"} last />
       </div>
 
       <div style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.5 }}>
@@ -62,24 +61,6 @@ export default async function SettingsPage() {
           en="Tip: click your photo to change it. To change your password, sign out and use “Forgot password”."
         />
       </div>
-    </div>
-  );
-}
-
-function Row({ label, value, last }: { label: React.ReactNode; value: React.ReactNode; last?: boolean }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "10px 0",
-        borderBottom: last ? "none" : "1px solid var(--divider)",
-        gap: 12,
-      }}
-    >
-      <div style={{ fontSize: 12, color: "var(--ink-3)" }}>{label}</div>
-      <div style={{ fontSize: 13.5, color: "var(--ink)", fontWeight: 600 }}>{value}</div>
     </div>
   );
 }
