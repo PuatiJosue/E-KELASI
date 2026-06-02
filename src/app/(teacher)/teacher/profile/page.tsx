@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
+import { ProfileEditForm } from "@/components/ProfileEditForm";
 import { T } from "@/lib/i18n";
 import { getTeacherProfile, getTeacherSchool, listTeacherClasses } from "@/lib/teacher-db";
 
@@ -27,6 +28,10 @@ export default async function TeacherProfilePage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="ek-card" style={{ padding: 20 }}>
+        <ProfileEditForm initialName={profile?.name ?? ""} initialEmail={profile?.email ?? ""} />
       </div>
 
       <div className="ek-card" style={{ padding: 18 }}>

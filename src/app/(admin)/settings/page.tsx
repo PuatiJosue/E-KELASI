@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
-import { ProfileEditForm } from "./ProfileEditForm";
+import { ProfileEditForm } from "@/components/ProfileEditForm";
 import { T } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";

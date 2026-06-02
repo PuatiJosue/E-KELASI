@@ -17,6 +17,7 @@ function service() {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Met à jour le nom et l'email de l'utilisateur CONNECTÉ (tous rôles web).
 export async function updateProfileAction(formData: FormData): Promise<Result> {
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -27,15 +28,12 @@ export async function updateProfileAction(formData: FormData): Promise<Result> {
 
   if (!isLiveMode()) return { ok: true, message: "Modifié (mode démo)." };
 
-  // Seul l'utilisateur connecté peut modifier son propre compte.
   const session = createClient();
   const { data: { user } } = await session.auth.getUser();
   if (!user) return { ok: false, message: "Non authentifié." };
 
   const svc = service();
 
-  // Si l'email change : mise à jour de l'auth (confirmé directement, sans
-  // email de validation — adapté au contexte où l'email est peu fiable).
   if (email !== (user.email ?? "").toLowerCase()) {
     const { error: authErr } = await svc.auth.admin.updateUserById(user.id, {
       email,
@@ -48,7 +46,6 @@ export async function updateProfileAction(formData: FormData): Promise<Result> {
     }
   }
 
-  // Mise à jour du profil (nom + email synchronisés).
   const { error: profErr } = await svc
     .from("profiles")
     .update({ full_name: fullName, email })
@@ -58,6 +55,9 @@ export async function updateProfileAction(formData: FormData): Promise<Result> {
     return { ok: false, message: taken ? "Cet email est déjà utilisé." : "Enregistrement impossible." };
   }
 
+  // Rafraîchit les pages de réglages des 3 espaces.
   revalidatePath("/settings");
+  revalidatePath("/school/settings");
+  revalidatePath("/teacher/profile");
   return { ok: true, message: "Profil mis à jour ✅" };
 }

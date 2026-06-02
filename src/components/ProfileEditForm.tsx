@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { T } from "@/lib/i18n";
-import { updateProfileAction } from "./actions";
+import { updateProfileAction } from "@/lib/profile-actions";
 
 export function ProfileEditForm({ initialName, initialEmail }: { initialName: string; initialEmail: string }) {
   const router = useRouter();
@@ -24,28 +24,17 @@ export function ProfileEditForm({ initialName, initialEmail }: { initialName: st
   return (
     <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
-        <T fr="Compte" en="Account" />
+        <T fr="Mon compte" en="My account" />
       </div>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}><T fr="Nom complet" en="Full name" /></span>
-        <input
-          name="full_name"
-          defaultValue={initialName}
-          required
-          style={inputStyle}
-        />
+        <input name="full_name" defaultValue={initialName} required style={inputStyle} />
       </label>
 
       <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>Email</span>
-        <input
-          name="email"
-          type="email"
-          defaultValue={initialEmail}
-          required
-          style={inputStyle}
-        />
+        <input name="email" type="email" defaultValue={initialEmail} required style={inputStyle} />
         <span style={{ fontSize: 11, color: "var(--ink-3)" }}>
           <T
             fr="Changer l'email modifie aussi ton identifiant de connexion."

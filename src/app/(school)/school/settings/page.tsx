@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
+import { ProfileEditForm } from "@/components/ProfileEditForm";
 import { T } from "@/lib/i18n";
 import { getMySchool } from "@/lib/school-db";
 import { createClient } from "@/lib/supabase/server";
@@ -34,6 +35,10 @@ export default async function SchoolSettings() {
           </div>
           <div style={{ fontSize: 13, color: "var(--ink-3)", marginTop: 2 }}>{me?.email ?? ""}</div>
         </div>
+      </div>
+
+      <div className="ek-card" style={{ padding: 20 }}>
+        <ProfileEditForm initialName={me?.name ?? ""} initialEmail={me?.email ?? ""} />
       </div>
 
       <div className="ek-card" style={{ padding: 20 }}>
