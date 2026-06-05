@@ -12,14 +12,10 @@ import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { ratelimit } from "@/lib/rate-limit";
 
-type Plan = "essentiel" | "famille" | "premium";
-
-function priceIdFor(plan: Plan): string | null {
-  switch (plan) {
-    case "essentiel": return process.env.STRIPE_PRICE_ESSENTIEL ?? null;
-    case "famille":   return process.env.STRIPE_PRICE_FAMILLE   ?? null;
-    case "premium":   return process.env.STRIPE_PRICE_PREMIUM   ?? null;
-  }
+// Plan unique : un seul abonnement E-KELASI. Le priceId vient de l'env
+// (STRIPE_PRICE_ABONNEMENT), avec repli sur l'ancien nom pour le mode test.
+function abonnementPriceId(): string | null {
+  return process.env.STRIPE_PRICE_ABONNEMENT ?? process.env.STRIPE_PRICE_ESSENTIEL ?? null;
 }
 
 export async function POST(req: NextRequest) {
@@ -30,14 +26,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "rate_limited" }, { status: 429 });
     }
 
-    const body = (await req.json().catch(() => ({}))) as { plan?: string };
-    const plan = body.plan as Plan | undefined;
-    if (!plan || !["essentiel", "famille", "premium"].includes(plan)) {
-      return NextResponse.json({ error: "invalid_plan" }, { status: 400 });
-    }
-    const priceId = priceIdFor(plan);
+    // Plan unique : on n'exige plus de "plan" précis côté client.
+    const priceId = abonnementPriceId();
     if (!priceId) {
-      console.error("[create-subscription] priceId env var missing for plan", plan);
+      console.error("[create-subscription] STRIPE_PRICE_ABONNEMENT manquant");
       return NextResponse.json({ error: "server_misconfigured" }, { status: 500 });
     }
 
@@ -72,7 +64,8 @@ export async function POST(req: NextRequest) {
       payment_settings: { save_default_payment_method: "on_subscription" },
       expand: ["latest_invoice.payment_intent"],
       trial_period_days: 14,
-      metadata: { supabase_user_id: user.id, plan },
+      // Plan unique : valeur interne "essentiel" (l'enum DB n'a pas changé).
+      metadata: { supabase_user_id: user.id, plan: "essentiel" },
     });
 
     const invoice = subscription.latest_invoice as any;
