@@ -3,25 +3,31 @@ import { Avatar } from "@/components/Avatar";
 import { T } from "@/lib/i18n";
 import { listSchoolParents } from "@/lib/school-db";
 import { ParentAccessButton } from "./ParentAccessButton";
+import { MarkPaidButton } from "./MarkPaidButton";
+import { getParentFeeStatus } from "./actions";
 
 export default async function SchoolParents() {
-  const parents = await listSchoolParents();
+  const [parents, paidIds] = await Promise.all([listSchoolParents(), getParentFeeStatus()]);
+  const paid = new Set(paidIds);
   const blocked = parents.filter((p) => p.status === "blocked").length;
+  const paidCount = parents.filter((p) => paid.has(p.parentId)).length;
+
+  const monthLabel = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
         title={{ fr: "Parents", en: "Parents" }}
         sub={{
-          fr: `${parents.length} parent(s) · ${blocked} bloqué(s)`,
-          en: `${parents.length} parent(s) · ${blocked} blocked`,
+          fr: `${parents.length} parent(s) · ${paidCount} payé(s) ce mois · ${blocked} bloqué(s)`,
+          en: `${parents.length} parent(s) · ${paidCount} paid this month · ${blocked} blocked`,
         }}
       />
 
       <div style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>
         <T
-          fr="Un parent bloqué perd l'accès à l'app jusqu'à régularisation. Débloque-le une fois sa cotisation reçue."
-          en="A blocked parent loses app access until cleared. Unblock once their fee is received."
+          fr={`Cotisation du mois : ${monthLabel}. « Marquer payé » enregistre les 5 $ et réactive l'accès du parent. Tu peux bloquer un parent qui n'a pas payé.`}
+          en={`This month's fee: ${monthLabel}. “Mark paid” records the $5 and reactivates the parent's access. You can block a parent who hasn't paid.`}
         />
       </div>
 
@@ -35,11 +41,11 @@ export default async function SchoolParents() {
           </div>
         ) : (
           <div className="ek-tablewrap">
-            <div style={{ minWidth: 640 }}>
+            <div style={{ minWidth: 820 }}>
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "2fr 2fr 1fr 1fr",
+                  gridTemplateColumns: "2fr 1.6fr 1.1fr 0.9fr 1fr",
                   padding: "12px 18px",
                   fontSize: 11,
                   fontWeight: 700,
@@ -52,6 +58,7 @@ export default async function SchoolParents() {
               >
                 <div><T fr="Parent" en="Parent" /></div>
                 <div><T fr="Enfant(s)" en="Child(ren)" /></div>
+                <div><T fr="Cotisation" en="Fee" /></div>
                 <div><T fr="Statut" en="Status" /></div>
                 <div style={{ textAlign: "right" }}><T fr="Action" en="Action" /></div>
               </div>
@@ -60,7 +67,7 @@ export default async function SchoolParents() {
                   key={p.parentId}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 2fr 1fr 1fr",
+                    gridTemplateColumns: "2fr 1.6fr 1.1fr 0.9fr 1fr",
                     padding: "12px 18px",
                     alignItems: "center",
                     fontSize: 12.5,
@@ -76,6 +83,9 @@ export default async function SchoolParents() {
                   </div>
                   <div style={{ color: "var(--ink-3)", fontSize: 11.5 }}>
                     {p.students.length > 0 ? p.students.join(", ") : "—"}
+                  </div>
+                  <div>
+                    <MarkPaidButton parentId={p.parentId} paid={paid.has(p.parentId)} />
                   </div>
                   <div>
                     {p.status === "blocked" ? (
