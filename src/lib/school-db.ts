@@ -48,6 +48,14 @@ export type ClassWithAvg = {
   avg: number | null;
 };
 
+export type SchoolParentRow = {
+  parentId: string;
+  fullName: string;
+  email: string;
+  students: string[];
+  status: "active" | "blocked";
+};
+
 export async function getMySchool(): Promise<MySchool | null> {
   if (!isLiveMode()) {
     return {
@@ -234,6 +242,53 @@ export async function listSchoolStudents(): Promise<SchoolStudentRow[]> {
         avatarUrl: s.avatar_url ?? null,
       };
     });
+  } catch {
+    return [];
+  }
+}
+
+export async function listSchoolParents(): Promise<SchoolParentRow[]> {
+  if (!isLiveMode()) return [];
+  try {
+    const supabase = createClient();
+    const school = await getMySchool();
+    if (!school) return [];
+    const { data: students } = await supabase
+      .from("students")
+      .select("id, full_name")
+      .eq("school_id", school.id);
+    const ids = (students ?? []).map((s: any) => s.id);
+    if (ids.length === 0) return [];
+    const studentName = new Map((students ?? []).map((s: any) => [s.id, s.full_name]));
+
+    const { data: links } = await supabase
+      .from("parent_links")
+      .select("parent_id, student_id, access_status, profiles!parent_links_parent_id_fkey(full_name, email)")
+      .in("student_id", ids);
+
+    const byParent = new Map<string, { parentId: string; fullName: string; email: string; students: string[]; anyActive: boolean }>();
+    for (const l of links ?? []) {
+      const pid = (l as any).parent_id;
+      const cur = byParent.get(pid) ?? {
+        parentId: pid,
+        fullName: (l as any).profiles?.full_name ?? "?",
+        email: (l as any).profiles?.email ?? "",
+        students: [] as string[],
+        anyActive: false,
+      };
+      const sn = studentName.get((l as any).student_id);
+      if (sn && !cur.students.includes(sn)) cur.students.push(sn);
+      if ((l as any).access_status !== "blocked") cur.anyActive = true;
+      byParent.set(pid, cur);
+    }
+
+    return [...byParent.values()].map((p) => ({
+      parentId: p.parentId,
+      fullName: p.fullName,
+      email: p.email,
+      students: p.students,
+      status: p.anyActive ? "active" : "blocked",
+    }));
   } catch {
     return [];
   }
