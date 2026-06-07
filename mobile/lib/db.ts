@@ -79,6 +79,22 @@ function fmtAgo(d: Date): string {
   return `Il y a ${days}j`;
 }
 
+// ── Access status (école peut bloquer un parent impayé) ──────────────
+// "active" : au moins un lien actif → app libre.
+// "blocked" : des liens existent mais tous bloqués → app suspendue.
+// "none" : aucun enfant lié encore → on ne bloque pas.
+export async function getAccessStatus(): Promise<"active" | "blocked" | "none"> {
+  if (!isLiveMode || !supabase) return "active";
+  try {
+    const { data } = await supabase.from("parent_links").select("access_status");
+    if (!data || data.length === 0) return "none";
+    const anyActive = data.some((l: any) => l.access_status !== "blocked");
+    return anyActive ? "active" : "blocked";
+  } catch {
+    return "active"; // en cas d'erreur réseau, ne pas bloquer abusivement
+  }
+}
+
 // ── Child (the student linked to the current parent) ─────────────────
 export async function getChild(): Promise<Child> {
   if (!isLiveMode || !supabase) return DEMO_CHILD;
