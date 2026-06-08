@@ -2,14 +2,16 @@
   "expo": {
     "name": "E-KELASI",
     "slug": "e-kelasi",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "scheme": "ekelasi",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "splash": {
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FAF6EE"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": false,
@@ -17,9 +19,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FAF6EE"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
       },
-      "package": "com.ekelasi.parent"
+      "package": "com.ekelasi.parent",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
@@ -33,7 +37,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#E0701E",
+          "color": "#1E2F6D",
           "defaultChannel": "default"
         }
       ]
