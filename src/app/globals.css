@@ -5,12 +5,19 @@
 @tailwind utilities;
 
 :root {
-  --brand: #E0701E;
-  --brand-600: #B85715;
-  --brand-700: #8F4310;
-  --brand-100: #F9DDB8;
-  --brand-50: #FDF3E7;
-  --brand-soft: rgba(224, 112, 30, 0.10);
+  /* Couleurs officielles E-KELASI : bleu marine (principal) + or (accent). */
+  --brand: #1E2F6D;
+  --brand-600: #172452;
+  --brand-700: #101A3C;
+  --brand-100: #D6DCEF;
+  --brand-50: #EEF1F9;
+  --brand-soft: rgba(30, 47, 109, 0.10);
+
+  /* Or de la marque (logo). */
+  --gold: #F5B301;
+  --gold-600: #D99A00;
+  --gold-100: #FCEBB8;
+  --gold-soft: rgba(245, 179, 1, 0.14);
 
   --accent: #1D6650;
   --accent-100: #D6EAE0;
@@ -62,12 +69,17 @@
   --border-strong: #3F382C;
   --divider: rgba(245, 239, 227, 0.07);
 
-  --brand: #E89A4F;
-  --brand-600: #D88030;
-  --brand-700: #B45A14;
-  --brand-100: #4A2F14;
-  --brand-50: #2A1F12;
-  --brand-soft: rgba(232, 154, 79, 0.12);
+  --brand: #7B91DE;
+  --brand-600: #6076C9;
+  --brand-700: #455CAE;
+  --brand-100: #1E2A4A;
+  --brand-50: #161E33;
+  --brand-soft: rgba(123, 145, 222, 0.14);
+
+  --gold: #F5C040;
+  --gold-600: #E0A91E;
+  --gold-100: #3A2E10;
+  --gold-soft: rgba(245, 192, 64, 0.16);
 
   --accent: #4FA286;
   --accent-100: #1F3A30;

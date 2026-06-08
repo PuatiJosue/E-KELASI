@@ -15,7 +15,7 @@ export function Logo({
         <rect width="32" height="32" rx="9" fill="var(--brand)" />
         <path
           d="M10 8v16M10 16l7-8M10 16l8 8"
-          stroke="white"
+          stroke="var(--gold)"
           strokeWidth="2.6"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -28,11 +28,11 @@ export function Logo({
             fontFamily: "var(--font-display)",
             fontSize: size * 0.7,
             fontWeight: 700,
-            color: "var(--ink)",
             letterSpacing: "-0.03em",
           }}
         >
-          E-KELASI
+          <span style={{ color: "var(--gold-600)" }}>E-</span>
+          <span style={{ color: "var(--brand)" }}>KELASI</span>
         </span>
       )}
     </div>
