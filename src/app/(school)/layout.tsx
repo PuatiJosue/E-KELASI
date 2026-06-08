@@ -4,10 +4,20 @@ import { Shell } from "@/components/Shell";
 import { SchoolSidebar } from "@/components/school/Sidebar";
 import { SchoolTopbar } from "@/components/school/Topbar";
 import { getMySchool } from "@/lib/school-db";
+import { SuspendedNotice } from "@/components/SuspendedNotice";
 
 export default async function SchoolLayout({ children }: { children: React.ReactNode }) {
   const school = await getMySchool();
   const lang = getLang();
+
+  // École suspendue (abonnement E-KELASI impayé) → accès direction bloqué.
+  if (school?.status === "suspended") {
+    return (
+      <LangProvider value={lang}>
+        <SuspendedNotice />
+      </LangProvider>
+    );
+  }
 
   // Branding : si l'école a une couleur custom, on l'applique sur tout le shell.
   const brandStyle = school?.brandColor

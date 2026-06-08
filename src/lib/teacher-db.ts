@@ -74,6 +74,25 @@ export async function getTeacherProfile(): Promise<TeacherProfile | null> {
   return { id: user.id, name: data.full_name, email: data.email, avatarUrl: data.avatar_url };
 }
 
+// Statut de l'école du prof (pour bloquer l'accès si l'abonnement est impayé).
+export async function getTeacherSchoolStatus(): Promise<string | null> {
+  if (!isLiveMode()) return "active";
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data: staff } = await supabase
+      .from("school_staff")
+      .select("schools(status)")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    return (staff as any)?.schools?.status ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getTeacherSchool(): Promise<TeacherSchool | null> {
   if (!isLiveMode()) {
     return { id: "demo", name: "Lycée Albert-Camus", city: "Dakar", totalStudents: 28 };
