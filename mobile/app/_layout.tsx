@@ -34,7 +34,7 @@ function AuthGate() {
     const inAuthGroup = segments[0] === "(tabs)" || segments[0] === "thread" || segments[0] === "notifications" || segments[0] === "book";
     if (!session && inAuthGroup) {
       router.replace("/");
-    } else if (session && (segments.length === 0 || segments[0] === undefined)) {
+    } else if (session && !segments[0]) {
       router.replace("/(tabs)");
     }
   }, [session, loading, segments]);
@@ -100,7 +100,6 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="login" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="signup" options={{ animation: "slide_from_right" }} />
-            <Stack.Screen name="subscribe" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="thread" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="book" options={{ animation: "slide_from_right" }} />

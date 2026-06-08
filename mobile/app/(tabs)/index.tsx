@@ -10,11 +10,10 @@ import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { Card, Chip } from "@/components/Card";
-import { Sparkline } from "@/components/Charts";
 import { useTheme, fonts, radii } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
-import { MOCK, type Grade, type Homework } from "@/lib/mock";
+import { type Grade, type Homework } from "@/lib/mock";
 import { getChild, listGrades, listHomework, listThreads, type Child, type Thread } from "@/lib/db";
 
 export default function Home() {
@@ -22,12 +21,13 @@ export default function Home() {
   const tr = useT();
   const router = useRouter();
   const { session } = useAuth();
-  const parentName = session?.fullName ?? MOCK.parent.name;
+  const parentName = session?.fullName ?? "Parent";
 
+  const [ready, setReady] = useState(false);
   const [child, setChild] = useState<Child | null>(null);
-  const [grades, setGrades] = useState<Grade[] | null>(null);
-  const [homework, setHomework] = useState<Homework[] | null>(null);
-  const [threads, setThreads] = useState<Thread[] | null>(null);
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [homework, setHomework] = useState<Homework[]>([]);
+  const [threads, setThreads] = useState<Thread[]>([]);
 
   useEffect(() => {
     Promise.all([getChild(), listGrades(5), listHomework(), listThreads()]).then(([c, g, h, th]) => {
@@ -35,13 +35,35 @@ export default function Home() {
       setGrades(g);
       setHomework(h);
       setThreads(th);
+      setReady(true);
     });
   }, []);
 
-  if (!child || !grades || !homework || !threads) {
+  if (!ready) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color={t.brand} />
+      </SafeAreaView>
+    );
+  }
+
+  // Aucun enfant rattaché (l'école doit lier le parent à son enfant).
+  if (!child) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
+        <HeaderGreeting parentName={parentName} onBell={() => router.push("/notifications")} />
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 10 }}>
+          <Icon name="user" size={40} color={t.ink3} />
+          <Text style={{ fontSize: 16, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold, textAlign: "center" }}>
+            {tr({ fr: "Aucun enfant lié", en: "No child linked" })}
+          </Text>
+          <Text style={{ fontSize: 13, color: t.ink3, textAlign: "center", fontFamily: fonts.body, lineHeight: 20 }}>
+            {tr({
+              fr: "Votre enfant n'est pas encore rattaché à votre compte. Contactez l'école pour qu'elle fasse le lien.",
+              en: "Your child isn't linked to your account yet. Ask the school to link you.",
+            })}
+          </Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -242,24 +264,19 @@ function ChildHero({ child, onAvatarChange }: { child: Child; onAvatarChange?: (
           </Text>
         </View>
       </View>
-      <View style={{ marginTop: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 11, color: "white", opacity: 0.85, fontWeight: "600", fontFamily: fonts.body }}>
-            <T fr="Moyenne générale" en="Overall average" />
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 4 }}>
-            <Text style={{ fontSize: 36, color: "white", fontWeight: "700", fontFamily: fonts.display, letterSpacing: -1 }}>{child.avg}</Text>
-            <Text style={{ fontSize: 14, color: "white", opacity: 0.85, fontFamily: fonts.body }}>/20</Text>
-            <View style={{ marginLeft: 4, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.2)", flexDirection: "row", alignItems: "center", gap: 3 }}>
-              <Icon name="arrowUp" size={10} color="white" />
-              <Text style={{ fontSize: 11, color: "white", fontWeight: "700", fontFamily: fonts.bodyBold }}>+0.4</Text>
-            </View>
-          </View>
+      <View style={{ marginTop: 16 }}>
+        <Text style={{ fontSize: 11, color: "white", opacity: 0.85, fontWeight: "600", fontFamily: fonts.body }}>
+          <T fr="Moyenne générale" en="Overall average" />
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 4 }}>
+          <Text style={{ fontSize: 36, color: "white", fontWeight: "700", fontFamily: fonts.display, letterSpacing: -1 }}>{child.avg}</Text>
+          <Text style={{ fontSize: 14, color: "white", opacity: 0.85, fontFamily: fonts.body }}>/20</Text>
+        </View>
+        {child.rank != null && child.total != null && (
           <Text style={{ fontSize: 11, color: "white", opacity: 0.85, marginTop: 6, fontFamily: fonts.body }}>
             <T fr={`Rang ${child.rank} sur ${child.total}`} en={`Rank ${child.rank} of ${child.total}`} />
           </Text>
-        </View>
-        <Sparkline values={MOCK.weekly} w={92} h={36} color="white" />
+        )}
       </View>
     </View>
   );
@@ -283,9 +300,19 @@ function SectionTitle({ title, action }: { title: { fr: string; en: string }; ac
   );
 }
 
+// Couleur + code court d'une matière, dérivés de son nom (sans données fictives).
+const SUBJECT_COLORS = ["#1E2F6D", "#D99A00", "#1D6650", "#3A6DBC", "#C0392B", "#8E44AD", "#16A085", "#E67E22"];
+export function subjectVisual(name: string): { short: string; color: string } {
+  const n = name || "?";
+  const short = n.slice(0, 3).toUpperCase();
+  let h = 0;
+  for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) >>> 0;
+  return { short, color: SUBJECT_COLORS[h % SUBJECT_COLORS.length] };
+}
+
 export function GradeRow({ g }: { g: Grade }) {
   const t = useTheme();
-  const subj = MOCK.subjects.find((s) => s.name === g.subject) ?? MOCK.subjects[0];
+  const subj = subjectVisual(g.subject);
   const pct = g.score / g.max;
   const toneColor = pct >= 0.75 ? t.accent : pct >= 0.5 ? t.warning : t.danger;
   return (
@@ -314,7 +341,7 @@ export function GradeRow({ g }: { g: Grade }) {
 
 export function HomeworkCard({ hw }: { hw: Homework }) {
   const t = useTheme();
-  const subj = MOCK.subjects.find((s) => s.name === hw.subject) ?? MOCK.subjects[0];
+  const subj = subjectVisual(hw.subject);
   return (
     <Card style={{ padding: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>

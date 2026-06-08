@@ -89,8 +89,8 @@ export default function Signup() {
       // l'utilisateur recevra un mail. Sinon il est connecté direct.
       if (data.session) {
         setSuccess(tr({ fr: "Compte créé !", en: "Account created!" }));
-        // Direction le choix de plan (essai gratuit 14j)
-        setTimeout(() => router.replace("/subscribe"), 400);
+        // Modèle B2B : pas de paiement parent → direct à l'accueil.
+        setTimeout(() => router.replace("/(tabs)"), 400);
       } else {
         setSuccess(
           tr({

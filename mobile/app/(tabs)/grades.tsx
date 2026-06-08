@@ -21,20 +21,32 @@ export default function Grades() {
   const t = useTheme();
   const tr = useT();
   const [period, setPeriod] = useState<(typeof PERIODS)[number]["id"]>("t2");
+  const [ready, setReady] = useState(false);
   const [child, setChild] = useState<Child | null>(null);
-  const [subjects, setSubjects] = useState<Subject[] | null>(null);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
 
   useEffect(() => {
     Promise.all([getChild(), listSubjects()]).then(([c, s]) => {
       setChild(c);
       setSubjects(s);
+      setReady(true);
     });
   }, []);
 
-  if (!child || !subjects) {
+  if (!ready) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color={t.brand} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!child) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <Text style={{ fontSize: 13.5, color: t.ink3, textAlign: "center", fontFamily: fonts.body, lineHeight: 20 }}>
+          {tr({ fr: "Aucun enfant lié. Contactez l'école.", en: "No child linked. Contact your school." })}
+        </Text>
       </SafeAreaView>
     );
   }
@@ -92,16 +104,13 @@ export default function Grades() {
                 <Text style={{ fontSize: 32, fontWeight: "700", color: t.ink, fontFamily: fonts.display, letterSpacing: -0.8 }}>{child.avg}</Text>
                 <Text style={{ fontSize: 14, color: t.ink3, fontFamily: fonts.body }}>/20</Text>
               </View>
-              <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Chip
-                  tone="success"
-                  icon={<Icon name="arrowUp" size={11} color={t.accent} />}
-                  label={`+0.4 ${tr({ fr: "vs T1", en: "vs T1" })}`}
-                />
-                <Text style={{ fontSize: 11, color: t.ink3, fontFamily: fonts.body }}>
-                  <T fr="Classement" en="Rank" /> {child.rank}/{child.total}
-                </Text>
-              </View>
+              {child.rank != null && child.total != null && (
+                <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Text style={{ fontSize: 11, color: t.ink3, fontFamily: fonts.body }}>
+                    <T fr="Classement" en="Rank" /> {child.rank}/{child.total}
+                  </Text>
+                </View>
+              )}
             </View>
           </Card>
 

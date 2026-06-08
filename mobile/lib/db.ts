@@ -12,8 +12,8 @@ export type Child = {
   grade: string;
   school: string;
   avg: number;
-  rank: number;
-  total: number;
+  rank?: number | null;
+  total?: number | null;
   avatarUrl?: string | null;
 };
 
@@ -96,7 +96,7 @@ export async function getAccessStatus(): Promise<"active" | "blocked" | "none"> 
 }
 
 // ── Child (the student linked to the current parent) ─────────────────
-export async function getChild(): Promise<Child> {
+export async function getChild(): Promise<Child | null> {
   if (!isLiveMode || !supabase) return DEMO_CHILD;
   try {
     const { data: links } = await supabase
@@ -104,7 +104,7 @@ export async function getChild(): Promise<Child> {
       .select("students(id, full_name, class_name, grade_level, avatar_url, schools(name))")
       .limit(1)
       .single();
-    if (!links || !(links as any).students) return DEMO_CHILD;
+    if (!links || !(links as any).students) return null;
     const s = (links as any).students;
     const studentId = s.id;
 
@@ -127,12 +127,10 @@ export async function getChild(): Promise<Child> {
       grade: s.class_name ?? s.grade_level,
       school: s.schools?.name ?? "",
       avg,
-      rank: MOCK.child.rank,
-      total: MOCK.child.total,
       avatarUrl: s.avatar_url ?? null,
     };
   } catch {
-    return DEMO_CHILD;
+    return null;
   }
 }
 
@@ -141,8 +139,9 @@ export async function listSubjects(): Promise<Subject[]> {
   if (!isLiveMode || !supabase) return MOCK.subjects;
   try {
     const child = await getChild();
+    if (!child) return [];
     const { data: subjects } = await supabase.from("subjects").select("*");
-    if (!subjects) return MOCK.subjects;
+    if (!subjects) return [];
     const { data: grades } = await supabase
       .from("grades")
       .select("subject_id, score, max_score, coefficient")
@@ -159,7 +158,7 @@ export async function listSubjects(): Promise<Subject[]> {
       return { name: s.name, short: s.short_name, grade: avg || 0, trend: 0, color: s.color };
     });
   } catch {
-    return MOCK.subjects;
+    return [];
   }
 }
 
@@ -168,6 +167,7 @@ export async function listGrades(limit = 20): Promise<Grade[]> {
   if (!isLiveMode || !supabase) return MOCK.grades;
   try {
     const child = await getChild();
+    if (!child) return [];
     const { data } = await supabase
       .from("grades")
       .select("kind, score, max_score, coefficient, graded_at, subjects(name), profiles(full_name)")
@@ -175,7 +175,7 @@ export async function listGrades(limit = 20): Promise<Grade[]> {
       .is("archived_at", null)
       .order("graded_at", { ascending: false })
       .limit(limit);
-    if (!data) return MOCK.grades;
+    if (!data) return [];
     return data.map((g: any) => ({
       subject: g.subjects?.name ?? "",
       kind: g.kind,
@@ -186,7 +186,7 @@ export async function listGrades(limit = 20): Promise<Grade[]> {
       teacher: g.profiles?.full_name ?? "",
     }));
   } catch {
-    return MOCK.grades;
+    return [];
   }
 }
 
@@ -195,13 +195,14 @@ export async function listHomework(): Promise<Homework[]> {
   if (!isLiveMode || !supabase) return MOCK.homework;
   try {
     const child = await getChild();
+    if (!child) return [];
     const { data } = await supabase
       .from("homework")
       .select("title, due_at, status, subjects(name), profiles(full_name)")
       .eq("class_name", child.grade)
       .is("archived_at", null)
       .order("due_at", { ascending: true });
-    if (!data) return MOCK.homework;
+    if (!data) return [];
     return data.map((h: any) => ({
       subject: h.subjects?.name ?? "",
       title: h.title,
@@ -210,7 +211,7 @@ export async function listHomework(): Promise<Homework[]> {
       teacher: h.profiles?.full_name ?? "",
     }));
   } catch {
-    return MOCK.homework;
+    return [];
   }
 }
 
@@ -442,7 +443,7 @@ export async function listNotifications(): Promise<Notification[]> {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
-    if (!data) return MOCK.notifs;
+    if (!data) return [];
     return data.map((n: any) => ({
       kind: n.kind as Notification["kind"],
       text: n.body,
@@ -450,6 +451,6 @@ export async function listNotifications(): Promise<Notification[]> {
       fileUrl: n.payload?.file_url,
     }));
   } catch {
-    return MOCK.notifs;
+    return [];
   }
 }
