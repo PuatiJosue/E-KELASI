@@ -34,9 +34,9 @@ export default function PrivacyPage() {
         <ul>
           <li><b>Compte</b> : nom, adresse e-mail, rôle (parent, professeur, direction), et mot de passe (stocké de façon chiffrée).</li>
           <li><b>Données scolaires</b> : élèves rattachés, notes, devoirs, bulletins, messages entre professeurs et parents.</li>
-          <li><b>Photos</b> (facultatif) : photo de profil et photo de l'élève, si vous en ajoutez une.</li>
+          <li><b>Photos</b> (facultatif) : photo de profil et photo de l’élève, si vous en ajoutez une.</li>
           <li><b>Paiements</b> : les abonnements des écoles sont traités par Stripe ; nous ne stockons jamais les numéros de carte.</li>
-          <li><b>Notifications</b> : un identifiant d'appareil pour envoyer les notifications push (si activées).</li>
+          <li><b>Notifications</b> : un identifiant d’appareil pour envoyer les notifications push (si activées).</li>
         </ul>
       </Section>
 
@@ -47,14 +47,14 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="4. Hébergement et sécurité">
-        Les données sont hébergées chez Supabase (serveurs situés dans l'Union européenne) et
-        protégées par des règles d'accès strictes : chaque utilisateur ne voit que les données qui le
+        Les données sont hébergées chez Supabase (serveurs situés dans l’Union européenne) et
+        protégées par des règles d’accès strictes : chaque utilisateur ne voit que les données qui le
         concernent. Les connexions sont chiffrées (HTTPS).
       </Section>
 
       <Section title="5. Partage">
         Nous partageons des données uniquement avec les prestataires nécessaires au service
-        (hébergement Supabase, paiements Stripe) et avec l'école de votre enfant dans le cadre du
+        (hébergement Supabase, paiements Stripe) et avec l’école de votre enfant dans le cadre du
         suivi scolaire. Aucune autre transmission à des tiers.
       </Section>
 
@@ -65,11 +65,11 @@ export default function PrivacyPage() {
 
       <Section title="7. Vos droits">
         Vous pouvez accéder à vos données, les corriger ou en demander la suppression. Pour toute
-        demande, contactez-nous à l'adresse ci-dessous.
+        demande, contactez-nous à l’adresse ci-dessous.
       </Section>
 
       <Section title="8. Enfants">
-        Les données scolaires des élèves sont saisies par l'école et les professeurs, et consultées
+        Les données scolaires des élèves sont saisies par l’école et les professeurs, et consultées
         par les parents/tuteurs rattachés. Elles servent exclusivement au suivi scolaire.
       </Section>
 
