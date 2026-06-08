@@ -55,6 +55,7 @@ function isActiveStatus(status: string): boolean {
 
 // ── Schools ───────────────────────────────────────────────────────────
 export type SchoolRow = {
+  id: string;
   name: string;
   city: string;
   plan: string;
@@ -63,21 +64,25 @@ export type SchoolRow = {
   mrr: string;
   status: string;
   since: string;
+  paidThisMonth: boolean;
 };
 
 export async function listSchools(): Promise<SchoolRow[]> {
-  if (!isLiveMode()) return MOCK_SCHOOLS;
+  if (!isLiveMode()) return MOCK_SCHOOLS.map((s, i) => ({ ...s, id: String(i), paidThisMonth: false }));
   try {
     const supabase = createClient();
-    const [{ data: schools, error }, { data: staff }, { data: subs }] = await Promise.all([
+    const period = new Date().toISOString().slice(0, 7);
+    const [{ data: schools, error }, { data: staff }, { data: subs }, { data: schoolPays }] = await Promise.all([
       supabase
         .from("schools")
         .select("id, name, city, plan, status, joined_at")
         .order("joined_at", { ascending: false }),
       supabase.from("school_staff").select("school_id, role"),
       supabase.from("subscriptions").select("school_id, amount_cents, status"),
+      supabase.from("school_payments").select("school_id").eq("period", period),
     ]);
     if (error || !schools) return [];
+    const paidSet = new Set((schoolPays ?? []).map((p: any) => p.school_id));
 
     const teachers = new Map<string, number>();
     for (const s of staff ?? []) {
@@ -95,6 +100,7 @@ export async function listSchools(): Promise<SchoolRow[]> {
     }
 
     return schools.map((s) => ({
+      id: s.id,
       name: s.name,
       city: s.city,
       plan: s.plan === "pro" ? "Pro" : "Standard",
@@ -103,6 +109,7 @@ export async function listSchools(): Promise<SchoolRow[]> {
       mrr: mrr.get(s.id) ? fmtMoneyKpi(mrr.get(s.id)!) : "—",
       status: s.status,
       since: new Date(s.joined_at).toLocaleDateString("fr-FR", { month: "short", year: "numeric" }),
+      paidThisMonth: paidSet.has(s.id),
     }));
   } catch {
     return [];

@@ -7,33 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -444,6 +421,7 @@ export type Database = {
           id: string
           kind: Database["public"]["Enums"]["notification_kind"]
           payload: Json | null
+          pushed_at: string | null
           read_at: string | null
           user_id: string
         }
@@ -453,6 +431,7 @@ export type Database = {
           id?: string
           kind: Database["public"]["Enums"]["notification_kind"]
           payload?: Json | null
+          pushed_at?: string | null
           read_at?: string | null
           user_id: string
         }
@@ -462,6 +441,7 @@ export type Database = {
           id?: string
           kind?: Database["public"]["Enums"]["notification_kind"]
           payload?: Json | null
+          pushed_at?: string | null
           read_at?: string | null
           user_id?: string
         }
@@ -475,20 +455,84 @@ export type Database = {
           },
         ]
       }
+      parent_fee_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          id: string
+          method: string
+          paid_at: string
+          parent_id: string
+          period: string
+          recorded_by: string | null
+          school_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          method?: string
+          paid_at?: string
+          parent_id: string
+          period: string
+          recorded_by?: string | null
+          school_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          method?: string
+          paid_at?: string
+          parent_id?: string
+          period?: string
+          recorded_by?: string | null
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_fee_payments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_fee_payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_fee_payments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_links: {
         Row: {
+          access_status: string
           is_primary: boolean
           parent_id: string
           relation: string
           student_id: string
         }
         Insert: {
+          access_status?: string
           is_primary?: boolean
           parent_id: string
           relation?: string
           student_id: string
         }
         Update: {
+          access_status?: string
           is_primary?: boolean
           parent_id?: string
           relation?: string
@@ -565,6 +609,27 @@ export type Database = {
           },
         ]
       }
+      plan_prices: {
+        Row: {
+          amount_cents: number
+          currency: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          currency?: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          currency?: string
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
@@ -604,104 +669,6 @@ export type Database = {
         }
         Relationships: []
       }
-      school_staff: {
-        Row: {
-          created_at: string
-          role: Database["public"]["Enums"]["user_role"]
-          school_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          role: Database["public"]["Enums"]["user_role"]
-          school_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          school_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "school_staff_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "school_staff_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      plan_prices: {
-        Row: {
-          plan: Database["public"]["Enums"]["subscription_plan"]
-          amount_cents: number
-          currency: string
-          updated_at: string
-        }
-        Insert: {
-          plan: Database["public"]["Enums"]["subscription_plan"]
-          amount_cents: number
-          currency?: string
-          updated_at?: string
-        }
-        Update: {
-          plan?: Database["public"]["Enums"]["subscription_plan"]
-          amount_cents?: number
-          currency?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      teacher_access_codes: {
-        Row: {
-          code: string
-          school_id: string
-          full_name: string
-          address: string | null
-          created_by: string | null
-          created_at: string
-          redeemed_by: string | null
-          redeemed_at: string | null
-        }
-        Insert: {
-          code: string
-          school_id: string
-          full_name: string
-          address?: string | null
-          created_by?: string | null
-          created_at?: string
-          redeemed_by?: string | null
-          redeemed_at?: string | null
-        }
-        Update: {
-          code?: string
-          school_id?: string
-          full_name?: string
-          address?: string | null
-          created_by?: string | null
-          created_at?: string
-          redeemed_by?: string | null
-          redeemed_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "teacher_access_codes_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       push_tokens: {
         Row: {
           created_at: string
@@ -733,6 +700,93 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_payments: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          id: string
+          method: string
+          paid_at: string
+          period: string
+          recorded_by: string | null
+          school_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          method?: string
+          paid_at?: string
+          period: string
+          recorded_by?: string | null
+          school_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          method?: string
+          paid_at?: string
+          period?: string
+          recorded_by?: string | null
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_payments_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_staff: {
+        Row: {
+          created_at: string
+          role: Database["public"]["Enums"]["user_role"]
+          school_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role: Database["public"]["Enums"]["user_role"]
+          school_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          school_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_staff_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_staff_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -994,23 +1048,87 @@ export type Database = {
           },
         ]
       }
+      teacher_access_codes: {
+        Row: {
+          address: string | null
+          code: string
+          created_at: string
+          created_by: string | null
+          full_name: string
+          redeemed_at: string | null
+          redeemed_by: string | null
+          school_id: string
+        }
+        Insert: {
+          address?: string | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          full_name: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          school_id: string
+        }
+        Update: {
+          address?: string | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          full_name?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_access_codes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_access_codes_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_access_codes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      archive_year: {
+        Args: { cutoff: string }
+        Returns: {
+          grades_count: number
+          homework_count: number
+        }[]
+      }
       current_role_value: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
       is_super_admin: { Args: never; Returns: boolean }
-      archive_year: {
-        Args: { cutoff: string }
-        Returns: { grades_count: number; homework_count: number }[]
-      }
+      my_admin_school_ids: { Args: never; Returns: string[] }
+      my_conversation_ids: { Args: never; Returns: string[] }
+      my_student_classes: { Args: never; Returns: string[] }
+      my_student_ids: { Args: never; Returns: string[] }
+      my_student_school_ids: { Args: never; Returns: string[] }
+      my_teacher_school_ids: { Args: never; Returns: string[] }
       set_student_avatar: {
-        Args: { p_student_id: string; p_avatar_url: string }
-        Returns: void
+        Args: { p_avatar_url: string; p_student_id: string }
+        Returns: undefined
       }
     }
     Enums: {
@@ -1162,9 +1280,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       homework_status: ["todo", "inprogress", "done", "late"],
@@ -1195,4 +1310,3 @@ export const Constants = {
     },
   },
 } as const
-

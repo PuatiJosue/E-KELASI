@@ -1,11 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import type { SchoolRow } from "@/lib/db";
+import { markSchoolPaid, setSchoolSuspended } from "@/app/(admin)/schools/billing-actions";
 
 type Filter = "all" | "active" | "onboarding" | "trial" | "suspended";
+
+function SchoolActions({ id, status, paid }: { id: string; status: string; paid: boolean }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const run = (fn: () => Promise<{ ok: boolean; message?: string }>) =>
+    startTransition(async () => {
+      const r = await fn();
+      if (r.ok) router.refresh();
+      else alert(r.message ?? "Erreur");
+    });
+
+  const suspended = status === "suspended";
+  return (
+    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+      {!paid && (
+        <button
+          onClick={() => run(() => markSchoolPaid(id))}
+          disabled={pending}
+          className="ek-btn ek-btn-outline"
+          style={{ height: 28, fontSize: 11 }}
+        >
+          {pending ? "…" : <T fr="Marquer payé" en="Mark paid" />}
+        </button>
+      )}
+      <button
+        onClick={() => run(() => setSchoolSuspended(id, !suspended))}
+        disabled={pending}
+        className="ek-btn ek-btn-outline"
+        style={{ height: 28, fontSize: 11, color: suspended ? "var(--accent)" : "var(--danger)", borderColor: suspended ? "var(--accent)" : "var(--danger)" }}
+      >
+        {suspended ? <T fr="Réactiver" en="Reactivate" /> : <T fr="Suspendre" en="Suspend" />}
+      </button>
+    </div>
+  );
+}
 
 function statusChip(s: string) {
   if (s === "active")
@@ -25,6 +62,12 @@ function statusChip(s: string) {
     return (
       <span className="ek-chip info">
         <T fr="Onboarding" en="Onboarding" />
+      </span>
+    );
+  if (s === "suspended")
+    return (
+      <span className="ek-chip danger">
+        <T fr="Suspendue" en="Suspended" />
       </span>
     );
   return <span className="ek-chip">{s}</span>;
@@ -110,11 +153,11 @@ export function SchoolsTable({
 
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
         <div className="ek-tablewrap">
-        <div style={{ minWidth: 720 }}>
+        <div style={{ minWidth: 900 }}>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "2.2fr 1fr 1fr 0.9fr 1fr 1fr 0.5fr",
+            gridTemplateColumns: "2.2fr 0.7fr 1fr 1.1fr 1fr 0.8fr 1.8fr",
             padding: "12px 16px",
             fontSize: 11,
             fontWeight: 700,
@@ -128,10 +171,10 @@ export function SchoolsTable({
           <div><T fr="École" en="School" /></div>
           <div><T fr="Plan" en="Plan" /></div>
           <div><T fr="Parents · profs" en="Parents · teachers" /></div>
-          <div><T fr="MRR" en="MRR" /></div>
+          <div><T fr="Cotisation 90$" en="Fee $90" /></div>
           <div><T fr="Statut" en="Status" /></div>
           <div><T fr="Depuis" en="Since" /></div>
-          <div></div>
+          <div style={{ textAlign: "right" }}><T fr="Actions" en="Actions" /></div>
         </div>
         {filtered.length === 0 && (
           <div style={{ padding: 24, textAlign: "center", color: "var(--ink-3)", fontSize: 12 }}>
@@ -143,7 +186,7 @@ export function SchoolsTable({
             key={i}
             style={{
               display: "grid",
-              gridTemplateColumns: "2.2fr 1fr 1fr 0.9fr 1fr 1fr 0.5fr",
+              gridTemplateColumns: "2.2fr 0.7fr 1fr 1.1fr 1fr 0.8fr 1.8fr",
               padding: "12px 16px",
               alignItems: "center",
               fontSize: 12.5,
@@ -179,23 +222,16 @@ export function SchoolsTable({
             <div style={{ color: "var(--ink-2)", fontVariantNumeric: "tabular-nums" }}>
               {r.parents} · {r.teachers}
             </div>
-            <div
-              style={{
-                fontWeight: 700,
-                fontFamily: "var(--font-display)",
-                color: "var(--ink)",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {r.mrr}
+            <div>
+              {r.paidThisMonth ? (
+                <span className="ek-chip success"><T fr="Payée" en="Paid" /></span>
+              ) : (
+                <span className="ek-chip warn"><T fr="Impayée" en="Unpaid" /></span>
+              )}
             </div>
             <div>{statusChip(r.status)}</div>
             <div style={{ color: "var(--ink-3)" }}>{r.since}</div>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button style={{ color: "var(--ink-3)", padding: 6, borderRadius: 6 }}>
-                <Icon name="chevR" size={16} />
-              </button>
-            </div>
+            <SchoolActions id={r.id} status={r.status} paid={r.paidThisMonth} />
           </div>
         ))}
         </div>
