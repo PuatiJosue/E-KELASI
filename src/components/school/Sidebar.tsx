@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
 ];
 
 const SEC: NavItem[] = [
+  { id: "billing",  href: "/school/billing",  icon: "creditcard", fr: "Abonnement",   en: "Subscription" },
   { id: "branding", href: "/school/branding", icon: "star",     fr: "Branding école", en: "School branding" },
   { id: "settings", href: "/school/settings", icon: "settings", fr: "Paramètres",     en: "Settings" },
 ];

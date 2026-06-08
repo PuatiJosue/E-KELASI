@@ -21,7 +21,35 @@ function planFromMetadata(sub: Stripe.Subscription): "essentiel" | "famille" | "
   return "essentiel";
 }
 
+// Abonnement ÉCOLE (90$/mois par carte). Renvoie true si géré (= ne pas
+// continuer le flux parent). Active l'école si payée, suspend sinon.
+async function handleSchoolSubscription(sub: Stripe.Subscription): Promise<boolean> {
+  const schoolId = sub.metadata?.school_id;
+  if (!schoolId) return false;
+  const supabase = service();
+  const active = ["active", "trialing", "past_due"].includes(sub.status);
+  await supabase.from("schools").update({ status: active ? "active" : "suspended" }).eq("id", schoolId);
+  if (active) {
+    const item = sub.items.data[0];
+    const period = new Date().toISOString().slice(0, 7);
+    await supabase.from("school_payments").upsert(
+      {
+        school_id: schoolId,
+        period,
+        amount_cents: item?.price?.unit_amount ?? 9000,
+        currency: (item?.price?.currency ?? "usd").toUpperCase(),
+        method: "card",
+      },
+      { onConflict: "school_id,period" }
+    );
+  }
+  return true;
+}
+
 async function upsertSubscription(sub: Stripe.Subscription) {
+  // Abonnement école ? → traité à part, on ne touche pas la table parents.
+  if (await handleSchoolSubscription(sub)) return;
+
   const supabase = service();
   const parentId = sub.metadata?.supabase_user_id;
   if (!parentId) return;
