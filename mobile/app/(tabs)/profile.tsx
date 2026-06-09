@@ -11,30 +11,7 @@ import { T, useT, useLang, useSetLang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { getChild, type Child } from "@/lib/db";
 
-const GROUPS = [
-  {
-    title: { fr: "Compte", en: "Account" },
-    items: [
-      { icon: "user",       fr: "Informations personnelles", en: "Personal info" },
-      { icon: "school",     fr: "Enfants & écoles",          en: "Children & schools", detail: "1" },
-    ],
-  },
-  {
-    title: { fr: "Préférences", en: "Preferences" },
-    items: [
-      { icon: "bell",       fr: "Notifications",  en: "Notifications", detail: "Tout" },
-      { icon: "mail",       fr: "Langue",         en: "Language",      detail: "FR" },
-      { icon: "moon",       fr: "Apparence",      en: "Appearance",    detail: "Auto" },
-    ],
-  },
-  {
-    title: { fr: "Sécurité", en: "Security" },
-    items: [
-      { icon: "lock",       fr: "Confidentialité",      en: "Privacy" },
-      { icon: "shield",     fr: "Sécurité du compte",   en: "Account security" },
-    ],
-  },
-] as const;
+const PRIVACY_URL = "https://e-kelasi.vercel.app/privacy";
 
 export default function Profile() {
   const t = useTheme();
@@ -54,17 +31,29 @@ export default function Profile() {
     router.replace("/");
   };
 
-  // Mettre à jour la 2e ligne "Enfants & écoles" avec le compte réel
-  const groupsWithChild = GROUPS.map((g) =>
-    g.title.fr === "Compte"
-      ? {
-          ...g,
-          items: g.items.map((it) =>
-            it.fr === "Enfants & écoles" ? { ...it, detail: child ? "1" : "—" } : it
-          ),
-        }
-      : g
-  );
+  const groups = [
+    {
+      title: { fr: "Compte", en: "Account" },
+      items: [
+        { icon: "user", fr: "Informations personnelles", en: "Personal info", onPress: () => router.push("/account/info") },
+        { icon: "school", fr: "Enfants & écoles", en: "Children & schools", detail: child ? "1" : "—", onPress: () => router.push("/account/children") },
+      ],
+    },
+    {
+      title: { fr: "Préférences", en: "Preferences" },
+      items: [
+        { icon: "bell", fr: "Notifications", en: "Notifications", onPress: () => router.push("/account/notifications") },
+        { icon: "moon", fr: "Apparence", en: "Appearance", onPress: () => router.push("/account/appearance") },
+      ],
+    },
+    {
+      title: { fr: "Sécurité", en: "Security" },
+      items: [
+        { icon: "lock", fr: "Confidentialité", en: "Privacy", onPress: () => Linking.openURL(PRIVACY_URL) },
+        { icon: "shield", fr: "Sécurité du compte", en: "Account security", onPress: () => router.push("/account/security") },
+      ],
+    },
+  ];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
@@ -111,7 +100,7 @@ export default function Profile() {
 
         {/* Settings groups */}
         <View style={{ paddingHorizontal: 20, gap: 10 }}>
-          {groupsWithChild.map((g, i) => (
+          {groups.map((g, i) => (
             <SettingsGroup key={i} group={g} />
           ))}
 
@@ -163,7 +152,7 @@ function SettingsGroup({
 }: {
   group: {
     title: { fr: string; en: string };
-    items: ReadonlyArray<{ icon: string; fr: string; en: string; detail?: string }>;
+    items: ReadonlyArray<{ icon: string; fr: string; en: string; detail?: string; onPress?: () => void }>;
   };
 }) {
   const t = useTheme();
@@ -174,8 +163,9 @@ function SettingsGroup({
       </Text>
       <Card style={{ padding: 4 }}>
         {group.items.map((it, i) => (
-          <View
+          <Pressable
             key={i}
+            onPress={it.onPress}
             style={{
               flexDirection: "row",
               alignItems: "center",
@@ -202,7 +192,7 @@ function SettingsGroup({
             </Text>
             {it.detail && <Text style={{ fontSize: 12, color: t.ink3, fontFamily: fonts.body }}>{it.detail}</Text>}
             <Icon name="chevR" size={16} color={t.ink4} />
-          </View>
+          </Pressable>
         ))}
       </Card>
     </View>

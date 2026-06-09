@@ -2,6 +2,7 @@
 // Use via useTheme() (returns light/dark based on system pref).
 
 import { useColorScheme } from "react-native";
+import { useThemePref } from "./themePref";
 
 const LIGHT = {
   brand: "#1E2F6D",
@@ -90,8 +91,10 @@ export const fonts = {
 export type Theme = typeof LIGHT;
 
 export function useTheme(): Theme {
-  const scheme = useColorScheme();
-  return scheme === "dark" ? DARK : LIGHT;
+  const sys = useColorScheme();
+  const { mode } = useThemePref();
+  const effective = mode === "auto" ? sys : mode;
+  return effective === "dark" ? DARK : LIGHT;
 }
 
 export const themes = { light: LIGHT, dark: DARK };

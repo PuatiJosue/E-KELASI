@@ -20,7 +20,8 @@ import { StripeProvider } from "@stripe/stripe-react-native";
 
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { LangProvider } from "@/lib/i18n";
-import { themes } from "@/lib/theme";
+import { themes, useTheme } from "@/lib/theme";
+import { ThemePrefProvider, useThemePref } from "@/lib/themePref";
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
@@ -65,6 +66,35 @@ function AuthGate() {
   return null;
 }
 
+function AppShell() {
+  const t = useTheme();
+  const { mode } = useThemePref();
+  const sys = useColorScheme();
+  const dark = (mode === "auto" ? sys : mode) === "dark";
+  return (
+    <>
+      <AuthGate />
+      <StatusBar style={dark ? "light" : "dark"} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: t.bg },
+          animation: "fade",
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="signup" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="account" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="thread" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="book" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="notifications" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+      </Stack>
+    </>
+  );
+}
+
 export default function RootLayout() {
   const scheme = useColorScheme();
   const theme = scheme === "dark" ? themes.dark : themes.light;
@@ -86,27 +116,13 @@ export default function RootLayout() {
 
   const Wrapped = (
     <SafeAreaProvider>
-      <LangProvider value="fr">
-        <AuthProvider>
-          <AuthGate />
-          <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: theme.bg },
-              animation: "fade",
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="login" options={{ animation: "slide_from_right" }} />
-            <Stack.Screen name="signup" options={{ animation: "slide_from_right" }} />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="thread" options={{ animation: "slide_from_right" }} />
-            <Stack.Screen name="book" options={{ animation: "slide_from_right" }} />
-            <Stack.Screen name="notifications" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
-          </Stack>
-        </AuthProvider>
-      </LangProvider>
+      <ThemePrefProvider>
+        <LangProvider value="fr">
+          <AuthProvider>
+            <AppShell />
+          </AuthProvider>
+        </LangProvider>
+      </ThemePrefProvider>
     </SafeAreaProvider>
   );
 
