@@ -11,14 +11,13 @@ import { Button } from "@/components/Button";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
-import { isLiveMode } from "@/lib/supabase";
 import { pinToPassword, isValidPin } from "@/lib/pin";
 
 export default function Login() {
   const t = useTheme();
   const tr = useT();
   const router = useRouter();
-  const { signIn, signInDemo } = useAuth();
+  const { signIn } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,11 +37,6 @@ export default function Login() {
       setError(res.error ?? tr({ fr: "Email ou code incorrect.", en: "Incorrect email or PIN." }));
       return;
     }
-    router.replace("/(tabs)");
-  };
-
-  const onDemo = () => {
-    signInDemo();
     router.replace("/(tabs)");
   };
 
@@ -123,20 +117,6 @@ export default function Login() {
             </Text>
           </Button>
 
-          {!isLiveMode && (
-            <Text style={{ marginTop: 14, textAlign: "center", fontSize: 11.5, color: t.ink3, fontFamily: fonts.body }}>
-              <T
-                fr="Mode démo · aucune connexion réelle"
-                en="Demo mode · no real connection"
-              />
-            </Text>
-          )}
-
-          <Pressable onPress={onDemo} style={{ marginTop: 24, alignItems: "center" }}>
-            <Text style={{ fontSize: 13, color: t.ink3, fontFamily: fonts.body }}>
-              <T fr="Continuer en mode démo →" en="Continue in demo mode →" />
-            </Text>
-          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

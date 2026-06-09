@@ -1,6 +1,6 @@
 // Signup parent — création de compte + sélection enfant/école.
 // MVP : email, password, nom complet, code école (fourni par l'école), nom de l'enfant.
-// Le paiement Stripe arrivera dans l'étape suivante (free trial 14j actif par défaut).
+// Modèle B2B : le parent crée son compte ; l'accès est ensuite géré par l'école.
 
 import { View, Text, TextInput, ScrollView, Pressable, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -125,8 +125,8 @@ export default function Signup() {
             </Text>
             <Text style={{ fontSize: 14, color: t.ink3, marginTop: 6, lineHeight: 20, fontFamily: fonts.body }}>
               <T
-                fr="Essai gratuit 14 jours, sans engagement. Aucun paiement requis maintenant."
-                en="Free 14-day trial, no commitment. No payment required now."
+                fr="Créez votre compte pour suivre la scolarité de votre enfant. L'accès est géré par l'école."
+                en="Create your account to follow your child's school journey. Access is managed by the school."
               />
             </Text>
           </View>

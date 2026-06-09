@@ -10,7 +10,7 @@ export function Logo({ size = 28, withWord = false }: { size?: number; withWord?
         <Rect width={32} height={32} rx={9} fill={t.brand} />
         <Path
           d="M10 8v16M10 16l7-8M10 16l8 8"
-          stroke="white"
+          stroke={t.gold}
           strokeWidth={2.6}
           strokeLinecap="round"
           strokeLinejoin="round"

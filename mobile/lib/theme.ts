@@ -4,12 +4,16 @@
 import { useColorScheme } from "react-native";
 
 const LIGHT = {
-  brand: "#E0701E",
-  brand600: "#B85715",
-  brand700: "#8F4310",
-  brand100: "#F9DDB8",
-  brand50: "#FDF3E7",
-  brandSoft: "rgba(224,112,30,0.10)",
+  brand: "#1E2F6D",
+  brand600: "#172452",
+  brand700: "#101A3C",
+  brand100: "#D6DCEF",
+  brand50: "#EEF1F9",
+  brandSoft: "rgba(30,47,109,0.10)",
+
+  gold: "#F5B301",
+  gold600: "#D99A00",
+  goldSoft: "rgba(245,179,1,0.14)",
 
   accent: "#1D6650",
   accent100: "#D6EAE0",
@@ -36,12 +40,16 @@ const LIGHT = {
 };
 
 const DARK: typeof LIGHT = {
-  brand: "#E89A4F",
-  brand600: "#D88030",
-  brand700: "#B45A14",
-  brand100: "#4A2F14",
-  brand50: "#2A1F12",
-  brandSoft: "rgba(232,154,79,0.12)",
+  brand: "#7B91DE",
+  brand600: "#6076C9",
+  brand700: "#455CAE",
+  brand100: "#1E2A4A",
+  brand50: "#161E33",
+  brandSoft: "rgba(123,145,222,0.14)",
+
+  gold: "#F5C040",
+  gold600: "#E0A91E",
+  goldSoft: "rgba(245,192,64,0.16)",
 
   accent: "#4FA286",
   accent100: "#1F3A30",

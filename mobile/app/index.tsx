@@ -18,7 +18,7 @@ export default function Welcome() {
   const t = useTheme();
   const tr = useT();
   const router = useRouter();
-  const { signInDemo, session } = useAuth();
+  const { session } = useAuth();
   const [busy, setBusy] = useState(false);
 
   // If user is already signed in, jump to tabs immediately.
@@ -27,7 +27,7 @@ export default function Welcome() {
     return null;
   }
 
-  const startTrial = () => router.push("/signup");
+  const goSignup = () => router.push("/signup");
   const haveAccount = () => router.push("/login");
 
   return (
@@ -94,9 +94,9 @@ export default function Welcome() {
         </View>
 
         <View style={{ paddingHorizontal: 24, paddingBottom: 12, gap: 10 }}>
-          <Button onPress={startTrial} disabled={busy} style={{ paddingVertical: 16, borderRadius: 14 }}>
+          <Button onPress={goSignup} disabled={busy} style={{ paddingVertical: 16, borderRadius: 14 }}>
             <Text style={{ color: t.onBrand, fontSize: 15.5, fontWeight: "700", fontFamily: fonts.bodyBold }}>
-              {tr({ fr: "Commencer l'essai gratuit · 14 jours", en: "Start free trial · 14 days" })}
+              {tr({ fr: "S'inscrire", en: "Sign up" })}
             </Text>
           </Button>
           <Button variant="ghost" onPress={haveAccount} disabled={busy}>
