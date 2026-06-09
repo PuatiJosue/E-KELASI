@@ -2,6 +2,7 @@
   "expo": {
     "name": "E-KELASI",
     "slug": "e-kelasi",
+    "owner": "oshua",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -44,6 +45,12 @@
     ],
     "experiments": {
       "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3eb0d3bd-6247-4e3a-8c14-0e278d4ea319"
+      }
     }
   }
 }
