@@ -75,8 +75,8 @@ export default function PrivacyPage() {
 
       <Section title="9. Contact">
         Pour toute question relative à cette politique ou à vos données :{" "}
-        <a href="mailto:contact@e-kelasi.com" style={{ color: "var(--brand)", fontWeight: 600 }}>
-          contact@e-kelasi.com
+        <a href="mailto:juniorkhonde11@gmail.com" style={{ color: "var(--brand)", fontWeight: 600 }}>
+          juniorkhonde11@gmail.com
         </a>
         .
       </Section>

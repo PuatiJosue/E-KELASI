@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable } from "react-native";
+import { View, Text, ScrollView, Pressable, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -17,7 +17,6 @@ const GROUPS = [
     items: [
       { icon: "user",       fr: "Informations personnelles", en: "Personal info" },
       { icon: "school",     fr: "Enfants & écoles",          en: "Children & schools", detail: "1" },
-      { icon: "creditcard", fr: "Paiement & facturation",    en: "Billing" },
     ],
   },
   {
@@ -29,11 +28,10 @@ const GROUPS = [
     ],
   },
   {
-    title: { fr: "Sécurité & aide", en: "Security & help" },
+    title: { fr: "Sécurité", en: "Security" },
     items: [
       { icon: "lock",       fr: "Confidentialité",      en: "Privacy" },
       { icon: "shield",     fr: "Sécurité du compte",   en: "Account security" },
-      { icon: "mail",       fr: "Contacter le support", en: "Contact support" },
     ],
   },
 ] as const;
@@ -116,6 +114,27 @@ export default function Profile() {
           {groupsWithChild.map((g, i) => (
             <SettingsGroup key={i} group={g} />
           ))}
+
+          {/* Support / Contact */}
+          <View>
+            <Text style={{ fontSize: 11, color: t.ink3, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", paddingHorizontal: 4, paddingBottom: 8, paddingTop: 4, fontFamily: fonts.body }}>
+              <T fr="Aide & support" en="Help & support" />
+            </Text>
+            <Pressable onPress={() => Linking.openURL("mailto:juniorkhonde11@gmail.com")}>
+              <Card style={{ padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: t.surface2, alignItems: "center", justifyContent: "center" }}>
+                  <Icon name="mail" size={16} color={t.ink2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, color: t.ink, fontWeight: "500", fontFamily: fonts.body }}>
+                    <T fr="Contacter le support" en="Contact support" />
+                  </Text>
+                  <Text style={{ fontSize: 12, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>juniorkhonde11@gmail.com</Text>
+                </View>
+                <Icon name="chevR" size={16} color={t.ink4} />
+              </Card>
+            </Pressable>
+          </View>
 
           <Pressable
             onPress={handleSignOut}

@@ -43,6 +43,18 @@ export default async function SchoolSettings() {
 
       <div className="ek-card" style={{ padding: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
+          <T fr="Aide & support" en="Help & support" />
+        </div>
+        <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 8, lineHeight: 1.6 }}>
+          <T fr="Un problème ou une question ? Écrivez-nous :" en="A problem or question? Email us:" />{" "}
+          <a href="mailto:juniorkhonde11@gmail.com" style={{ color: "var(--brand)", fontWeight: 600 }}>
+            juniorkhonde11@gmail.com
+          </a>
+        </div>
+      </div>
+
+      <div className="ek-card" style={{ padding: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
           <T fr="École" en="School" />
         </div>
         <Row label="Nom" value={school?.name ?? "—"} />
