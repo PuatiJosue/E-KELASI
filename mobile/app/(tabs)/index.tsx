@@ -52,17 +52,25 @@ export default function Home() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
         <HeaderGreeting parentName={parentName} onBell={() => router.push("/notifications")} />
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 10 }}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 }}>
           <Icon name="user" size={40} color={t.ink3} />
           <Text style={{ fontSize: 16, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold, textAlign: "center" }}>
-            {tr({ fr: "Aucun enfant lié", en: "No child linked" })}
+            {tr({ fr: "Aucun enfant enregistré", en: "No child registered" })}
           </Text>
           <Text style={{ fontSize: 13, color: t.ink3, textAlign: "center", fontFamily: fonts.body, lineHeight: 20 }}>
             {tr({
-              fr: "Votre enfant n'est pas encore rattaché à votre compte. Contactez l'école pour qu'elle fasse le lien.",
-              en: "Your child isn't linked to your account yet. Ask the school to link you.",
+              fr: "Enregistrez votre enfant : l'école validera et vous verrez son suivi scolaire.",
+              en: "Register your child: the school will confirm and you'll see their school journey.",
             })}
           </Text>
+          <Pressable
+            onPress={() => router.push("/account/register-child")}
+            style={{ marginTop: 6, backgroundColor: t.brand, paddingVertical: 14, paddingHorizontal: 22, borderRadius: 14 }}
+          >
+            <Text style={{ color: t.onBrand, fontSize: 15, fontWeight: "700", fontFamily: fonts.bodyBold }}>
+              {tr({ fr: "Enregistrer mon enfant", en: "Register my child" })}
+            </Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     );

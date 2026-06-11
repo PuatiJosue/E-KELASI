@@ -10,7 +10,8 @@
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://kbikkkyonbnkqdacmrfx.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWtra3lvbmJua3FkYWNtcmZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzI3OTUsImV4cCI6MjA5NTkwODc5NX0.wWUXCkF_gNIBhGdTsRWSPJD1DbBcgE4qH_Ro7a4bKGQ"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWtra3lvbmJua3FkYWNtcmZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzI3OTUsImV4cCI6MjA5NTkwODc5NX0.wWUXCkF_gNIBhGdTsRWSPJD1DbBcgE4qH_Ro7a4bKGQ",
+        "EXPO_PUBLIC_WEB_API_URL": "https://e-kelasi.vercel.app"
       }
     },
     "production": {
@@ -20,7 +21,8 @@
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://kbikkkyonbnkqdacmrfx.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWtra3lvbmJua3FkYWNtcmZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzI3OTUsImV4cCI6MjA5NTkwODc5NX0.wWUXCkF_gNIBhGdTsRWSPJD1DbBcgE4qH_Ro7a4bKGQ"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtiaWtra3lvbmJua3FkYWNtcmZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMzI3OTUsImV4cCI6MjA5NTkwODc5NX0.wWUXCkF_gNIBhGdTsRWSPJD1DbBcgE4qH_Ro7a4bKGQ",
+        "EXPO_PUBLIC_WEB_API_URL": "https://e-kelasi.vercel.app"
       }
     }
   },

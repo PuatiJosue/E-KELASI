@@ -1,10 +1,12 @@
-import { View, Text, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, ActivityIndicator, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Avatar } from "@/components/Avatar";
 import { Card } from "@/components/Card";
+import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { getChild, type Child } from "@/lib/db";
@@ -12,6 +14,7 @@ import { getChild, type Child } from "@/lib/db";
 export default function AccountChildren() {
   const t = useTheme();
   const tr = useT();
+  const router = useRouter();
   const [child, setChild] = useState<Child | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -43,10 +46,19 @@ export default function AccountChildren() {
             </View>
           </Card>
         )}
+        <Pressable
+          onPress={() => router.push("/account/register-child")}
+          style={{ marginTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: t.brand }}
+        >
+          <Icon name="plus" size={16} color={t.brand} />
+          <Text style={{ color: t.brand, fontSize: 14.5, fontWeight: "700", fontFamily: fonts.bodyBold }}>
+            {tr({ fr: "Enregistrer un enfant", en: "Register a child" })}
+          </Text>
+        </Pressable>
         <Text style={{ fontSize: 11.5, color: t.ink3, fontFamily: fonts.body, lineHeight: 17, marginTop: 4 }}>
           <T
-            fr="L'ajout ou le retrait d'un enfant est géré par l'école."
-            en="Adding or removing a child is managed by the school."
+            fr="Après enregistrement, l'école valide avant que l'accès soit actif."
+            en="After registering, the school validates before access is active."
           />
         </Text>
       </ScrollView>
