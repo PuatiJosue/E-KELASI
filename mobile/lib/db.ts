@@ -15,6 +15,9 @@ export type Child = {
   rank?: number | null;
   total?: number | null;
   avatarUrl?: string | null;
+  schoolPhone?: string | null;
+  sex?: string | null;
+  age?: number | null;
 };
 
 export type Thread = {
@@ -101,12 +104,25 @@ export async function getChild(): Promise<Child | null> {
   try {
     const { data: links } = await supabase
       .from("parent_links")
-      .select("students(id, full_name, class_name, grade_level, avatar_url, schools(name))")
+      .select("students!inner(id, full_name, class_name, grade_level, avatar_url, birth_date, sex, status, schools(name, phone))")
+      .eq("students.status", "active")
       .limit(1)
-      .single();
+      .maybeSingle();
     if (!links || !(links as any).students) return null;
     const s = (links as any).students;
     const studentId = s.id;
+
+    // Âge depuis la date de naissance.
+    let age: number | null = null;
+    if (s.birth_date) {
+      const d = new Date(s.birth_date);
+      if (!isNaN(d.getTime())) {
+        const now = new Date();
+        age = now.getFullYear() - d.getFullYear();
+        const m = now.getMonth() - d.getMonth();
+        if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+      }
+    }
 
     // Compute average across all grades
     const { data: grades } = await supabase
@@ -128,9 +144,26 @@ export async function getChild(): Promise<Child | null> {
       school: s.schools?.name ?? "",
       avg,
       avatarUrl: s.avatar_url ?? null,
+      schoolPhone: s.schools?.phone ?? null,
+      sex: s.sex ?? null,
+      age,
     };
   } catch {
     return null;
+  }
+}
+
+// Le parent a-t-il un enfant en attente de validation par l'école ?
+export async function hasPendingChild(): Promise<boolean> {
+  if (!isLiveMode || !supabase) return false;
+  try {
+    const { data } = await supabase
+      .from("parent_links")
+      .select("students!inner(id)")
+      .eq("students.status", "pending");
+    return (data ?? []).length > 0;
+  } catch {
+    return false;
   }
 }
 

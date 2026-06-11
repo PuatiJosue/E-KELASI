@@ -16,6 +16,7 @@ export default function AccountInfo() {
 
   const [fullName, setFullName] = useState(session?.fullName ?? "");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -23,10 +24,13 @@ export default function AccountInfo() {
     if (!isLiveMode || !supabase || !session?.userId) return;
     supabase
       .from("profiles")
-      .select("phone")
+      .select("phone, address")
       .eq("id", session.userId)
       .maybeSingle()
-      .then(({ data }) => setPhone(data?.phone ?? ""));
+      .then(({ data }) => {
+        setPhone(data?.phone ?? "");
+        setAddress(data?.address ?? "");
+      });
   }, [session?.userId]);
 
   const save = async () => {
@@ -42,7 +46,7 @@ export default function AccountInfo() {
     setBusy(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ full_name: fullName.trim(), phone: phone.trim() || null })
+      .update({ full_name: fullName.trim(), phone: phone.trim() || null, address: address.trim() || null })
       .eq("id", session.userId);
     await supabase.auth.updateUser({ data: { full_name: fullName.trim() } }).catch(() => {});
     setBusy(false);
@@ -59,6 +63,7 @@ export default function AccountInfo() {
       <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
         <Field label={tr({ fr: "Nom complet", en: "Full name" })} value={fullName} onChangeText={setFullName} />
         <Field label={tr({ fr: "Téléphone", en: "Phone" })} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+        <Field label={tr({ fr: "Adresse du domicile", en: "Home address" })} value={address} onChangeText={setAddress} placeholder="Commune, quartier, avenue…" />
         <View>
           <Text style={{ fontSize: 12, fontWeight: "600", color: t.ink2, fontFamily: fonts.bodyBold, marginBottom: 6 }}>Email</Text>
           <Text style={{ fontSize: 14, color: t.ink3, fontFamily: fonts.body }}>{session?.email ?? "—"}</Text>

@@ -14,7 +14,8 @@ import { useTheme, fonts, radii } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { type Grade, type Homework } from "@/lib/mock";
-import { getChild, listGrades, listHomework, listThreads, type Child, type Thread } from "@/lib/db";
+import { getChild, hasPendingChild, listGrades, listHomework, listThreads, type Child, type Thread } from "@/lib/db";
+import { Linking } from "react-native";
 
 export default function Home() {
   const t = useTheme();
@@ -25,16 +26,18 @@ export default function Home() {
 
   const [ready, setReady] = useState(false);
   const [child, setChild] = useState<Child | null>(null);
+  const [pending, setPending] = useState(false);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
 
   useEffect(() => {
-    Promise.all([getChild(), listGrades(5), listHomework(), listThreads()]).then(([c, g, h, th]) => {
+    Promise.all([getChild(), listGrades(5), listHomework(), listThreads()]).then(async ([c, g, h, th]) => {
       setChild(c);
       setGrades(g);
       setHomework(h);
       setThreads(th);
+      if (!c) setPending(await hasPendingChild().catch(() => false));
       setReady(true);
     });
   }, []);
@@ -53,24 +56,27 @@ export default function Home() {
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
         <HeaderGreeting parentName={parentName} onBell={() => router.push("/notifications")} />
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 }}>
-          <Icon name="user" size={40} color={t.ink3} />
+          <Icon name={pending ? "clock" : "user"} size={40} color={pending ? t.warning : t.ink3} />
           <Text style={{ fontSize: 16, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold, textAlign: "center" }}>
-            {tr({ fr: "Aucun enfant enregistré", en: "No child registered" })}
+            {pending
+              ? tr({ fr: "En attente de validation", en: "Awaiting validation" })
+              : tr({ fr: "Aucun enfant enregistré", en: "No child registered" })}
           </Text>
           <Text style={{ fontSize: 13, color: t.ink3, textAlign: "center", fontFamily: fonts.body, lineHeight: 20 }}>
-            {tr({
-              fr: "Enregistrez votre enfant : l'école validera et vous verrez son suivi scolaire.",
-              en: "Register your child: the school will confirm and you'll see their school journey.",
-            })}
+            {pending
+              ? tr({ fr: "Votre demande a été envoyée. L'école doit valider l'inscription de votre enfant.", en: "Your request was sent. The school must confirm your child's enrollment." })
+              : tr({ fr: "Enregistrez votre enfant : l'école validera et vous verrez son suivi scolaire.", en: "Register your child: the school will confirm and you'll see their school journey." })}
           </Text>
-          <Pressable
-            onPress={() => router.push("/account/register-child")}
-            style={{ marginTop: 6, backgroundColor: t.brand, paddingVertical: 14, paddingHorizontal: 22, borderRadius: 14 }}
-          >
-            <Text style={{ color: t.onBrand, fontSize: 15, fontWeight: "700", fontFamily: fonts.bodyBold }}>
-              {tr({ fr: "Enregistrer mon enfant", en: "Register my child" })}
-            </Text>
-          </Pressable>
+          {!pending && (
+            <Pressable
+              onPress={() => router.push("/account/register-child")}
+              style={{ marginTop: 6, backgroundColor: t.brand, paddingVertical: 14, paddingHorizontal: 22, borderRadius: 14 }}
+            >
+              <Text style={{ color: t.onBrand, fontSize: 15, fontWeight: "700", fontFamily: fonts.bodyBold }}>
+                {tr({ fr: "Enregistrer mon enfant", en: "Register my child" })}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -85,6 +91,27 @@ export default function Home() {
 
         <View style={{ padding: 20, paddingTop: 12, gap: 14 }}>
           <ChildHero child={child} onAvatarChange={(url) => setChild((c) => (c ? { ...c, avatarUrl: url } : c))} />
+
+          <Pressable
+            onPress={() => child.schoolPhone && Linking.openURL(`tel:${child.schoolPhone}`)}
+            disabled={!child.schoolPhone}
+          >
+            <Card style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: t.brandSoft, alignItems: "center", justifyContent: "center" }}>
+                <Icon name="school" size={18} color={t.brand600} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, color: t.ink3, fontWeight: "600", fontFamily: fonts.body }}>
+                  <T fr="Contact École" en="School contact" />
+                </Text>
+                <Text style={{ fontSize: 13.5, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>{child.school}</Text>
+                <Text style={{ fontSize: 12, color: t.ink3, fontFamily: fonts.body, marginTop: 1 }}>
+                  {child.schoolPhone || tr({ fr: "Numéro non renseigné", en: "No number provided" })}
+                </Text>
+              </View>
+              {child.schoolPhone ? <Icon name="chevR" size={18} color={t.brand} /> : null}
+            </Card>
+          </Pressable>
 
           <SectionTitle
             title={{ fr: "Nouvelles notes", en: "New grades" }}
