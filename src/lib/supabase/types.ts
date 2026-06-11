@@ -796,43 +796,55 @@ export type Database = {
       }
       schools: {
         Row: {
+          address: string | null
           brand_color: string | null
           city: string
+          commune: string | null
           country_code: string
           created_at: string
           id: string
           joined_at: string
           logo_url: string | null
           name: string
+          phone: string | null
           plan: Database["public"]["Enums"]["school_plan"]
+          quartier: string | null
           slug: string
           status: Database["public"]["Enums"]["school_status"]
           updated_at: string
         }
         Insert: {
+          address?: string | null
           brand_color?: string | null
           city: string
+          commune?: string | null
           country_code: string
           created_at?: string
           id?: string
           joined_at?: string
           logo_url?: string | null
           name: string
+          phone?: string | null
           plan?: Database["public"]["Enums"]["school_plan"]
+          quartier?: string | null
           slug: string
           status?: Database["public"]["Enums"]["school_status"]
           updated_at?: string
         }
         Update: {
+          address?: string | null
           brand_color?: string | null
           city?: string
+          commune?: string | null
           country_code?: string
           created_at?: string
           id?: string
           joined_at?: string
           logo_url?: string | null
           name?: string
+          phone?: string | null
           plan?: Database["public"]["Enums"]["school_plan"]
+          quartier?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["school_status"]
           updated_at?: string
@@ -845,32 +857,57 @@ export type Database = {
           birth_date: string | null
           class_name: string | null
           created_at: string
+          created_by: string | null
+          first_name: string | null
           full_name: string
           grade_level: string
           id: string
+          last_name: string | null
+          middle_name: string | null
           school_id: string
+          sex: string | null
+          status: string
         }
         Insert: {
           avatar_url?: string | null
           birth_date?: string | null
           class_name?: string | null
           created_at?: string
+          created_by?: string | null
+          first_name?: string | null
           full_name: string
           grade_level: string
           id?: string
+          last_name?: string | null
+          middle_name?: string | null
           school_id: string
+          sex?: string | null
+          status?: string
         }
         Update: {
           avatar_url?: string | null
           birth_date?: string | null
           class_name?: string | null
           created_at?: string
+          created_by?: string | null
+          first_name?: string | null
           full_name?: string
           grade_level?: string
           id?: string
+          last_name?: string | null
+          middle_name?: string | null
           school_id?: string
+          sex?: string | null
+          status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "students_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "students_school_id_fkey"
             columns: ["school_id"]
