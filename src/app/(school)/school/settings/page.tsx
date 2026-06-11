@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
 import { ProfileEditForm } from "@/components/ProfileEditForm";
+import { SchoolContactForm } from "./SchoolContactForm";
 import { T } from "@/lib/i18n";
 import { getMySchool } from "@/lib/school-db";
 import { createClient } from "@/lib/supabase/server";
@@ -59,8 +60,18 @@ export default async function SchoolSettings() {
         </div>
         <Row label="Nom" value={school?.name ?? "—"} />
         <Row label="Ville" value={`${school?.city ?? "—"}, ${school?.countryCode ?? ""}`} />
-        <Row label="Plan" value={school?.plan === "pro" ? "Pro · $120/mois" : "Standard · $80/mois"} />
         <Row label="Statut" value={school?.status ?? "—"} last />
+      </div>
+
+      <div className="ek-card" style={{ padding: 20 }}>
+        <SchoolContactForm
+          initial={{
+            commune: school?.commune ?? "",
+            quartier: school?.quartier ?? "",
+            address: school?.address ?? "",
+            phone: school?.phone ?? "",
+          }}
+        />
       </div>
 
       <div className="ek-card" style={{ padding: 20 }}>

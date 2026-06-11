@@ -13,6 +13,10 @@ export type MySchool = {
   status: string;
   brandColor: string | null;
   logoUrl: string | null;
+  commune: string | null;
+  quartier: string | null;
+  address: string | null;
+  phone: string | null;
 };
 
 export type SchoolKpis = {
@@ -68,6 +72,10 @@ export async function getMySchool(): Promise<MySchool | null> {
       status: "active",
       brandColor: null,
       logoUrl: null,
+      commune: null,
+      quartier: null,
+      address: null,
+      phone: null,
     };
   }
   try {
@@ -76,7 +84,7 @@ export async function getMySchool(): Promise<MySchool | null> {
     if (!user) return null;
     const { data: staff } = await supabase
       .from("school_staff")
-      .select("schools(id, name, slug, city, country_code, plan, status, brand_color, logo_url)")
+      .select("schools(id, name, slug, city, country_code, plan, status, brand_color, logo_url, commune, quartier, address, phone)")
       .eq("user_id", user.id)
       .eq("role", "school_admin")
       .limit(1)
@@ -93,6 +101,10 @@ export async function getMySchool(): Promise<MySchool | null> {
       status: s.status,
       brandColor: s.brand_color,
       logoUrl: s.logo_url,
+      commune: s.commune,
+      quartier: s.quartier,
+      address: s.address,
+      phone: s.phone,
     };
   } catch {
     return null;
