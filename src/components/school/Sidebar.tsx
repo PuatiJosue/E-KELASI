@@ -13,6 +13,7 @@ type NavItem = { id: string; href: string; icon: string; fr: string; en: string 
 
 const NAV: NavItem[] = [
   { id: "overview", href: "/school/overview", icon: "pieChart", fr: "Vue d'ensemble", en: "Overview" },
+  { id: "requests", href: "/school/requests", icon: "bell",     fr: "Demandes",      en: "Requests" },
   { id: "teachers", href: "/school/teachers", icon: "users",    fr: "Professeurs",   en: "Teachers" },
   { id: "students", href: "/school/students", icon: "user",     fr: "Élèves",        en: "Students" },
   { id: "parents",  href: "/school/parents",  icon: "users",    fr: "Parents",       en: "Parents" },

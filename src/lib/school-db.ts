@@ -215,6 +215,7 @@ export async function listSchoolStudents(): Promise<SchoolStudentRow[]> {
       .from("students")
       .select("id, full_name, class_name, grade_level, avatar_url")
       .eq("school_id", school.id)
+      .eq("status", "active")
       .order("class_name")
       .order("full_name");
     if (!students || students.length === 0) return [];
@@ -268,7 +269,8 @@ export async function listSchoolParents(): Promise<SchoolParentRow[]> {
     const { data: students } = await supabase
       .from("students")
       .select("id, full_name")
-      .eq("school_id", school.id);
+      .eq("school_id", school.id)
+      .eq("status", "active");
     const ids = (students ?? []).map((s: any) => s.id);
     if (ids.length === 0) return [];
     const studentName = new Map((students ?? []).map((s: any) => [s.id, s.full_name]));
