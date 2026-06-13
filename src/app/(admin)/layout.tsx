@@ -13,6 +13,9 @@ const ROLE_LABELS: Record<string, string> = {
   teacher: "Professeur",
 };
 
+// Jamais de cache : chaque requête rend le profil de l'utilisateur connecté.
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const lang = getLang();
 

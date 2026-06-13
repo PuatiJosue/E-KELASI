@@ -6,6 +6,8 @@ import { TeacherTopbar } from "@/components/teacher/Topbar";
 import { getTeacherSchoolStatus } from "@/lib/teacher-db";
 import { SuspendedNotice } from "@/components/SuspendedNotice";
 
+export const dynamic = "force-dynamic";
+
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
   const lang = getLang();
 

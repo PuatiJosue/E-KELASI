@@ -82,9 +82,11 @@ export async function middleware(request: NextRequest) {
       (isTeacherRoute && (role === "teacher" || role === "super_admin")) ||
       (isSchoolRoute && (role === "school_admin" || role === "super_admin"));
 
-    if (!allowed && role) {
+    // Non autorisé : on redirige vers son espace s'il a un rôle, sinon vers
+    // /login (comptes parents/sans rôle ne doivent jamais voir la console).
+    if (!allowed) {
       const url = request.nextUrl.clone();
-      url.pathname = homeByRole[role] ?? "/login";
+      url.pathname = role ? (homeByRole[role] ?? "/login") : "/login";
       return NextResponse.redirect(url);
     }
   }

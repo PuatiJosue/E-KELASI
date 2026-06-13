@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { loginAction } from "./actions";
 
-export default function LoginPage() {
+export default function LoginPage({ searchParams }: { searchParams: { error?: string } }) {
+  const error = searchParams?.error;
   return (
     <div
       style={{
@@ -38,6 +39,23 @@ export default function LoginPage() {
         >
           Connectez-vous à votre compte E-KELASI.
         </p>
+
+        {error && (
+          <div
+            style={{
+              padding: "10px 12px",
+              borderRadius: 9,
+              background: "rgba(192,58,43,0.1)",
+              color: "var(--danger)",
+              fontSize: 12.5,
+              fontWeight: 600,
+              marginBottom: 16,
+              textAlign: "center",
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         <form action={loginAction} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>

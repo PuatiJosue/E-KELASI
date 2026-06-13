@@ -6,6 +6,8 @@ import { SchoolTopbar } from "@/components/school/Topbar";
 import { getMySchool } from "@/lib/school-db";
 import { SuspendedNotice } from "@/components/SuspendedNotice";
 
+export const dynamic = "force-dynamic";
+
 export default async function SchoolLayout({ children }: { children: React.ReactNode }) {
   const school = await getMySchool();
   const lang = getLang();
