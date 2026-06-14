@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { ratelimit } from "@/lib/rate-limit";
+import { ratelimit, checkLockout, recordFailure, clearFailures } from "@/lib/rate-limit";
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") ?? "");
@@ -23,13 +23,26 @@ export async function loginAction(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent("Trop de tentatives. Réessaie dans une minute.")}`);
   }
 
+  // Verrouillage par compte : après 5 échecs sur le même email, on bloque
+  // 15 min — stoppe le brute-force ciblé même si l'attaquant change d'IP.
+  const emailKey = `loginfail:${email.toLowerCase().trim()}`;
+  const lockedMs = checkLockout(emailKey);
+  if (lockedMs > 0) {
+    const mins = Math.ceil(lockedMs / 60_000);
+    redirect(`/login?error=${encodeURIComponent(`Trop d'échecs. Compte bloqué ${mins} min par sécurité.`)}`);
+  }
+
   const supabase = createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.user) {
     // Message volontairement vague : ne pas révéler si l'email existe ou pas.
     if (error) console.warn("[login] failed signin for", email.slice(0, 3) + "***", "-", error.message);
+    recordFailure(emailKey, { maxFailures: 5, windowMs: 15 * 60_000, lockMs: 15 * 60_000 });
     redirect(`/login?error=${encodeURIComponent("Email ou mot de passe incorrect.")}`);
   }
+
+  // Connexion réussie : on efface le compteur d'échecs de ce compte.
+  clearFailures(emailKey);
 
   // Redirige selon le rôle
   const { data: profile } = await supabase
