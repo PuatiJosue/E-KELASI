@@ -79,7 +79,8 @@ export function TeacherSidebar() {
         display: "flex",
         flexDirection: "column",
         gap: 16,
-        overflow: "hidden",
+        overflowY: "auto",
+        overflowX: "hidden",
       }}
     >
       <div style={{ padding: "4px 8px 0" }}>
