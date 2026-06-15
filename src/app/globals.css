@@ -170,12 +170,13 @@ h1, h2, h3, h4 {
   height: 100dvh; /* hauteur dynamique : évite que la barre du navigateur mobile masque le bas */
   display: grid;
   grid-template-columns: var(--ek-sidebar-w, 232px) 1fr;
+  grid-template-rows: minmax(0, 1fr); /* contraint la hauteur → colonnes défilables */
   overflow: hidden;
   background: var(--bg);
 }
 /* Marge de sécurité en bas du contenu défilant (zone gestes mobile). */
 .ek-content { padding-bottom: env(safe-area-inset-bottom, 0); }
-.ek-sidebar { display: flex; min-width: 0; }
+.ek-sidebar { display: flex; min-width: 0; min-height: 0; }
 .ek-sidebar > * { flex: 1; min-width: 0; }
 .ek-main { display: flex; flex-direction: column; overflow: hidden; min-width: 0; min-height: 0; }
 .ek-content { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; background: var(--bg); }
