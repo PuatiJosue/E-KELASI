@@ -3,7 +3,7 @@
     "name": "E-KELASI",
     "slug": "e-kelasi",
     "owner": "oshua",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "ekelasi",
@@ -24,7 +24,7 @@
         "backgroundColor": "#02122C"
       },
       "package": "com.ekelasi.parent",
-      "versionCode": 3
+      "versionCode": 4
     },
     "web": {
       "bundler": "metro",

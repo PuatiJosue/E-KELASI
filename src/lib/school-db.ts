@@ -44,6 +44,31 @@ export type SchoolStudentRow = {
   parentNames: string[];
   avg: number | null;
   avatarUrl: string | null;
+  sex: string | null;
+  birthDate: string | null;
+  option: string | null;
+};
+
+export type ClassDirectoryRow = {
+  className: string;
+  studentCount: number;
+  teacherCount: number;
+  teacherNames: string[];
+  avg: number | null;
+};
+
+export type StudentDossier = {
+  id: string;
+  fullName: string;
+  sex: string | null;
+  birthDate: string | null;
+  className: string;
+  option: string | null;
+  schoolName: string | null;
+  status: string;
+  parents: { name: string; email: string; phone: string | null; access: string }[];
+  subjects: { name: string; short: string; avg: number; items: any[] }[];
+  overallAvg: number;
 };
 
 export type ClassWithAvg = {
@@ -213,7 +238,7 @@ export async function listSchoolStudents(): Promise<SchoolStudentRow[]> {
     if (!school) return [];
     const { data: students } = await supabase
       .from("students")
-      .select("id, full_name, class_name, grade_level, avatar_url")
+      .select("id, full_name, class_name, grade_level, avatar_url, sex, birth_date, option")
       .eq("school_id", school.id)
       .eq("status", "active")
       .order("class_name")
@@ -253,6 +278,9 @@ export async function listSchoolStudents(): Promise<SchoolStudentRow[]> {
         parentNames: ps,
         avg,
         avatarUrl: s.avatar_url ?? null,
+        sex: s.sex ?? null,
+        birthDate: s.birth_date ?? null,
+        option: s.option ?? null,
       };
     });
   } catch {
@@ -325,6 +353,142 @@ export async function listClassesWithAvg(): Promise<ClassWithAvg[]> {
     studentCount: g.count,
     avg: g.n > 0 ? +(g.sum / g.n).toFixed(1) : null,
   }));
+}
+
+// Annuaire : effectifs élèves + enseignants par classe (+ moyenne).
+export async function getClassDirectory(): Promise<{
+  rows: ClassDirectoryRow[];
+  totalStudents: number;
+  totalTeachers: number;
+}> {
+  if (!isLiveMode()) return { rows: [], totalStudents: 0, totalTeachers: 0 };
+  try {
+    const supabase = createClient();
+    const school = await getMySchool();
+    if (!school) return { rows: [], totalStudents: 0, totalTeachers: 0 };
+
+    const students = await listSchoolStudents();
+
+    // Enseignants de l'école + leurs noms.
+    const { data: staff } = await supabase
+      .from("school_staff")
+      .select("user_id, profiles(full_name)")
+      .eq("school_id", school.id)
+      .eq("role", "teacher");
+    const teacherName = new Map<string, string>();
+    const teacherIds: string[] = [];
+    for (const s of staff ?? []) {
+      if ((s as any).user_id) {
+        teacherIds.push((s as any).user_id);
+        teacherName.set((s as any).user_id, (s as any).profiles?.full_name ?? "");
+      }
+    }
+
+    // Quels enseignants interviennent dans quelle classe (via les devoirs).
+    const teachersByClass: Record<string, Set<string>> = {};
+    if (teacherIds.length > 0) {
+      const { data: hw } = await supabase
+        .from("homework")
+        .select("class_name, teacher_id")
+        .in("teacher_id", teacherIds);
+      for (const h of hw ?? []) {
+        const c = (h as any).class_name;
+        if (!c || !(h as any).teacher_id) continue;
+        (teachersByClass[c] ||= new Set()).add((h as any).teacher_id);
+      }
+    }
+
+    // Regroupe les élèves par classe.
+    const byClass: Record<string, SchoolStudentRow[]> = {};
+    for (const s of students) (byClass[s.className] ||= []).push(s);
+
+    const rows: ClassDirectoryRow[] = Object.entries(byClass)
+      .map(([className, list]) => {
+        const withAvg = list.filter((s) => s.avg !== null) as { avg: number }[];
+        const avg = withAvg.length ? +(withAvg.reduce((a, s) => a + s.avg, 0) / withAvg.length).toFixed(1) : null;
+        const tset = teachersByClass[className] ?? new Set<string>();
+        return {
+          className,
+          studentCount: list.length,
+          teacherCount: tset.size,
+          teacherNames: [...tset].map((id) => teacherName.get(id) ?? "").filter(Boolean),
+          avg,
+        };
+      })
+      .sort((a, b) => a.className.localeCompare(b.className));
+
+    return { rows, totalStudents: students.length, totalTeachers: teacherIds.length };
+  } catch {
+    return { rows: [], totalStudents: 0, totalTeachers: 0 };
+  }
+}
+
+// Dossier complet d'un élève (identité + parents + scolarité).
+export async function getStudentDossier(studentId: string): Promise<StudentDossier | null> {
+  if (!isLiveMode()) return null;
+  try {
+    const supabase = createClient();
+    const school = await getMySchool();
+    if (!school) return null;
+
+    const { data: s } = await supabase
+      .from("students")
+      .select("id, full_name, sex, birth_date, class_name, option, status, school_id, schools(name)")
+      .eq("id", studentId)
+      .eq("school_id", school.id)
+      .maybeSingle();
+    if (!s) return null;
+
+    const { data: links } = await supabase
+      .from("parent_links")
+      .select("access_status, profiles!parent_links_parent_id_fkey(full_name, email, phone)")
+      .eq("student_id", studentId);
+    const parents = (links ?? []).map((l: any) => ({
+      name: l.profiles?.full_name ?? "—",
+      email: l.profiles?.email ?? "",
+      phone: l.profiles?.phone ?? null,
+      access: l.access_status ?? "active",
+    }));
+
+    const { data: grades } = await supabase
+      .from("grades")
+      .select("kind, score, max_score, coefficient, graded_at, comment, subjects(name, short_name)")
+      .eq("student_id", studentId)
+      .is("archived_at", null)
+      .order("graded_at", { ascending: false });
+
+    const bySubject: Record<string, { name: string; short: string; sum: number; coef: number; items: any[] }> = {};
+    for (const g of grades ?? []) {
+      const name = (g as any).subjects?.name ?? "?";
+      if (!bySubject[name]) bySubject[name] = { name, short: (g as any).subjects?.short_name ?? "", sum: 0, coef: 0, items: [] };
+      bySubject[name].sum += ((g as any).score / (g as any).max_score) * 20 * (g as any).coefficient;
+      bySubject[name].coef += (g as any).coefficient;
+      bySubject[name].items.push(g);
+    }
+    const subjects = Object.values(bySubject).map((su) => ({
+      name: su.name,
+      short: su.short,
+      avg: su.coef > 0 ? +(su.sum / su.coef).toFixed(2) : 0,
+      items: su.items,
+    }));
+    const overallAvg = subjects.length ? +(subjects.reduce((a, su) => a + su.avg, 0) / subjects.length).toFixed(2) : 0;
+
+    return {
+      id: (s as any).id,
+      fullName: (s as any).full_name,
+      sex: (s as any).sex ?? null,
+      birthDate: (s as any).birth_date ?? null,
+      className: (s as any).class_name ?? "—",
+      option: (s as any).option ?? null,
+      schoolName: (s as any).schools?.name ?? null,
+      status: (s as any).status,
+      parents,
+      subjects,
+      overallAvg,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function getStudentReportData(studentId: string) {

@@ -76,7 +76,7 @@ export default async function SchoolRequests() {
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600, color: "var(--ink)" }}>{p.fullName}</div>
                       <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                        {(p.sex === "M" ? "Garçon" : p.sex === "F" ? "Fille" : "—")} · {ageFrom(p.birthDate)}
+                        {(p.sex === "M" ? "Masculin" : p.sex === "F" ? "Féminin" : "—")} · {ageFrom(p.birthDate)}
                       </div>
                     </div>
                   </div>
@@ -84,7 +84,10 @@ export default async function SchoolRequests() {
                     <div style={{ color: "var(--ink-2)", fontWeight: 600 }}>{p.parentName}</div>
                     <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{p.parentPhone || p.parentEmail}</div>
                   </div>
-                  <div style={{ color: "var(--ink-2)" }}>{p.className ?? "—"}</div>
+                  <div style={{ color: "var(--ink-2)" }}>
+                    {p.className ?? "—"}
+                    {p.option ? <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{p.option}</div> : null}
+                  </div>
                   <div style={{ textAlign: "right" }}>
                     <RequestActions studentId={p.id} />
                   </div>

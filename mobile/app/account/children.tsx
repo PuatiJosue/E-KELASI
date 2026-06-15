@@ -1,7 +1,6 @@
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Avatar } from "@/components/Avatar";
@@ -9,42 +8,39 @@ import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
-import { getChild, type Child } from "@/lib/db";
+import { useChildren } from "@/lib/children";
 
 export default function AccountChildren() {
   const t = useTheme();
   const tr = useT();
   const router = useRouter();
-  const [child, setChild] = useState<Child | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    getChild().then((c) => { setChild(c); setReady(true); }).catch(() => setReady(true));
-  }, []);
+  const { children, loading } = useChildren();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top", "bottom"]}>
       <ScreenHeader title={tr({ fr: "Enfants & écoles", en: "Children & schools" })} />
       <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
-        {!ready ? (
+        {loading ? (
           <ActivityIndicator color={t.brand} style={{ marginTop: 40 }} />
-        ) : !child ? (
+        ) : children.length === 0 ? (
           <Text style={{ fontSize: 13.5, color: t.ink3, fontFamily: fonts.body, textAlign: "center", marginTop: 30, lineHeight: 20 }}>
             {tr({
-              fr: "Aucun enfant lié. Contactez l'école de votre enfant pour qu'elle vous relie.",
-              en: "No child linked. Ask your child's school to link you.",
+              fr: "Aucun enfant lié. Enregistrez votre enfant ci-dessous ; l'école validera.",
+              en: "No child linked. Register your child below; the school will validate.",
             })}
           </Text>
         ) : (
-          <Card style={{ padding: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <Avatar name={child.name} url={child.avatarUrl} size={52} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: "700", color: t.ink, fontFamily: fonts.display }}>{child.name}</Text>
-              <Text style={{ fontSize: 13, color: t.ink3, marginTop: 2, fontFamily: fonts.body }}>
-                {child.grade}{child.school ? ` · ${child.school}` : ""}
-              </Text>
-            </View>
-          </Card>
+          children.map((child) => (
+            <Card key={child.id} style={{ padding: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <Avatar name={child.name} url={child.avatarUrl} size={52} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: "700", color: t.ink, fontFamily: fonts.display }}>{child.name}</Text>
+                <Text style={{ fontSize: 13, color: t.ink3, marginTop: 2, fontFamily: fonts.body }}>
+                  {[child.grade, child.option, child.school].filter(Boolean).join(" · ")}
+                </Text>
+              </View>
+            </Card>
+          ))
         )}
         <Pressable
           onPress={() => router.push("/account/register-child")}

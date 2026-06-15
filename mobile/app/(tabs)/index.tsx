@@ -10,11 +10,13 @@ import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { Card, Chip } from "@/components/Card";
+import { ChildSwitcher } from "@/components/ChildSwitcher";
 import { useTheme, fonts, radii } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
+import { useChildren } from "@/lib/children";
 import { type Grade, type Homework } from "@/lib/mock";
-import { getChild, hasPendingChild, listGrades, listHomework, listThreads, type Child, type Thread } from "@/lib/db";
+import { hasPendingChild, listGrades, listHomework, listThreads, type Child, type Thread } from "@/lib/db";
 import { Linking } from "react-native";
 
 export default function Home() {
@@ -23,24 +25,44 @@ export default function Home() {
   const router = useRouter();
   const { session } = useAuth();
   const parentName = session?.fullName ?? "Parent";
+  const { children, selectedChild, loading: childrenLoading, refresh } = useChildren();
 
-  const [ready, setReady] = useState(false);
-  const [child, setChild] = useState<Child | null>(null);
   const [pending, setPending] = useState(false);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [dataReady, setDataReady] = useState(false);
 
+  // Messagerie : une seule fois.
   useEffect(() => {
-    Promise.all([getChild(), listGrades(5), listHomework(), listThreads()]).then(async ([c, g, h, th]) => {
-      setChild(c);
+    listThreads().then(setThreads).catch(() => {});
+  }, []);
+
+  // Aucun enfant actif → vérifie s'il y a une demande en attente.
+  useEffect(() => {
+    if (!childrenLoading && children.length === 0) {
+      hasPendingChild().then(setPending).catch(() => setPending(false));
+    }
+  }, [childrenLoading, children.length]);
+
+  // Notes + devoirs de l'enfant sélectionné (rechargés au changement d'enfant).
+  useEffect(() => {
+    if (!selectedChild) {
+      setGrades([]);
+      setHomework([]);
+      setDataReady(true);
+      return;
+    }
+    setDataReady(false);
+    Promise.all([listGrades(5, selectedChild.id), listHomework(selectedChild.grade)]).then(([g, h]) => {
       setGrades(g);
       setHomework(h);
-      setThreads(th);
-      if (!c) setPending(await hasPendingChild().catch(() => false));
-      setReady(true);
+      setDataReady(true);
     });
-  }, []);
+  }, [selectedChild?.id]);
+
+  const ready = !childrenLoading && (selectedChild ? dataReady : true);
+  const child = selectedChild;
 
   if (!ready) {
     return (
@@ -89,8 +111,10 @@ export default function Home() {
       <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
         <HeaderGreeting parentName={parentName} onBell={() => router.push("/notifications")} />
 
+        <ChildSwitcher style={{ paddingVertical: 6 }} />
+
         <View style={{ padding: 20, paddingTop: 12, gap: 14 }}>
-          <ChildHero child={child} onAvatarChange={(url) => setChild((c) => (c ? { ...c, avatarUrl: url } : c))} />
+          <ChildHero child={child} onAvatarChange={() => refresh()} />
 
           <Pressable
             onPress={() => child.schoolPhone && Linking.openURL(`tel:${child.schoolPhone}`)}
@@ -295,7 +319,7 @@ function ChildHero({ child, onAvatarChange }: { child: Child; onAvatarChange?: (
           </Text>
           <Text style={{ fontSize: 18, color: "white", fontWeight: "700", fontFamily: fonts.display }}>{child.name}</Text>
           <Text style={{ fontSize: 12, color: "white", opacity: 0.85, marginTop: 1, fontFamily: fonts.body }}>
-            {child.grade} · {child.school}
+            {[child.grade, child.option, child.school].filter(Boolean).join(" · ")}
           </Text>
         </View>
       </View>

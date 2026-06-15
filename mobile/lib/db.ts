@@ -18,6 +18,7 @@ export type Child = {
   schoolPhone?: string | null;
   sex?: string | null;
   age?: number | null;
+  option?: string | null;
 };
 
 export type Thread = {
@@ -98,59 +99,75 @@ export async function getAccessStatus(): Promise<"active" | "blocked" | "none"> 
   }
 }
 
-// ── Child (the student linked to the current parent) ─────────────────
-export async function getChild(): Promise<Child | null> {
-  if (!isLiveMode || !supabase) return DEMO_CHILD;
+// ── Child (the students linked to the current parent) ────────────────
+
+// Âge à partir d'une date de naissance ISO.
+function ageFromBirth(birth: string | null | undefined): number | null {
+  if (!birth) return null;
+  const d = new Date(birth);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+  return age;
+}
+
+// Moyenne générale d'un élève à partir de ses notes.
+async function avgForStudent(studentId: string): Promise<number> {
+  if (!supabase) return 0;
+  const { data: grades } = await supabase
+    .from("grades")
+    .select("score, max_score, coefficient")
+    .eq("student_id", studentId)
+    .is("archived_at", null);
+  if (!grades || grades.length === 0) return 0;
+  const weighted = grades.reduce((acc: number, g: any) => acc + (g.score / g.max_score) * 20 * g.coefficient, 0);
+  const totalCoef = grades.reduce((acc: number, g: any) => acc + g.coefficient, 0);
+  return totalCoef > 0 ? +(weighted / totalCoef).toFixed(1) : 0;
+}
+
+// Tous les enfants actifs liés au parent connecté.
+export async function listChildren(): Promise<Child[]> {
+  if (!isLiveMode || !supabase) return [DEMO_CHILD];
   try {
     const { data: links } = await supabase
       .from("parent_links")
-      .select("students!inner(id, full_name, class_name, grade_level, avatar_url, birth_date, sex, status, schools(name, phone))")
-      .eq("students.status", "active")
-      .limit(1)
-      .maybeSingle();
-    if (!links || !(links as any).students) return null;
-    const s = (links as any).students;
-    const studentId = s.id;
-
-    // Âge depuis la date de naissance.
-    let age: number | null = null;
-    if (s.birth_date) {
-      const d = new Date(s.birth_date);
-      if (!isNaN(d.getTime())) {
-        const now = new Date();
-        age = now.getFullYear() - d.getFullYear();
-        const m = now.getMonth() - d.getMonth();
-        if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
-      }
+      .select("students!inner(id, full_name, class_name, grade_level, avatar_url, birth_date, sex, status, option, schools(name, phone))")
+      .eq("students.status", "active");
+    if (!links) return [];
+    const children: Child[] = [];
+    for (const link of links as any[]) {
+      const s = link.students;
+      if (!s) continue;
+      children.push({
+        id: s.id,
+        name: s.full_name,
+        grade: s.class_name ?? s.grade_level,
+        school: s.schools?.name ?? "",
+        avg: await avgForStudent(s.id),
+        avatarUrl: s.avatar_url ?? null,
+        schoolPhone: s.schools?.phone ?? null,
+        sex: s.sex ?? null,
+        age: ageFromBirth(s.birth_date),
+        option: s.option ?? null,
+      });
     }
-
-    // Compute average across all grades
-    const { data: grades } = await supabase
-      .from("grades")
-      .select("score, max_score, coefficient")
-      .eq("student_id", studentId)
-      .is("archived_at", null);
-    let avg = 0;
-    if (grades && grades.length > 0) {
-      const weighted = grades.reduce((acc: number, g: any) => acc + (g.score / g.max_score) * 20 * g.coefficient, 0);
-      const totalCoef = grades.reduce((acc: number, g: any) => acc + g.coefficient, 0);
-      avg = totalCoef > 0 ? +(weighted / totalCoef).toFixed(1) : 0;
-    }
-
-    return {
-      id: studentId,
-      name: s.full_name,
-      grade: s.class_name ?? s.grade_level,
-      school: s.schools?.name ?? "",
-      avg,
-      avatarUrl: s.avatar_url ?? null,
-      schoolPhone: s.schools?.phone ?? null,
-      sex: s.sex ?? null,
-      age,
-    };
+    // Ordre stable (par prénom) pour un sélecteur cohérent.
+    children.sort((a, b) => a.name.localeCompare(b.name));
+    return children;
   } catch {
-    return null;
+    return [];
   }
+}
+
+// Un enfant précis (par id), ou le premier enfant actif si aucun id fourni.
+export async function getChild(childId?: string): Promise<Child | null> {
+  if (!isLiveMode || !supabase) return DEMO_CHILD;
+  const children = await listChildren();
+  if (children.length === 0) return null;
+  if (childId) return children.find((c) => c.id === childId) ?? null;
+  return children[0];
 }
 
 // Le parent a-t-il un enfant en attente de validation par l'école ?
@@ -168,17 +185,17 @@ export async function hasPendingChild(): Promise<boolean> {
 }
 
 // ── Subjects with current average (for Grades screen) ────────────────
-export async function listSubjects(): Promise<Subject[]> {
+export async function listSubjects(childId?: string): Promise<Subject[]> {
   if (!isLiveMode || !supabase) return MOCK.subjects;
   try {
-    const child = await getChild();
-    if (!child) return [];
+    const id = childId ?? (await getChild())?.id;
+    if (!id) return [];
     const { data: subjects } = await supabase.from("subjects").select("*");
     if (!subjects) return [];
     const { data: grades } = await supabase
       .from("grades")
       .select("subject_id, score, max_score, coefficient")
-      .eq("student_id", child.id)
+      .eq("student_id", id)
       .is("archived_at", null);
     return subjects.map((s: any) => {
       const gs = (grades ?? []).filter((g: any) => g.subject_id === s.id);
@@ -196,15 +213,15 @@ export async function listSubjects(): Promise<Subject[]> {
 }
 
 // ── Recent grades ────────────────────────────────────────────────────
-export async function listGrades(limit = 20): Promise<Grade[]> {
+export async function listGrades(limit = 20, childId?: string): Promise<Grade[]> {
   if (!isLiveMode || !supabase) return MOCK.grades;
   try {
-    const child = await getChild();
-    if (!child) return [];
+    const id = childId ?? (await getChild())?.id;
+    if (!id) return [];
     const { data } = await supabase
       .from("grades")
       .select("kind, score, max_score, coefficient, graded_at, subjects(name), profiles(full_name)")
-      .eq("student_id", child.id)
+      .eq("student_id", id)
       .is("archived_at", null)
       .order("graded_at", { ascending: false })
       .limit(limit);
@@ -224,15 +241,15 @@ export async function listGrades(limit = 20): Promise<Grade[]> {
 }
 
 // ── Homework ─────────────────────────────────────────────────────────
-export async function listHomework(): Promise<Homework[]> {
+export async function listHomework(className?: string): Promise<Homework[]> {
   if (!isLiveMode || !supabase) return MOCK.homework;
   try {
-    const child = await getChild();
-    if (!child) return [];
+    const cls = className ?? (await getChild())?.grade;
+    if (!cls) return [];
     const { data } = await supabase
       .from("homework")
       .select("title, due_at, status, subjects(name), profiles(full_name)")
-      .eq("class_name", child.grade)
+      .eq("class_name", cls)
       .is("archived_at", null)
       .order("due_at", { ascending: true });
     if (!data) return [];

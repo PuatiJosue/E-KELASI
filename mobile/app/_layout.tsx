@@ -19,6 +19,9 @@ import {
 import { StripeProvider } from "@stripe/stripe-react-native";
 
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { ChildrenProvider } from "@/lib/children";
+import { LockProvider } from "@/lib/lock";
+import { LockOverlay } from "@/components/LockOverlay";
 import { LangProvider } from "@/lib/i18n";
 import { themes, useTheme } from "@/lib/theme";
 import { ThemePrefProvider, useThemePref } from "@/lib/themePref";
@@ -91,6 +94,8 @@ function AppShell() {
         <Stack.Screen name="book" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="notifications" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       </Stack>
+      {/* Verrou du dossier : couvre l'app quand un code est requis (par-dessus tout). */}
+      <LockOverlay />
     </>
   );
 }
@@ -119,7 +124,11 @@ export default function RootLayout() {
       <ThemePrefProvider>
         <LangProvider value="fr">
           <AuthProvider>
-            <AppShell />
+            <ChildrenProvider>
+              <LockProvider>
+                <AppShell />
+              </LockProvider>
+            </ChildrenProvider>
           </AuthProvider>
         </LangProvider>
       </ThemePrefProvider>

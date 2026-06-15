@@ -11,7 +11,7 @@ import { Button } from "@/components/Button";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
-import { pinToPassword, isValidPin } from "@/lib/pin";
+import { codeToPassword, isValidAccessCode } from "@/lib/pin";
 
 export default function Login() {
   const t = useTheme();
@@ -26,12 +26,12 @@ export default function Login() {
 
   const onSubmit = async () => {
     setError(null);
-    if (!isValidPin(password)) {
-      setError(tr({ fr: "Le code doit faire 4 chiffres.", en: "PIN must be 4 digits." }));
+    if (!isValidAccessCode(password)) {
+      setError(tr({ fr: "Le code doit faire 8 caractères (lettres et chiffres).", en: "Code must be 8+ characters (letters and digits)." }));
       return;
     }
     setBusy(true);
-    const res = await signIn(email.trim(), pinToPassword(password));
+    const res = await signIn(email.trim(), codeToPassword(password));
     setBusy(false);
     if (!res.ok) {
       setError(res.error ?? tr({ fr: "Email ou code incorrect.", en: "Incorrect email or PIN." }));
@@ -77,13 +77,12 @@ export default function Login() {
               icon="mail"
             />
             <Field
-              label={tr({ fr: "Code à 4 chiffres", en: "4-digit PIN" })}
+              label={tr({ fr: "Code de connexion", en: "Login code" })}
               value={password}
-              onChangeText={(v) => setPassword(v.replace(/\D/g, "").slice(0, 4))}
-              placeholder="••••"
+              onChangeText={(v) => setPassword(v.replace(/[^A-Za-z0-9]/g, ""))}
+              placeholder="8 caractères min."
               secureTextEntry
-              keyboardType="number-pad"
-              maxLength={4}
+              autoCapitalize="none"
               autoComplete="off"
               icon="lock"
             />
@@ -109,7 +108,7 @@ export default function Login() {
 
           <Button
             onPress={onSubmit}
-            disabled={busy || !email || !isValidPin(password)}
+            disabled={busy || !email || !isValidAccessCode(password)}
             style={{ marginTop: 24, paddingVertical: 16, borderRadius: 14, opacity: busy ? 0.6 : 1 }}
           >
             <Text style={{ color: t.onBrand, fontSize: 15.5, fontWeight: "700", fontFamily: fonts.bodyBold }}>

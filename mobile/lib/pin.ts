@@ -1,20 +1,24 @@
-// PIN 4 chiffres pour les parents — transformation déterministe vers
-// une chaîne ≥6 caractères acceptée par Supabase Auth.
+// Codes d'accès parent.
 //
-// ⚠️ Pas de "sécurité" ajoutée par le suffixe (il est public dans le binaire
-// client). La protection réelle vient :
-//  - du rate limit serveur (5 tentatives / min / IP côté login, plus le
-//    rate limit natif de Supabase Auth).
-//  - du lockout après plusieurs échecs (configurable côté Supabase).
-// L'entropie effective reste de 10 000 combinaisons — c'est un choix UX
-// assumé pour les parents.
+// 1) Code de CONNEXION : 8 caractères minimum, lettres et chiffres uniquement
+//    (pas de caractères spéciaux). Il sert directement de mot de passe Supabase.
+//    Entropie réelle bien supérieure aux anciens 4 chiffres.
+//
+// 2) Code de DOSSIER (verrou local) : 4 chiffres, stocké sur l'appareil
+//    (expo-secure-store, voir lib/lock.tsx). Demandé à l'ouverture de l'app
+//    avant d'accéder aux dossiers des enfants. `isValidPin` valide ce code-là.
 
-const SUFFIX = "x9k";
-
-export function pinToPassword(pin: string): string {
-  return `ekelasi-pin-${pin}-${SUFFIX}`;
+// ── Code de connexion (8+ caractères alphanumériques) ────────────────
+export function isValidAccessCode(code: string): boolean {
+  return /^[A-Za-z0-9]{8,}$/.test(code);
 }
 
+// Le code de connexion EST le mot de passe Supabase (≥8 alphanum, accepté tel quel).
+export function codeToPassword(code: string): string {
+  return code;
+}
+
+// ── Code du dossier (verrou local, 4 chiffres) ───────────────────────
 export function isValidPin(pin: string): boolean {
   return /^\d{4}$/.test(pin);
 }

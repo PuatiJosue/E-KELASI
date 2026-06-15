@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 
 import { Card, Chip } from "@/components/Card";
 import { GradeRing } from "@/components/Charts";
+import { ChildSwitcher } from "@/components/ChildSwitcher";
 import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
+import { useChildren } from "@/lib/children";
 import { type Subject } from "@/lib/mock";
-import { getChild, listSubjects, type Child } from "@/lib/db";
+import { listSubjects } from "@/lib/db";
 
 const PERIODS = [
   { id: "t1", fr: "T1", en: "T1" },
@@ -21,17 +23,24 @@ export default function Grades() {
   const t = useTheme();
   const tr = useT();
   const [period, setPeriod] = useState<(typeof PERIODS)[number]["id"]>("t2");
-  const [ready, setReady] = useState(false);
-  const [child, setChild] = useState<Child | null>(null);
+  const { selectedChild: child, loading: childrenLoading } = useChildren();
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [dataReady, setDataReady] = useState(false);
 
   useEffect(() => {
-    Promise.all([getChild(), listSubjects()]).then(([c, s]) => {
-      setChild(c);
+    if (!child) {
+      setSubjects([]);
+      setDataReady(true);
+      return;
+    }
+    setDataReady(false);
+    listSubjects(child.id).then((s) => {
       setSubjects(s);
-      setReady(true);
+      setDataReady(true);
     });
-  }, []);
+  }, [child?.id]);
+
+  const ready = !childrenLoading && (child ? dataReady : true);
 
   if (!ready) {
     return (
@@ -62,6 +71,8 @@ export default function Grades() {
             <T fr="Notes & moyennes" en="Grades & averages" />
           </Text>
         </View>
+
+        <ChildSwitcher style={{ paddingBottom: 4 }} />
 
         <View style={{ paddingHorizontal: 20, paddingVertical: 12 }}>
           <View style={{ flexDirection: "row", backgroundColor: t.surface2, borderRadius: 12, padding: 4 }}>

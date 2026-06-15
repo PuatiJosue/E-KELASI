@@ -32,6 +32,7 @@ export type PendingStudent = {
   sex: string | null;
   birthDate: string | null;
   className: string | null;
+  option: string | null;
   parentName: string;
   parentEmail: string;
   parentPhone: string | null;
@@ -45,7 +46,7 @@ export async function getPendingStudents(): Promise<PendingStudent[]> {
   const svc = service();
   const { data: students } = await svc
     .from("students")
-    .select("id, full_name, sex, birth_date, class_name, created_at, created_by")
+    .select("id, full_name, sex, birth_date, class_name, option, created_at, created_by")
     .eq("school_id", schoolId)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
@@ -65,6 +66,7 @@ export async function getPendingStudents(): Promise<PendingStudent[]> {
       sex: s.sex,
       birthDate: s.birth_date,
       className: s.class_name,
+      option: s.option ?? null,
       parentName: p?.full_name ?? "—",
       parentEmail: p?.email ?? "",
       parentPhone: p?.phone ?? null,

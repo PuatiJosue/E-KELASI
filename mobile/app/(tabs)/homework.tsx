@@ -3,9 +3,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
 
 import { HomeworkCard } from "./index";
+import { ChildSwitcher } from "@/components/ChildSwitcher";
 import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
+import { useChildren } from "@/lib/children";
 import { type Homework } from "@/lib/mock";
 import { listHomework } from "@/lib/db";
 
@@ -14,14 +16,20 @@ type Filter = "all" | "todo" | "done";
 export default function HomeworkScreen() {
   const t = useTheme();
   const tr = useT();
+  const { selectedChild, loading: childrenLoading } = useChildren();
   const [filter, setFilter] = useState<Filter>("all");
   const [items, setItems] = useState<Homework[] | null>(null);
 
   useEffect(() => {
-    listHomework().then(setItems).catch(() => setItems([]));
-  }, []);
+    if (!selectedChild) {
+      setItems([]);
+      return;
+    }
+    setItems(null);
+    listHomework(selectedChild.grade).then(setItems).catch(() => setItems([]));
+  }, [selectedChild?.id]);
 
-  if (!items) {
+  if (childrenLoading || !items) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color={t.brand} />
@@ -58,6 +66,8 @@ export default function HomeworkScreen() {
             <Icon name="filter" size={18} color={t.ink2} />
           </Pressable>
         </View>
+
+        <ChildSwitcher style={{ paddingVertical: 4 }} />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 8, gap: 8 }}>
           {filters.map((f) => {
