@@ -3,6 +3,8 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { getStudentDossier } from "@/lib/school-db";
+import { listStudentPayments } from "@/lib/finance-db";
+import { PaymentManager } from "./PaymentManager";
 
 function ageFrom(birth: string | null): string {
   if (!birth) return "—";
@@ -25,7 +27,10 @@ function fmtDate(birth: string | null): string {
 const sexLabel = (s: string | null) => (s === "M" ? "Masculin" : s === "F" ? "Féminin" : "—");
 
 export default async function StudentDossierPage({ params }: { params: { student: string } }) {
-  const d = await getStudentDossier(params.student);
+  const [d, payments] = await Promise.all([
+    getStudentDossier(params.student),
+    listStudentPayments(params.student),
+  ]);
 
   if (!d) {
     return (
@@ -101,6 +106,9 @@ export default async function StudentDossierPage({ params }: { params: { student
           )}
         </div>
       </div>
+
+      {/* Frais scolaires / minerval */}
+      <PaymentManager studentId={d.id} payments={payments} />
 
       {/* Notes par matière */}
       <div className="ek-card" style={{ padding: 18 }}>
