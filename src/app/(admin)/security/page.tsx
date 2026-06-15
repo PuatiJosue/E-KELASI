@@ -1,5 +1,4 @@
 import { KPI, PageHeader } from "@/components/KPI";
-import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { listAuditLogs } from "@/lib/db";
 import { SecurityLogTable } from "@/components/admin/SecurityLogTable";
@@ -17,11 +16,6 @@ export default async function SecurityPage() {
           fr: "Journal d'audit · ressources & événements plateforme",
           en: "Audit log · resources & platform events",
         }}
-        right={
-          <button className="ek-btn ek-btn-outline" style={{ height: 32, fontSize: 12 }}>
-            <Icon name="download" size={13} /> <T fr="Exporter logs" en="Export logs" />
-          </button>
-        }
       />
 
       <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>

@@ -1,5 +1,5 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/KPI";
-import { Icon } from "@/components/Icon";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
 import { ProfileEditForm } from "@/components/ProfileEditForm";
 import { SchoolContactForm } from "./SchoolContactForm";
@@ -83,20 +83,16 @@ export default async function SchoolSettings() {
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
           <T fr="Année scolaire" en="School year" />
         </div>
-        <Row label="Année en cours" value="2025-2026" action={<button className="ek-btn ek-btn-outline" style={{ height: 28, fontSize: 11 }}>Modifier</button>} />
-        <Row label="Trimestre actif" value="T2 (janvier - avril)" last action={<button className="ek-btn ek-btn-outline" style={{ height: 28, fontSize: 11 }}>Changer</button>} />
-      </div>
-
-      <div className="ek-card" style={{ padding: 20, borderLeft: "3px solid var(--danger)" }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--danger)", fontFamily: "var(--font-display)" }}>
-          <T fr="Zone de danger" en="Danger zone" />
-        </div>
-        <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 4, marginBottom: 12 }}>
-          <T fr="Actions irréversibles." en="Irreversible actions." />
-        </div>
-        <button className="ek-btn" style={{ background: "rgba(192,58,43,0.10)", color: "var(--danger)", height: 32, fontSize: 12 }}>
-          <T fr="Désactiver l'école" en="Disable school" />
-        </button>
+        <Row
+          label="Année en cours"
+          value={school?.currentYear ?? "—"}
+          last
+          action={
+            <Link href="/school/reenrollments" className="ek-btn ek-btn-outline" style={{ height: 28, fontSize: 11 }}>
+              <T fr="Gérer" en="Manage" />
+            </Link>
+          }
+        />
       </div>
     </div>
   );

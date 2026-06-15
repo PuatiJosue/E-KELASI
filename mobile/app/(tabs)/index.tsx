@@ -440,11 +440,6 @@ export function HomeworkCard({ hw }: { hw: Homework }) {
           </Text>
           <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Chip tone="warn" icon={<Icon name="clock" size={11} color={t.warning} />} label={hw.due} />
-            <Pressable style={{ marginLeft: "auto", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: t.brandSoft }}>
-              <Text style={{ color: t.brand600, fontSize: 12, fontWeight: "600", fontFamily: fonts.bodyBold }}>
-                <T fr="Voir" en="Open" /> →
-              </Text>
-            </Pressable>
           </View>
         </View>
       </View>

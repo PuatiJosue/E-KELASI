@@ -1,6 +1,4 @@
 import { PageHeader } from "@/components/KPI";
-import { Icon } from "@/components/Icon";
-import { T } from "@/lib/i18n";
 import { listSchools } from "@/lib/db";
 import { SchoolsTable } from "@/components/admin/SchoolsTable";
 import { InviteSchoolButton } from "@/components/admin/InviteSchoolModal";
@@ -23,14 +21,7 @@ export default async function SchoolsPage() {
           fr: `${counts.active} écoles actives · ${counts.onboarding} en onboarding · ${counts.trial} en essai`,
           en: `${counts.active} active · ${counts.onboarding} onboarding · ${counts.trial} trial`,
         }}
-        right={
-          <>
-            <button className="ek-btn ek-btn-outline" style={{ height: 32, fontSize: 12 }}>
-              <Icon name="download" size={13} /> CSV
-            </button>
-            <InviteSchoolButton />
-          </>
-        }
+        right={<InviteSchoolButton />}
       />
 
       <SchoolsTable rows={rows} counts={counts} />

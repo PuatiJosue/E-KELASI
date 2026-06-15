@@ -86,6 +86,8 @@ export function AdminTopbar() {
       </button>
       <button
         type="button"
+        onClick={() => router.push("/broadcast")}
+        title="Diffusion"
         style={{
           width: 34,
           height: 34,

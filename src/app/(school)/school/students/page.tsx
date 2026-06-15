@@ -1,5 +1,4 @@
 import { PageHeader } from "@/components/KPI";
-import { Icon } from "@/components/Icon";
 import { listSchoolStudents } from "@/lib/school-db";
 import { AddStudentButton } from "@/components/school/AddStudentButton";
 import { StudentsBrowser } from "./StudentsBrowser";
@@ -16,14 +15,7 @@ export default async function SchoolStudents() {
           fr: `${students.length} élèves dans ${classes} classes`,
           en: `${students.length} students in ${classes} classes`,
         }}
-        right={
-          <>
-            <button className="ek-btn ek-btn-outline" style={{ height: 32, fontSize: 12 }}>
-              <Icon name="upload" size={13} /> CSV
-            </button>
-            <AddStudentButton />
-          </>
-        }
+        right={<AddStudentButton />}
       />
 
       <StudentsBrowser students={students} />

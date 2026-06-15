@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T, useLang } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -19,6 +19,7 @@ const LABELS: Record<string, { fr: string; en: string }> = {
 
 export function TeacherTopbar() {
   const lang = useLang();
+  const router = useRouter();
   const pathname = usePathname() ?? "";
   const parts = pathname.split("/").filter(Boolean); // ['teacher', 'grades', ...]
   const key = parts[1] ?? "dashboard";
@@ -47,6 +48,8 @@ export function TeacherTopbar() {
       <div style={{ flex: 1 }} />
       <button
         type="button"
+        onClick={() => router.push("/teacher/messages")}
+        title="Messagerie"
         style={{
           width: 34,
           height: 34,

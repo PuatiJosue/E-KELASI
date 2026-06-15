@@ -25,35 +25,53 @@ export function StudentsBrowser({ students }: { students: SchoolStudentRow[] }) 
   for (const s of filtered) (grouped[s.className] ||= []).push(s);
   const classes = Object.keys(grouped).sort();
 
+  const exportCsv = () => {
+    const header = ["Nom", "Classe", "Option", "Moyenne", "Parents"];
+    const lines = [header, ...students.map((s) => [s.fullName, s.className, s.option ?? "", s.avg ?? "", s.parentNames.join(" / ")])];
+    const csv = lines.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "eleves.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
-      {/* Recherche rapide */}
-      <div style={{ position: "relative" }}>
-        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--ink-3)", display: "flex" }}>
-          <Icon name="search" size={15} />
-        </span>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher un élève, une classe, un parent…"
-          style={{
-            width: "100%",
-            padding: "10px 12px 10px 36px",
-            borderRadius: 10,
-            border: "1px solid var(--border-strong)",
-            background: "var(--surface)",
-            fontSize: 13.5,
-            color: "var(--ink)",
-          }}
-        />
-        {query && (
-          <button
-            onClick={() => setQuery("")}
-            style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)", display: "flex" }}
-          >
-            <Icon name="close" size={16} />
-          </button>
-        )}
+      {/* Recherche rapide + export */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ position: "relative", flex: 1 }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--ink-3)", display: "flex" }}>
+            <Icon name="search" size={15} />
+          </span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher un élève, une classe, un parent…"
+            style={{
+              width: "100%",
+              padding: "10px 12px 10px 36px",
+              borderRadius: 10,
+              border: "1px solid var(--border-strong)",
+              background: "var(--surface)",
+              fontSize: 13.5,
+              color: "var(--ink)",
+            }}
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)", display: "flex" }}
+            >
+              <Icon name="close" size={16} />
+            </button>
+          )}
+        </div>
+        <button onClick={exportCsv} disabled={students.length === 0} className="ek-btn ek-btn-outline" style={{ height: 40, fontSize: 12, flexShrink: 0, opacity: students.length === 0 ? 0.5 : 1 }}>
+          <Icon name="upload" size={13} /> CSV
+        </button>
       </div>
 
       {query && (

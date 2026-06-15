@@ -1,6 +1,4 @@
 import { PageHeader } from "@/components/KPI";
-import { Icon } from "@/components/Icon";
-import { T } from "@/lib/i18n";
 import { listTicketsByStatus } from "@/lib/db";
 import { TicketBoard } from "@/components/admin/TicketBoard";
 
@@ -16,16 +14,6 @@ export default async function SupportPage() {
           fr: `${total} ticket(s) actif(s)`,
           en: `${total} active ticket(s)`,
         }}
-        right={
-          <>
-            <button className="ek-btn ek-btn-outline" style={{ height: 32, fontSize: 12 }}>
-              <T fr="Macros" en="Macros" />
-            </button>
-            <button className="ek-btn ek-btn-primary" style={{ height: 32, fontSize: 12 }}>
-              <Icon name="plus" size={14} stroke={2.5} /> <T fr="Nouveau ticket" en="New ticket" />
-            </button>
-          </>
-        }
       />
 
       <TicketBoard tickets={tickets} />
