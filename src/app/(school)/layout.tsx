@@ -4,12 +4,23 @@ import { Shell } from "@/components/Shell";
 import { SchoolSidebar } from "@/components/school/Sidebar";
 import { SchoolTopbar } from "@/components/school/Topbar";
 import { getMySchool } from "@/lib/school-db";
+import { createClient } from "@/lib/supabase/server";
+import { isLiveMode } from "@/lib/db";
 import { SuspendedNotice } from "@/components/SuspendedNotice";
 
 export const dynamic = "force-dynamic";
 
+async function getUserName(): Promise<string | undefined> {
+  if (!isLiveMode()) return undefined;
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return undefined;
+  const { data } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+  return data?.full_name ?? undefined;
+}
+
 export default async function SchoolLayout({ children }: { children: React.ReactNode }) {
-  const school = await getMySchool();
+  const [school, userName] = await Promise.all([getMySchool(), getUserName()]);
   const lang = getLang();
 
   // École suspendue (abonnement E-KELASI impayé) → accès direction bloqué.
@@ -29,7 +40,7 @@ export default async function SchoolLayout({ children }: { children: React.React
   return (
     <LangProvider value={lang}>
       <Shell
-        sidebar={<SchoolSidebar school={school} />}
+        sidebar={<SchoolSidebar school={school} userName={userName} />}
         topbar={<SchoolTopbar school={school} />}
         sidebarWidth={240}
         style={brandStyle}

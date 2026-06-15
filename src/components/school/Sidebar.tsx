@@ -78,7 +78,8 @@ function NavGroup({ label, items }: { label: { fr: string; en: string }; items: 
   );
 }
 
-export function SchoolSidebar({ school }: { school: MySchool | null }) {
+export function SchoolSidebar({ school, userName }: { school: MySchool | null; userName?: string }) {
+  const displayName = userName || "Direction";
   return (
     <div
       style={{
@@ -153,15 +154,15 @@ export function SchoolSidebar({ school }: { school: MySchool | null }) {
       <NavGroup label={{ fr: "École", en: "School" }} items={NAV} />
       <NavGroup label={{ fr: "Compte", en: "Account" }} items={SEC} />
 
-      <div style={{ marginTop: "auto" }}>
-        <div style={{ padding: "10px 8px", display: "flex", alignItems: "center", gap: 8 }}>
-          <Avatar name="Aminata Diop" size={30} />
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ padding: "8px", display: "flex", alignItems: "center", gap: 8 }}>
+          <Avatar name={displayName} size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>Mme Aminata Diop</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</div>
             <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>Direction</div>
           </div>
-          <LogoutButton />
         </div>
+        <LogoutButton label="Se déconnecter" block />
       </div>
     </div>
   );

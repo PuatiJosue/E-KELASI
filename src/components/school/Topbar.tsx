@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import { T, useLang } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { MobileMenuButton } from "@/components/Shell";
+import { LogoutButton } from "@/components/LogoutButton";
 import type { MySchool } from "@/lib/school-db";
 
 const LABELS: Record<string, { fr: string; en: string }> = {
@@ -61,6 +62,9 @@ export function SchoolTopbar({ school }: { school: MySchool | null }) {
       >
         <Icon name="bell" size={16} />
       </button>
+      <span className="ek-hide-mobile" style={{ display: "flex" }}>
+        <LogoutButton label="Déconnexion" />
+      </span>
     </div>
   );
 }
