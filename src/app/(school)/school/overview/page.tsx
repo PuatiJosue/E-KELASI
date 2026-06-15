@@ -3,12 +3,14 @@ import { KPI, PageHeader } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { getMySchool, getSchoolKpis, listClassesWithAvg } from "@/lib/school-db";
+import { getPlatformForSchools } from "@/lib/platform-db";
 
 export default async function SchoolOverview() {
-  const [school, kpis, classes] = await Promise.all([
+  const [school, kpis, classes, platform] = await Promise.all([
     getMySchool(),
     getSchoolKpis(),
     listClassesWithAvg(),
+    getPlatformForSchools(),
   ]);
 
   return (
@@ -35,6 +37,19 @@ export default async function SchoolOverview() {
           </>
         }
       />
+
+      {platform.map((a) => (
+        <div key={a.id} className="ek-card" style={{ padding: 16, borderLeft: "3px solid var(--brand)", display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: "var(--brand-soft)", color: "var(--brand-600)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Icon name="bell" size={16} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, color: "var(--ink-3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Annonce E-KELASI</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", marginTop: 1 }}>{a.title}</div>
+            <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 2, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{a.body}</div>
+          </div>
+        </div>
+      ))}
 
       <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
         <KPI label={<T fr="Élèves" en="Students" />} value={String(kpis.students)} sub={<T fr={`${kpis.classes} classes`} en={`${kpis.classes} classes`} />} />
