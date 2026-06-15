@@ -16,7 +16,7 @@ import { T, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useChildren } from "@/lib/children";
 import { type Grade, type Homework } from "@/lib/mock";
-import { hasPendingChild, listGrades, listHomework, listThreads, type Child, type Thread } from "@/lib/db";
+import { hasPendingChild, listAnnouncements, listGrades, listHomework, listThreads, type Announcement, type Child, type Thread } from "@/lib/db";
 import { Linking } from "react-native";
 
 export default function Home() {
@@ -31,11 +31,13 @@ export default function Home() {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [dataReady, setDataReady] = useState(false);
 
-  // Messagerie : une seule fois.
+  // Messagerie + annonces : une seule fois.
   useEffect(() => {
     listThreads().then(setThreads).catch(() => {});
+    listAnnouncements().then(setAnnouncements).catch(() => {});
   }, []);
 
   // Aucun enfant actif → vérifie s'il y a une demande en attente.
@@ -136,6 +138,30 @@ export default function Home() {
               {child.schoolPhone ? <Icon name="chevR" size={18} color={t.brand} /> : null}
             </Card>
           </Pressable>
+
+          {announcements.length > 0 && (
+            <>
+              <SectionTitle
+                title={{ fr: "Annonces de l'école", en: "School announcements" }}
+                action={{ fr: "Tout voir", en: "See all", onPress: () => router.push("/announcements") }}
+              />
+              <Pressable onPress={() => router.push("/announcements")}>
+                <Card style={{ padding: 14, flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: t.brandSoft, alignItems: "center", justifyContent: "center" }}>
+                    <Icon name="bell" size={16} color={t.brand600} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
+                      {announcements[0].title}
+                    </Text>
+                    <Text numberOfLines={2} style={{ fontSize: 12.5, color: t.ink3, marginTop: 2, fontFamily: fonts.body }}>
+                      {announcements[0].body}
+                    </Text>
+                  </View>
+                </Card>
+              </Pressable>
+            </>
+          )}
 
           <SectionTitle
             title={{ fr: "Nouvelles notes", en: "New grades" }}

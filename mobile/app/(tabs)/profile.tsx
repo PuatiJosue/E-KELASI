@@ -1,7 +1,6 @@
 import { View, Text, ScrollView, Pressable, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { Card } from "@/components/Card";
@@ -9,7 +8,7 @@ import { Icon } from "@/components/Icon";
 import { useTheme, fonts, radii } from "@/lib/theme";
 import { T, useT, useLang, useSetLang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
-import { getChild, type Child } from "@/lib/db";
+import { useChildren } from "@/lib/children";
 
 const PRIVACY_URL = "https://e-kelasi.vercel.app/privacy";
 
@@ -20,11 +19,7 @@ export default function Profile() {
   const setLang = useSetLang();
   const router = useRouter();
   const { session, signOut } = useAuth();
-  const [child, setChild] = useState<Child | null>(null);
-
-  useEffect(() => {
-    getChild().then(setChild).catch(() => {});
-  }, []);
+  const { children } = useChildren();
 
   const handleSignOut = async () => {
     await signOut();
@@ -36,7 +31,8 @@ export default function Profile() {
       title: { fr: "Compte", en: "Account" },
       items: [
         { icon: "user", fr: "Informations personnelles", en: "Personal info", onPress: () => router.push("/account/info") },
-        { icon: "school", fr: "Enfants & écoles", en: "Children & schools", detail: child ? "1" : "—", onPress: () => router.push("/account/children") },
+        { icon: "school", fr: "Enfants & écoles", en: "Children & schools", detail: children.length ? String(children.length) : "—", onPress: () => router.push("/account/children") },
+        { icon: "bell", fr: "Annonces de l'école", en: "School announcements", onPress: () => router.push("/announcements") },
       ],
     },
     {

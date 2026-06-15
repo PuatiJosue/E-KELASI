@@ -184,6 +184,35 @@ export async function hasPendingChild(): Promise<boolean> {
   }
 }
 
+// ── Annonces de l'école (Lot C) ──────────────────────────────────────
+export type Announcement = {
+  id: string;
+  title: string;
+  body: string;
+  eventDate: string | null;
+  createdAt: string;
+};
+
+export async function listAnnouncements(): Promise<Announcement[]> {
+  if (!isLiveMode || !supabase) return [];
+  try {
+    const { data } = await supabase
+      .from("announcements")
+      .select("id, title, body, event_date, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return (data ?? []).map((a: any) => ({
+      id: a.id,
+      title: a.title,
+      body: a.body,
+      eventDate: a.event_date,
+      createdAt: a.created_at,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ── Subjects with current average (for Grades screen) ────────────────
 export async function listSubjects(childId?: string): Promise<Subject[]> {
   if (!isLiveMode || !supabase) return MOCK.subjects;

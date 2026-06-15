@@ -90,6 +90,7 @@ function AppShell() {
         <Stack.Screen name="signup" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="account" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="announcements" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="thread" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="book" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="notifications" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
