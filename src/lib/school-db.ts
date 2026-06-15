@@ -17,6 +17,9 @@ export type MySchool = {
   quartier: string | null;
   address: string | null;
   phone: string | null;
+  directorName: string | null;
+  signatureUrl: string | null;
+  currentYear: string | null;
 };
 
 export type SchoolKpis = {
@@ -101,6 +104,9 @@ export async function getMySchool(): Promise<MySchool | null> {
       quartier: null,
       address: null,
       phone: null,
+      directorName: null,
+      signatureUrl: null,
+      currentYear: null,
     };
   }
   try {
@@ -109,7 +115,7 @@ export async function getMySchool(): Promise<MySchool | null> {
     if (!user) return null;
     const { data: staff } = await supabase
       .from("school_staff")
-      .select("schools(id, name, slug, city, country_code, plan, status, brand_color, logo_url, commune, quartier, address, phone)")
+      .select("schools(id, name, slug, city, country_code, plan, status, brand_color, logo_url, commune, quartier, address, phone, director_name, signature_url, current_year)")
       .eq("user_id", user.id)
       .eq("role", "school_admin")
       .limit(1)
@@ -130,6 +136,9 @@ export async function getMySchool(): Promise<MySchool | null> {
       quartier: s.quartier,
       address: s.address,
       phone: s.phone,
+      directorName: s.director_name ?? null,
+      signatureUrl: s.signature_url ?? null,
+      currentYear: s.current_year ?? null,
     };
   } catch {
     return null;

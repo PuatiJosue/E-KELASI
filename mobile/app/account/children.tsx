@@ -51,6 +51,18 @@ export default function AccountChildren() {
             {tr({ fr: "Enregistrer un enfant", en: "Register a child" })}
           </Text>
         </Pressable>
+
+        {children.length > 0 && (
+          <Pressable
+            onPress={() => router.push("/account/reenroll")}
+            style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, backgroundColor: t.brand }}
+          >
+            <Icon name="school" size={16} color={t.onBrand} />
+            <Text style={{ color: t.onBrand, fontSize: 14.5, fontWeight: "700", fontFamily: fonts.bodyBold }}>
+              {tr({ fr: "Demander une réinscription", en: "Request re-enrollment" })}
+            </Text>
+          </Pressable>
+        )}
         <Text style={{ fontSize: 11.5, color: t.ink3, fontFamily: fonts.body, lineHeight: 17, marginTop: 4 }}>
           <T
             fr="Après enregistrement, l'école valide avant que l'accès soit actif."

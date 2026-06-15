@@ -213,6 +213,43 @@ export async function listAnnouncements(): Promise<Announcement[]> {
   }
 }
 
+// ── Documents officiels signés (Lot E2) ──────────────────────────────
+export type ParentDocument = {
+  id: string;
+  title: string;
+  period: string | null;
+  signedBy: string | null;
+  signatureUrl: string | null;
+  verifyCode: string;
+  issuedAt: string;
+  studentName: string | null;
+  data: any;
+};
+
+export async function listDocuments(): Promise<ParentDocument[]> {
+  if (!isLiveMode || !supabase) return [];
+  try {
+    const { data } = await supabase
+      .from("student_documents")
+      .select("id, title, period, signed_by, signature_url, verify_code, issued_at, data, students(full_name)")
+      .order("issued_at", { ascending: false })
+      .limit(50);
+    return (data ?? []).map((d: any) => ({
+      id: d.id,
+      title: d.title,
+      period: d.period,
+      signedBy: d.signed_by,
+      signatureUrl: d.signature_url,
+      verifyCode: d.verify_code,
+      issuedAt: d.issued_at,
+      studentName: d.students?.full_name ?? null,
+      data: d.data,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ── Subjects with current average (for Grades screen) ────────────────
 export async function listSubjects(childId?: string): Promise<Subject[]> {
   if (!isLiveMode || !supabase) return MOCK.subjects;

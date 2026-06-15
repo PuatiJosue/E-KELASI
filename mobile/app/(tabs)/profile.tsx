@@ -33,6 +33,7 @@ export default function Profile() {
         { icon: "user", fr: "Informations personnelles", en: "Personal info", onPress: () => router.push("/account/info") },
         { icon: "school", fr: "Enfants & écoles", en: "Children & schools", detail: children.length ? String(children.length) : "—", onPress: () => router.push("/account/children") },
         { icon: "bell", fr: "Annonces de l'école", en: "School announcements", onPress: () => router.push("/announcements") },
+        { icon: "file", fr: "Documents officiels", en: "Official documents", onPress: () => router.push("/documents") },
       ],
     },
     {

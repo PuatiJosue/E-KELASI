@@ -3,11 +3,12 @@ import { Avatar } from "@/components/Avatar";
 import { Logo } from "@/components/Logo";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
-import { getStudentReportData } from "@/lib/school-db";
+import { getStudentReportData, getMySchool } from "@/lib/school-db";
 import { PrintButton } from "@/components/school/PrintButton";
+import { PublishButton } from "./PublishButton";
 
 export default async function StudentReport({ params }: { params: { student: string } }) {
-  const data = await getStudentReportData(params.student);
+  const [data, school] = await Promise.all([getStudentReportData(params.student), getMySchool()]);
 
   if (!data) {
     return (
@@ -36,7 +37,10 @@ export default async function StudentReport({ params }: { params: { student: str
           <Icon name="chevL" size={14} />
           <T fr="Retour" en="Back" />
         </Link>
-        <PrintButton />
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <PublishButton studentId={params.student} period={period} hasSignature={!!school?.signatureUrl || !!school?.directorName} />
+          <PrintButton />
+        </div>
       </div>
 
       {/* Bulletin */}
@@ -176,10 +180,18 @@ export default async function StudentReport({ params }: { params: { student: str
         {/* Signatures */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 30, marginTop: 30, paddingTop: 20, borderTop: "1px solid #ECE3D2" }}>
           <div>
-            <div style={{ fontSize: 11, color: "#8a7c6e", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 30 }}>
+            <div style={{ fontSize: 11, color: "#8a7c6e", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
               Direction
             </div>
-            <div style={{ borderBottom: "1px solid #1a1410", paddingBottom: 4, fontSize: 11, color: "#8a7c6e" }}>Signature</div>
+            {school?.signatureUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={school.signatureUrl} alt="Signature" style={{ height: 48, objectFit: "contain", display: "block", marginBottom: 4 }} />
+            ) : (
+              <div style={{ height: 30 }} />
+            )}
+            <div style={{ borderBottom: "1px solid #1a1410", paddingBottom: 4, fontSize: 11.5, color: "#1a1410", fontWeight: 600 }}>
+              {school?.directorName || "Signature"}
+            </div>
           </div>
           <div>
             <div style={{ fontSize: 11, color: "#8a7c6e", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 30 }}>

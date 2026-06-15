@@ -3,6 +3,7 @@ import { Icon } from "@/components/Icon";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
 import { ProfileEditForm } from "@/components/ProfileEditForm";
 import { SchoolContactForm } from "./SchoolContactForm";
+import { SignatureForm } from "./SignatureForm";
 import { T } from "@/lib/i18n";
 import { getMySchool } from "@/lib/school-db";
 import { createClient } from "@/lib/supabase/server";
@@ -72,6 +73,10 @@ export default async function SchoolSettings() {
             phone: school?.phone ?? "",
           }}
         />
+      </div>
+
+      <div className="ek-card" style={{ padding: 20 }}>
+        <SignatureForm initialName={school?.directorName ?? ""} initialSignatureUrl={school?.signatureUrl ?? null} />
       </div>
 
       <div className="ek-card" style={{ padding: 20 }}>
