@@ -17,6 +17,7 @@ const NAV: NavItem[] = [
   { id: "announcements", href: "/school/announcements", icon: "bell", fr: "Annonces", en: "Announcements" },
   { id: "teachers", href: "/school/teachers", icon: "users",    fr: "Professeurs",   en: "Teachers" },
   { id: "staff",    href: "/school/staff",    icon: "user",     fr: "Personnel",     en: "Staff" },
+  { id: "courses",  href: "/school/courses",  icon: "file",     fr: "Cours",         en: "Courses" },
   { id: "students", href: "/school/students", icon: "user",     fr: "Élèves",        en: "Students" },
   { id: "classes",  href: "/school/classes",  icon: "pieChart", fr: "Classes",       en: "Classes" },
   { id: "parents",  href: "/school/parents",  icon: "users",    fr: "Parents",       en: "Parents" },
