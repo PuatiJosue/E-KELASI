@@ -1,20 +1,48 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { T } from "@/lib/i18n";
+import { Icon } from "@/components/Icon";
+import { createClient } from "@/lib/supabase/client";
 import type { MySchool } from "@/lib/school-db";
 import { updateBrandingAction } from "@/app/(school)/school/branding/actions";
 
-const COLORS = ["#E0701E", "#1D6650", "#3A6DBC", "#9747BB", "#B8475B", "#C28728"];
+const COLORS = ["#1E2F6D", "#1D6650", "#3A6DBC", "#9747BB", "#B8475B", "#C28728"];
 
 export function BrandingForm({ school }: { school: MySchool }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(school.name);
-  const [brandColor, setBrandColor] = useState(school.brandColor ?? "#E0701E");
+  const [brandColor, setBrandColor] = useState(school.brandColor ?? "#1E2F6D");
   const [logoUrl, setLogoUrl] = useState(school.logoUrl ?? "");
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  const onPickLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMsg(null);
+    setUploading(true);
+    try {
+      const supabase = createClient();
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${school.id}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("school-logos").upload(path, file, { upsert: false });
+      if (error) {
+        setMsg({ kind: "err", text: "Échec du téléversement du logo." });
+      } else {
+        const url = supabase.storage.from("school-logos").getPublicUrl(path).data.publicUrl;
+        setLogoUrl(url);
+        setMsg({ kind: "ok", text: "Logo chargé — cliquez sur Enregistrer pour valider." });
+      }
+    } catch {
+      setMsg({ kind: "err", text: "Échec du téléversement." });
+    }
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
 
   const save = () => {
     setMsg(null);
@@ -34,23 +62,32 @@ export function BrandingForm({ school }: { school: MySchool }) {
       <div className="ek-card" style={{ padding: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           {/* Preview */}
-          <div
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 14,
-              background: brandColor,
-              color: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 24,
-              fontWeight: 700,
-              fontFamily: "var(--font-display)",
-            }}
-          >
-            {name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("")}
-          </div>
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt="Logo"
+              style={{ width: 80, height: 80, borderRadius: 14, objectFit: "cover", background: "var(--surface-2)", border: "1px solid var(--border)" }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 14,
+                background: brandColor,
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 24,
+                fontWeight: 700,
+                fontFamily: "var(--font-display)",
+              }}
+            >
+              {name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("")}
+            </div>
+          )}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{name}</div>
             <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>
@@ -92,15 +129,32 @@ export function BrandingForm({ school }: { school: MySchool }) {
           </div>
         </Row>
 
-        <Row label={<T fr="URL du logo (optionnel)" en="Logo URL (optional)" />}>
-          <input
-            value={logoUrl}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            placeholder="https://…/logo.png"
-            style={inputStyle}
-          />
+        <Row label={<T fr="Logo de l'école" en="School logo" />}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="ek-btn ek-btn-outline"
+              style={{ height: 38, fontSize: 13, opacity: uploading ? 0.6 : 1 }}
+            >
+              <Icon name="upload" size={14} />
+              {uploading ? "Téléversement…" : logoUrl ? "Changer le logo" : "Téléverser depuis l'appareil"}
+            </button>
+            {logoUrl && (
+              <button
+                type="button"
+                onClick={() => setLogoUrl("")}
+                className="ek-btn ek-btn-outline"
+                style={{ height: 38, fontSize: 13, color: "var(--danger)" }}
+              >
+                <Icon name="trash" size={13} /> Retirer
+              </button>
+            )}
+            <input ref={fileRef} type="file" accept="image/*" onChange={onPickLogo} style={{ display: "none" }} />
+          </div>
           <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>
-            <T fr="L'upload de fichier sera disponible bientôt." en="File upload coming soon." />
+            <T fr="PNG, JPG ou SVG depuis votre téléphone ou ordinateur (max 2 Mo)." en="PNG, JPG or SVG from your phone or computer (max 2 MB)." />
           </div>
         </Row>
 
