@@ -132,7 +132,7 @@ export function StudentsBrowser({ students }: { students: SchoolStudentRow[] }) 
         <div className="ek-card" style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>
           {query
             ? <T fr="Aucun élève ne correspond à votre recherche." en="No student matches your search." />
-            : <T fr="Aucun élève. Ajoutez-en avec le bouton ci-dessus." en="No students. Add some with the button above." />}
+            : <T fr="Aucun élève pour l'instant. Ils apparaîtront ici quand un parent les enregistrera et que vous validerez la demande." en="No students yet. They appear here once a parent registers them and you approve the request." />}
         </div>
       )}
     </>

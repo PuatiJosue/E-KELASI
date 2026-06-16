@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/KPI";
 import { listSchoolStudents } from "@/lib/school-db";
-import { AddStudentButton } from "@/components/school/AddStudentButton";
 import { StudentsBrowser } from "./StudentsBrowser";
 
 export default async function SchoolStudents() {
@@ -15,8 +14,11 @@ export default async function SchoolStudents() {
           fr: `${students.length} élèves dans ${classes} classes`,
           en: `${students.length} students in ${classes} classes`,
         }}
-        right={<AddStudentButton />}
       />
+
+      <div style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>
+        Les élèves apparaissent ici automatiquement lorsqu&apos;un parent les enregistre depuis l&apos;application et que vous validez la demande (menu <strong>Demandes</strong>).
+      </div>
 
       <StudentsBrowser students={students} />
     </div>
