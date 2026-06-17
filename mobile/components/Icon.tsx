@@ -47,6 +47,8 @@ const MAP: Record<string, React.ComponentProps<typeof Feather>["name"]> = {
   zap: "zap",
   lock: "lock",
   award: "award",
+  camera: "camera",
+  image: "image",
 };
 
 export function Icon({

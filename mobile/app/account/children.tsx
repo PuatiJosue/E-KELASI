@@ -43,12 +43,22 @@ export default function AccountChildren() {
           ))
         )}
         <Pressable
+          onPress={() => router.push("/account/inscription")}
+          style={{ marginTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, backgroundColor: t.brand }}
+        >
+          <Icon name="school" size={16} color={t.onBrand} />
+          <Text style={{ color: t.onBrand, fontSize: 14.5, fontWeight: "700", fontFamily: fonts.bodyBold }}>
+            {tr({ fr: "Inscrire un nouvel élève", en: "Enroll a new student" })}
+          </Text>
+        </Pressable>
+
+        <Pressable
           onPress={() => router.push("/account/register-child")}
-          style={{ marginTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: t.brand }}
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: t.brand }}
         >
           <Icon name="plus" size={16} color={t.brand} />
           <Text style={{ color: t.brand, fontSize: 14.5, fontWeight: "700", fontFamily: fonts.bodyBold }}>
-            {tr({ fr: "Enregistrer un enfant", en: "Register a child" })}
+            {tr({ fr: "Enregistrement rapide", en: "Quick register" })}
           </Text>
         </Pressable>
 
