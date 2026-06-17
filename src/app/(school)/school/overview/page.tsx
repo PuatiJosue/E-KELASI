@@ -25,7 +25,7 @@ export default async function SchoolOverview() {
           en: school ? `${school.city}, ${school.countryCode} · ${school.plan === "pro" ? "Pro" : "Standard"} plan` : "",
         }}
         right={
-          <Link href="/school/teachers" className="ek-btn ek-btn-outline" style={{ height: 32, fontSize: 12 }}>
+          <Link href="/school/classes" className="ek-btn ek-btn-outline" style={{ height: 32, fontSize: 12 }}>
             <Icon name="plus" size={14} stroke={2.5} />
             <T fr="Inviter un prof" en="Invite teacher" />
           </Link>
