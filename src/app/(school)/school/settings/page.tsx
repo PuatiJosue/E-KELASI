@@ -2,7 +2,6 @@ import Link from "next/link";
 import { PageHeader } from "@/components/KPI";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
 import { ProfileEditForm } from "@/components/ProfileEditForm";
-import { SchoolContactForm } from "./SchoolContactForm";
 import { SignatureForm } from "./SignatureForm";
 import { T } from "@/lib/i18n";
 import { getMySchool } from "@/lib/school-db";
@@ -64,14 +63,10 @@ export default async function SchoolSettings() {
         <Row label="Statut" value={school?.status ?? "—"} last />
       </div>
 
-      <div className="ek-card" style={{ padding: 20 }}>
-        <SchoolContactForm
-          initial={{
-            commune: school?.commune ?? "",
-            quartier: school?.quartier ?? "",
-            address: school?.address ?? "",
-            phone: school?.phone ?? "",
-          }}
+      <div className="ek-card" style={{ padding: 16, fontSize: 12.5, color: "var(--ink-2)" }}>
+        <T
+          fr="Nom, e-mail, téléphone, adresse et logo de l'école se modifient dans « Branding école »."
+          en="School name, email, phone, address and logo are edited under “School branding”."
         />
       </div>
 

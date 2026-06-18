@@ -16,6 +16,11 @@ export function BrandingForm({ school }: { school: MySchool }) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(school.name);
+  const [email, setEmail] = useState(school.email ?? "");
+  const [phone, setPhone] = useState(school.phone ?? "");
+  const [address, setAddress] = useState(school.address ?? "");
+  const [commune, setCommune] = useState(school.commune ?? "");
+  const [quartier, setQuartier] = useState(school.quartier ?? "");
   const [brandColor, setBrandColor] = useState(school.brandColor ?? "#1E2F6D");
   const [logoUrl, setLogoUrl] = useState(school.logoUrl ?? "");
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -47,7 +52,7 @@ export function BrandingForm({ school }: { school: MySchool }) {
   const save = () => {
     setMsg(null);
     startTransition(async () => {
-      const res = await updateBrandingAction({ name, brandColor, logoUrl: logoUrl || null });
+      const res = await updateBrandingAction({ name, brandColor, logoUrl: logoUrl || null, email, phone, address, commune, quartier });
       if (res.ok) {
         setMsg({ kind: "ok", text: "Branding mis à jour." });
         router.refresh();
@@ -101,6 +106,31 @@ export function BrandingForm({ school }: { school: MySchool }) {
         <Row label={<T fr="Nom de l'école" en="School name" />}>
           <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
         </Row>
+
+        <Row label={<T fr="E-mail de l'école" en="School email" />}>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@ecole.cd" style={inputStyle} />
+        </Row>
+
+        <Row label={<T fr="Téléphone" en="Phone" />}>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+243 …" style={inputStyle} />
+        </Row>
+
+        <Row label={<T fr="Adresse" en="Address" />}>
+          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Avenue, n°…" style={inputStyle} />
+        </Row>
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <Row label={<T fr="Commune" en="Commune" />}>
+              <input value={commune} onChange={(e) => setCommune(e.target.value)} style={inputStyle} />
+            </Row>
+          </div>
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <Row label={<T fr="Quartier" en="Neighborhood" />}>
+              <input value={quartier} onChange={(e) => setQuartier(e.target.value)} style={inputStyle} />
+            </Row>
+          </div>
+        </div>
 
         <Row label={<T fr="Couleur principale" en="Primary color" />}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>

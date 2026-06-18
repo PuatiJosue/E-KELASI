@@ -10,6 +10,11 @@ export async function updateBrandingAction(args: {
   name: string;
   brandColor: string;
   logoUrl: string | null;
+  email?: string;
+  phone?: string;
+  address?: string;
+  commune?: string;
+  quartier?: string;
 }): Promise<Result> {
   if (!isLiveMode()) return { ok: true };
   if (!args.name.trim()) return { ok: false, message: "Le nom est requis." };
@@ -27,14 +32,18 @@ export async function updateBrandingAction(args: {
     .maybeSingle();
   if (!staff) return { ok: false, message: "Vous n'êtes pas direction." };
 
-  const { error } = await supabase
-    .from("schools")
-    .update({
-      name: args.name.trim(),
-      brand_color: args.brandColor,
-      logo_url: args.logoUrl,
-    })
-    .eq("id", staff.school_id);
+  const update: Record<string, any> = {
+    name: args.name.trim(),
+    brand_color: args.brandColor,
+    logo_url: args.logoUrl,
+    email: args.email?.trim() || null,
+    phone: args.phone?.trim() || null,
+    address: args.address?.trim() || null,
+    commune: args.commune?.trim() || null,
+    quartier: args.quartier?.trim() || null,
+  };
+
+  const { error } = await supabase.from("schools").update(update as any).eq("id", staff.school_id);
   if (error) return { ok: false, message: error.message };
 
   revalidatePath("/school", "layout");
