@@ -96,7 +96,8 @@ export default function RegisterChild() {
         setMsg({ ok: true, text: tr({ fr: "Demande envoyée ! En attente de validation par l'école.", en: "Request sent! Awaiting school validation." }) });
         setTimeout(() => router.back(), 1400);
       } else {
-        setMsg({ ok: false, text: tr({ fr: "Échec de l'envoi. Réessaie.", en: "Failed to send. Try again." }) });
+        const detail = typeof data?.error === "string" ? ` (${data.error})` : "";
+        setMsg({ ok: false, text: tr({ fr: `Échec de l'envoi. Réessaie.${detail}`, en: `Failed to send. Try again.${detail}` }) });
       }
     } catch {
       setBusy(false);

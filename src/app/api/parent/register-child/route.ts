@@ -39,6 +39,23 @@ export async function POST(req: NextRequest) {
 
     const svc = createClient(URL, SR, { auth: { autoRefreshToken: false, persistSession: false } });
 
+    // Garantit qu'un profil parent existe. Au signup l'upsert du profil est
+    // "best-effort" (échec silencieux possible) ; sans ligne profiles, les
+    // clés étrangères students.created_by et parent_links.parent_id cassent
+    // → l'insertion échoue et le parent voit "Échec de l'envoi".
+    const meta = (user.user_metadata ?? {}) as { full_name?: string; phone?: string };
+    const { error: profErr } = await svc.from("profiles").upsert(
+      {
+        id: user.id,
+        email: user.email ?? `${user.id}@parent.ekelasi`,
+        full_name: meta.full_name?.trim() || user.email?.split("@")[0] || "Parent",
+        role: "parent",
+        phone: meta.phone ?? null,
+      },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
+    if (profErr) console.error("[register-child] profile upsert:", profErr.message);
+
     // L'école existe ?
     const { data: school } = await svc.from("schools").select("id").eq("id", schoolId).maybeSingle();
     if (!school) return NextResponse.json({ error: "school_not_found" }, { status: 404 });
