@@ -16,21 +16,21 @@ export function NewHomeworkForm({ classes, subjects }: { classes: string[]; subj
   const defaultDueAt = tomorrow.toISOString().slice(0, 16);
 
   const [className, setClassName] = useState(classes[0] ?? "");
-  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? "");
+  const [subjectName, setSubjectName] = useState(subjects[0]?.name ?? "");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState(defaultDueAt);
 
   const onSubmit = () => {
     setError(null);
-    if (!title.trim() || !className || !subjectId) {
+    if (!title.trim() || !className || !subjectName.trim()) {
       setError("Titre, classe et matière sont requis.");
       return;
     }
     startTransition(async () => {
       const res = await createHomeworkAction({
         className,
-        subjectId,
+        subjectName: subjectName.trim(),
         title: title.trim(),
         description: description.trim() || null,
         dueAt: new Date(dueAt).toISOString(),
@@ -48,9 +48,17 @@ export function NewHomeworkForm({ classes, subjects }: { classes: string[]; subj
         </select>
       </Row>
       <Row label={<T fr="Matière" en="Subject" />}>
-        <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} style={inputStyle}>
-          {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+        <input
+          value={subjectName}
+          onChange={(e) => setSubjectName(e.target.value)}
+          list="homework-subject-suggestions"
+          placeholder="ex. Mathématiques"
+          autoComplete="off"
+          style={inputStyle}
+        />
+        <datalist id="homework-subject-suggestions">
+          {subjects.map((s) => <option key={s.id} value={s.name} />)}
+        </datalist>
       </Row>
       <Row label={<T fr="Titre du devoir" en="Title" />}>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Exercices p.142 · 1 à 7" style={inputStyle} />

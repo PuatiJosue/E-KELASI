@@ -17,8 +17,8 @@ export default async function SchoolOverview() {
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
       <PageHeader
         title={{
-          fr: `Bonjour, voici ${school?.name ?? "votre école"}.`,
-          en: `Hello, here's ${school?.name ?? "your school"}.`,
+          fr: `Bonjour, ${school?.name ?? "votre école"}.`,
+          en: `Hello, ${school?.name ?? "your school"}.`,
         }}
         sub={{
           fr: school ? `${school.city}, ${school.countryCode} · plan ${school.plan === "pro" ? "Pro" : "Standard"}` : "",

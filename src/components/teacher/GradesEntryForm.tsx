@@ -20,7 +20,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
   const [pending, startTransition] = useTransition();
 
   const [className, setClassName] = useState(initialClassName);
-  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? "");
+  const [subjectName, setSubjectName] = useState(subjects[0]?.name ?? "");
   const [kind, setKind] = useState("Contrôle");
   const [maxScore, setMaxScore] = useState("20");
   const [coefficient, setCoefficient] = useState("1");
@@ -54,14 +54,14 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
       setError("Aucune note saisie.");
       return;
     }
-    if (!subjectId) {
-      setError("Sélectionne une matière.");
+    if (!subjectName.trim()) {
+      setError("Indique une matière.");
       return;
     }
 
     startTransition(async () => {
       const res = await submitGradesAction({
-        subjectId,
+        subjectName: subjectName.trim(),
         kind,
         maxScore: parseFloat(maxScore),
         coefficient: parseFloat(coefficient),
@@ -87,11 +87,13 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
       <div className="ek-card" style={{ padding: 18 }}>
         <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 0.8fr 0.8fr 1fr", gap: 12 }}>
           <Selector label={<T fr="Classe" en="Class" />} value={className} onChange={onChangeClass} options={classes.map((c) => ({ value: c, label: c }))} />
-          <Selector
+          <ComboField
             label={<T fr="Matière" en="Subject" />}
-            value={subjectId}
-            onChange={setSubjectId}
-            options={subjects.map((s) => ({ value: s.id, label: s.name }))}
+            value={subjectName}
+            onChange={setSubjectName}
+            listId="grade-subject-suggestions"
+            suggestions={subjects.map((s) => s.name)}
+            placeholder="ex. Mathématiques"
           />
           <TextField
             label={<T fr="Type d'évaluation" en="Kind" />}
@@ -242,6 +244,49 @@ function Selector({
           </option>
         ))}
       </select>
+    </label>
+  );
+}
+
+function ComboField({
+  label,
+  value,
+  onChange,
+  suggestions,
+  listId,
+  placeholder,
+}: {
+  label: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  suggestions: string[];
+  listId: string;
+  placeholder?: string;
+}) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <span style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>{label}</span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        list={listId}
+        placeholder={placeholder}
+        autoComplete="off"
+        style={{
+          padding: "9px 10px",
+          borderRadius: 8,
+          border: "1px solid var(--border-strong)",
+          background: "var(--surface)",
+          color: "var(--ink)",
+          fontSize: 13,
+          fontFamily: "inherit",
+        }}
+      />
+      <datalist id={listId}>
+        {suggestions.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
     </label>
   );
 }

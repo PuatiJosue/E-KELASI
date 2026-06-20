@@ -2,7 +2,16 @@
 // Le prof connecté ne voit que les données de ses écoles (RLS).
 
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { isLiveMode } from "@/lib/db";
+
+function service() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
 
 export type TeacherProfile = {
   id: string;
@@ -208,6 +217,29 @@ export async function listStudentsInClass(className: string): Promise<StudentRow
     });
   } catch {
     return [];
+  }
+}
+
+// ── Présence des élèves ─────────────────────────────────────────────
+export type StudentAttendanceMap = Record<string, string>; // studentId -> status
+
+export async function getStudentAttendanceForDate(
+  studentIds: string[],
+  date: string
+): Promise<StudentAttendanceMap> {
+  if (!isLiveMode() || studentIds.length === 0) return {};
+  try {
+    const svc = service();
+    const { data } = await svc
+      .from("student_attendance")
+      .select("student_id, status")
+      .eq("date", date)
+      .in("student_id", studentIds);
+    const map: StudentAttendanceMap = {};
+    for (const r of data ?? []) map[(r as any).student_id] = (r as any).status;
+    return map;
+  } catch {
+    return {};
   }
 }
 

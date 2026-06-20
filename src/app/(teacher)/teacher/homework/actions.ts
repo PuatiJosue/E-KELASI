@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
+import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
 
 type Args = {
   className: string;
-  subjectId: string;
+  subjectName: string;
   title: string;
   description: string | null;
   dueAt: string;
@@ -21,10 +22,23 @@ export async function createHomeworkAction(args: Args): Promise<Result> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Non authentifié" };
 
+  if (!args.subjectName?.trim()) return { ok: false, message: "Indique une matière." };
+
+  // École du prof (pour rattacher / créer la matière).
+  const { data: staff } = await supabase
+    .from("school_staff")
+    .select("school_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!staff?.school_id) return { ok: false, message: "Aucune école rattachée à ce compte." };
+
+  const subjectId = await resolveOrCreateSubjectId(staff.school_id, args.subjectName);
+  if (!subjectId) return { ok: false, message: "Matière invalide." };
+
   const { data: hw, error } = await supabase
     .from("homework")
     .insert({
-      subject_id: args.subjectId,
+      subject_id: subjectId,
       teacher_id: user.id,
       class_name: args.className,
       title: args.title,

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
+import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
 import {
   renderGradeReportPdf,
   schoolYearStartIso,
@@ -17,7 +18,7 @@ import {
 export type GradeInput = { studentId: string; score: number };
 
 type SubmitArgs = {
-  subjectId: string;
+  subjectName: string;
   kind: string;
   maxScore: number;
   coefficient: number;
@@ -47,15 +48,28 @@ export async function submitGradesAction(args: SubmitArgs): Promise<Result> {
 
   if (args.items.length === 0) return { ok: false, message: "Aucune note à enregistrer" };
 
+  if (!args.subjectName?.trim()) return { ok: false, message: "Indique une matière." };
+
   for (const it of args.items) {
     if (isNaN(it.score) || it.score < 0 || it.score > args.maxScore) {
       return { ok: false, message: `Note invalide (doit être entre 0 et ${args.maxScore})` };
     }
   }
 
+  // École du prof (pour rattacher / créer la matière).
+  const { data: staff } = await supabase
+    .from("school_staff")
+    .select("school_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!staff?.school_id) return { ok: false, message: "Aucune école rattachée à ce compte." };
+
+  const subjectId = await resolveOrCreateSubjectId(staff.school_id, args.subjectName);
+  if (!subjectId) return { ok: false, message: "Matière invalide." };
+
   const rows = args.items.map((it) => ({
     student_id: it.studentId,
-    subject_id: args.subjectId,
+    subject_id: subjectId,
     teacher_id: user.id,
     kind: args.kind,
     score: it.score,
