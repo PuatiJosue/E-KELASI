@@ -70,7 +70,8 @@ function NavGroup({ label, items }: { label: { fr: string; en: string }; items: 
   );
 }
 
-export function TeacherSidebar() {
+export function TeacherSidebar({ name, avatarUrl }: { name?: string | null; avatarUrl?: string | null }) {
+  const displayName = name?.trim() || "Professeur";
   return (
     <div
       style={{
@@ -129,10 +130,10 @@ export function TeacherSidebar() {
         </div>
 
         <div style={{ marginTop: 10, padding: "10px 8px", display: "flex", alignItems: "center", gap: 8 }}>
-          <Avatar name="Ousmane Bâ" size={30} />
+          <Avatar name={displayName} url={avatarUrl ?? undefined} size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>M. Ousmane Bâ</div>
-            <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>Mathématiques</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayName}</div>
+            <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}><T fr="Professeur" en="Teacher" /></div>
           </div>
           <LogoutButton />
         </div>

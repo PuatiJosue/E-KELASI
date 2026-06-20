@@ -101,7 +101,7 @@ export function StudentsBrowser({ students }: { students: SchoolStudentRow[] }) 
                   key={s.id}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 1.5fr 0.7fr 0.8fr",
+                    gridTemplateColumns: "2fr 1.5fr 0.8fr",
                     padding: "12px 18px",
                     alignItems: "center",
                     fontSize: 12.5,
@@ -115,7 +115,6 @@ export function StudentsBrowser({ students }: { students: SchoolStudentRow[] }) 
                   <div style={{ color: "var(--ink-3)", fontSize: 11.5 }}>
                     {s.parentNames.length > 0 ? s.parentNames.join(", ") : "—"}
                   </div>
-                  <div style={{ color: "var(--ink-2)" }}>{s.avg !== null ? `${s.avg}/20` : "—"}</div>
                   <div style={{ textAlign: "right", display: "flex", gap: 12, justifyContent: "flex-end" }}>
                     <Link href={`/school/students/${s.id}`} style={{ fontSize: 11.5, color: "var(--brand-600)", fontWeight: 600 }}>
                       <T fr="Dossier" en="Record" /> →
