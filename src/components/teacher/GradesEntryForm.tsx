@@ -85,7 +85,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
       });
       if (res.ok) {
         const base = `${items.length} note${items.length > 1 ? "s" : ""} enregistrée${items.length > 1 ? "s" : ""}.`;
-        const pdfPart = sendPdf && res.pdfsSent ? ` ${res.pdfsSent} bulletin${res.pdfsSent > 1 ? "s" : ""} PDF envoyé${res.pdfsSent > 1 ? "s" : ""}.` : "";
+        const pdfPart = sendPdf && res.pdfsSent ? ` ${res.pdfsSent} note${res.pdfsSent > 1 ? "s" : ""} PDF envoyée${res.pdfsSent > 1 ? "s" : ""}.` : "";
         setSuccess(base + pdfPart);
         setScores({});
         setSendPdf(false);
@@ -145,7 +145,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
                 onChange={(e) => setSendPdf(e.target.checked)}
                 style={{ width: 16, height: 16, accentColor: "var(--brand)" }}
               />
-              <T fr="Envoyer aussi le bulletin PDF aux parents" en="Also send PDF report to parents" />
+              <T fr="Envoyer la note en PDF aux parents" en="Send the grade as PDF to parents" />
             </label>
             <button
               onClick={onSubmit}

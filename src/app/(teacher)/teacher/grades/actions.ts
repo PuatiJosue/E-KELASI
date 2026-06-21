@@ -5,15 +5,8 @@ import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
 import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
-import {
-  renderGradeReportPdf,
-  schoolYearStartIso,
-  computeSubjectAverage20,
-  computeOverallAverage20,
-  formatDateFr,
-  type ReportData,
-  type ReportSubject,
-} from "@/lib/grade-report";
+import { formatDateFr } from "@/lib/grade-report";
+import { renderNotePdf } from "@/lib/note-pdf";
 
 export type GradeInput = { studentId: string; score: number };
 
@@ -109,13 +102,18 @@ export async function submitGradesAction(args: SubmitArgs): Promise<Result> {
     // best-effort
   }
 
-  // ── Génération + envoi du bulletin PDF (optionnel) ─────────────────
+  // ── Génération + envoi de la note en PDF (optionnel) ───────────────
   let pdfsSent = 0;
   if (args.sendPdf) {
     try {
-      pdfsSent = await sendReportPdfs({
-        studentIds: [...new Set(args.items.map((i) => i.studentId))],
-        teacherUserId: user.id,
+      pdfsSent = await sendNotePdfs({
+        schoolId: staff.school_id,
+        subject: args.subjectName.trim(),
+        kind: args.kind,
+        maxScore: args.maxScore,
+        coefficient: args.coefficient,
+        gradedAt: args.gradedAt,
+        items: args.items,
       });
     } catch (e: any) {
       // L'échec du PDF ne doit pas faire échouer la saisie des notes.
@@ -128,125 +126,88 @@ export async function submitGradesAction(args: SubmitArgs): Promise<Result> {
   return { ok: true, count: args.items.length, pdfsSent };
 }
 
-// ── PDF dispatch ──────────────────────────────────────────────────────
-async function sendReportPdfs(opts: {
-  studentIds: string[];
-  teacherUserId: string;
+// ── Envoi de la note (évaluation) en PDF aux parents ──────────────────
+async function sendNotePdfs(opts: {
+  schoolId: string;
+  subject: string;
+  kind: string;
+  maxScore: number;
+  coefficient: number;
+  gradedAt: string;
+  items: GradeInput[];
 }): Promise<number> {
   const admin = adminClient();
 
-  // Nom du prof (pour l'en-tête du bulletin)
-  const { data: teacher } = await admin
-    .from("profiles")
-    .select("full_name")
-    .eq("id", opts.teacherUserId)
+  // École (en-tête : nom + logo).
+  const { data: school } = await admin
+    .from("schools")
+    .select("name, city, brand_color, logo_url")
+    .eq("id", opts.schoolId)
     .maybeSingle();
-  const teacherName = teacher?.full_name ?? "Professeur";
-
-  const yearStart = schoolYearStartIso();
+  const sc: any = school ?? {};
+  const dateFr = formatDateFr(opts.gradedAt);
   let sent = 0;
 
-  for (const studentId of opts.studentIds) {
+  for (const item of opts.items) {
     try {
-      // Élève + école
       const { data: student } = await admin
         .from("students")
-        .select("id, full_name, class_name, school_id, schools(name, city, brand_color, logo_url)")
-        .eq("id", studentId)
+        .select("full_name, class_name")
+        .eq("id", item.studentId)
         .maybeSingle();
       if (!student) continue;
-      const school = (student as any).schools;
 
-      // Toutes les notes de l'année pour cet élève
-      const { data: grades } = await admin
-        .from("grades")
-        .select("score, max_score, coefficient, graded_at, kind, subject_id, subjects(name)")
-        .eq("student_id", studentId)
-        .gte("graded_at", yearStart)
-        .is("archived_at", null)
-        .order("graded_at", { ascending: true });
-
-      // Groupage par matière
-      type SubjectAcc = { name: string; grades: any[] };
-      const bySubject = new Map<string, SubjectAcc>();
-      for (const g of (grades ?? []) as any[]) {
-        const sid = g.subject_id as string;
-        if (!bySubject.has(sid)) bySubject.set(sid, { name: g.subjects?.name ?? "—", grades: [] });
-        bySubject.get(sid)!.grades.push(g);
-      }
-
-      const subjects: ReportSubject[] = [...bySubject.values()].map((s) => ({
-        name: s.name,
-        grades: s.grades.map((g) => ({
-          date: formatDateFr(g.graded_at),
-          kind: g.kind ?? "Évaluation",
-          score: Number(g.score),
-          max: Number(g.max_score),
-          coefficient: Number(g.coefficient ?? 1),
-        })),
-        average20: computeSubjectAverage20(
-          s.grades.map((g) => ({
-            score: Number(g.score),
-            max: Number(g.max_score),
-            coefficient: Number(g.coefficient ?? 1),
-          }))
-        ),
-      }));
-
-      const data: ReportData = {
+      const pdf = await renderNotePdf({
         school: {
-          name: school?.name ?? "École",
-          city: school?.city ?? "",
-          brandColor: school?.brand_color ?? null,
-          logoUrl: school?.logo_url ?? null,
+          name: sc.name ?? "École",
+          city: sc.city ?? null,
+          logoUrl: sc.logo_url ?? null,
+          brandColor: sc.brand_color ?? null,
         },
-        student: {
-          fullName: (student as any).full_name,
-          className: (student as any).class_name ?? "—",
-        },
-        teacherName,
-        asOf: formatDateFr(new Date()),
-        subjects,
-        overallAverage20: computeOverallAverage20(subjects.map((s) => s.average20)),
-      };
+        studentName: (student as any).full_name,
+        className: (student as any).class_name ?? "—",
+        subject: opts.subject,
+        kind: opts.kind,
+        score: item.score,
+        max: opts.maxScore,
+        coefficient: opts.coefficient,
+        date: dateFr,
+      });
 
-      const pdf = await renderGradeReportPdf(data);
-      const path = `${studentId}/${Date.now()}.pdf`;
+      const path = `notes/${item.studentId}/${Date.now()}.pdf`;
       const { error: upErr } = await admin.storage
         .from("grade-reports")
-        .upload(path, pdf, { contentType: "application/pdf", upsert: false });
+        .upload(path, pdf, { contentType: "application/pdf", upsert: true });
       if (upErr) {
-        console.warn("[pdf] upload error", studentId, upErr.message);
+        console.warn("[note-pdf] upload error", item.studentId, upErr.message);
         continue;
       }
 
-      // URL signée valable 30 jours
       const { data: signed, error: sErr } = await admin.storage
         .from("grade-reports")
-        .createSignedUrl(path, 60 * 60 * 24 * 30);
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
       if (sErr || !signed?.signedUrl) {
-        console.warn("[pdf] sign error", studentId, sErr?.message);
+        console.warn("[note-pdf] sign error", item.studentId, sErr?.message);
         continue;
       }
 
-      // Notifie les parents avec le lien signé
       const { data: links } = await admin
         .from("parent_links")
         .select("parent_id")
-        .eq("student_id", studentId);
+        .eq("student_id", item.studentId);
       if (links && links.length > 0) {
         await admin.from("notifications").insert(
           links.map((l: any) => ({
             user_id: l.parent_id,
             kind: "grade" as const,
-            body: `Bulletin de ${(student as any).full_name} disponible (PDF).`,
-            payload: { file_url: signed.signedUrl, kind: "report_pdf" },
+            body: `📄 Note de ${(student as any).full_name} en ${opts.subject} : ${item.score}/${opts.maxScore} (PDF).`,
+            payload: { file_url: signed.signedUrl, kind: "note_pdf" },
           }))
         );
       }
       sent += 1;
     } catch (e: any) {
-      console.warn("[pdf] per-student error", studentId, e?.message ?? e);
+      console.warn("[note-pdf] per-student error", item.studentId, e?.message ?? e);
     }
   }
 
