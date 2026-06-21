@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/KPI";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
 import { ProfileEditForm } from "@/components/ProfileEditForm";
+import { PreferencesCard } from "@/components/settings/PreferencesCard";
 import { T } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
@@ -54,6 +55,11 @@ export default async function SettingsPage() {
           <T fr="Rôle" en="Role" /> : {ROLE_LABELS[me?.role ?? ""] ?? me?.role ?? "—"}
         </div>
       </div>
+
+      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 4 }}>
+        <T fr="Préférences" en="Preferences" />
+      </div>
+      <PreferencesCard />
 
       <div style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.5 }}>
         <T

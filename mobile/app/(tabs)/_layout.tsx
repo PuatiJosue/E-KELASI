@@ -103,11 +103,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="messages"
+        name="dossier"
         options={{
-          title: tr({ fr: "Messages", en: "Messages" }),
-          tabBarIcon: ({ color }) => <Icon name="chat" size={22} color={color} />,
+          title: tr({ fr: "Dossier", en: "Folder" }),
+          tabBarIcon: ({ color }) => <Icon name="folder" size={22} color={color} />,
         }}
+      />
+      {/* Messagerie : retirée de la barre d'onglets, route conservée
+          (accessible depuis le tableau de bord). */}
+      <Tabs.Screen
+        name="messages"
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="profile"

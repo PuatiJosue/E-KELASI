@@ -250,21 +250,32 @@ export async function listDocuments(): Promise<ParentDocument[]> {
   }
 }
 
-// ── Subjects with current average (for Grades screen) ────────────────
-export async function listSubjects(childId?: string): Promise<Subject[]> {
-  if (!isLiveMode || !supabase) return MOCK.subjects;
+// ── Notes regroupées par trimestre (Bulletin) ───────────────────────
+import { trimesterOf } from "./trimester";
+
+export type TrimesterReport = {
+  subjects: Subject[];
+  overallAvg: number;
+  count: number; // nombre de cotations sur le trimestre
+};
+
+// Moyennes par matière + moyenne générale pour un trimestre donné (1-4).
+export async function listTrimester(childId: string, trimester: number): Promise<TrimesterReport> {
+  if (!isLiveMode || !supabase) {
+    // Démo : on renvoie les matières fictives quel que soit le trimestre.
+    return { subjects: MOCK.subjects, overallAvg: MOCK.child.avg, count: MOCK.subjects.length };
+  }
   try {
-    const id = childId ?? (await getChild())?.id;
-    if (!id) return [];
     const { data: subjects } = await supabase.from("subjects").select("*");
-    if (!subjects) return [];
     const { data: grades } = await supabase
       .from("grades")
-      .select("subject_id, score, max_score, coefficient")
-      .eq("student_id", id)
+      .select("subject_id, score, max_score, coefficient, graded_at")
+      .eq("student_id", childId)
       .is("archived_at", null);
-    return subjects.map((s: any) => {
-      const gs = (grades ?? []).filter((g: any) => g.subject_id === s.id);
+    const gradesT = (grades ?? []).filter((g: any) => trimesterOf(g.graded_at) === trimester);
+
+    const subjectRows: Subject[] = (subjects ?? []).map((s: any) => {
+      const gs = gradesT.filter((g: any) => g.subject_id === s.id);
       let avg = 0;
       if (gs.length > 0) {
         const w = gs.reduce((a: number, g: any) => a + (g.score / g.max_score) * 20 * g.coefficient, 0);
@@ -273,8 +284,20 @@ export async function listSubjects(childId?: string): Promise<Subject[]> {
       }
       return { name: s.name, short: s.short_name, grade: avg || 0, trend: 0, color: s.color };
     });
+
+    // Moyenne générale du trimestre (pondérée par coefficient sur toutes les cotes).
+    let overallAvg = 0;
+    if (gradesT.length > 0) {
+      const w = gradesT.reduce((a: number, g: any) => a + (g.score / g.max_score) * 20 * g.coefficient, 0);
+      const c = gradesT.reduce((a: number, g: any) => a + g.coefficient, 0);
+      overallAvg = c > 0 ? +(w / c).toFixed(1) : 0;
+    }
+
+    // On ne garde que les matières ayant au moins une cote sur ce trimestre.
+    const withGrades = subjectRows.filter((s) => s.grade > 0);
+    return { subjects: withGrades, overallAvg, count: gradesT.length };
   } catch {
-    return [];
+    return { subjects: [], overallAvg: 0, count: 0 };
   }
 }
 

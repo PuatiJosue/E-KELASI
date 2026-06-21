@@ -2,6 +2,27 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
+import { TRIMESTERS, trimesterOf, currentTrimester } from "@/lib/trimester";
+
+// Agrège une liste de cotes en moyennes par matière + moyenne générale.
+function aggregateGrades(grades: any[]): { subjects: DossierSubject[]; overallAvg: number } {
+  const bySubject: Record<string, { name: string; short: string; sum: number; coef: number; items: any[] }> = {};
+  for (const g of grades) {
+    const name = g.subjects?.name ?? "?";
+    if (!bySubject[name]) bySubject[name] = { name, short: g.subjects?.short_name ?? "", sum: 0, coef: 0, items: [] };
+    bySubject[name].sum += (g.score / g.max_score) * 20 * g.coefficient;
+    bySubject[name].coef += g.coefficient;
+    bySubject[name].items.push(g);
+  }
+  const subjects = Object.values(bySubject).map((su) => ({
+    name: su.name,
+    short: su.short,
+    avg: su.coef > 0 ? +(su.sum / su.coef).toFixed(2) : 0,
+    items: su.items,
+  }));
+  const overallAvg = subjects.length ? +(subjects.reduce((a, su) => a + su.avg, 0) / subjects.length).toFixed(2) : 0;
+  return { subjects, overallAvg };
+}
 
 export type MySchool = {
   id: string;
@@ -61,9 +82,21 @@ export type ClassDirectoryRow = {
   avg: number | null;
 };
 
+export type DossierSubject = { name: string; short: string; avg: number; items: any[] };
+export type DossierTrimester = {
+  index: number;
+  short: string;
+  fr: string;
+  en: string;
+  subjects: DossierSubject[];
+  overallAvg: number;
+  count: number;
+};
+
 export type StudentDossier = {
   id: string;
   fullName: string;
+  avatarUrl: string | null;
   sex: string | null;
   birthDate: string | null;
   className: string;
@@ -71,8 +104,9 @@ export type StudentDossier = {
   schoolName: string | null;
   status: string;
   parents: { name: string; email: string; phone: string | null; access: string }[];
-  subjects: { name: string; short: string; avg: number; items: any[] }[];
+  subjects: DossierSubject[];
   overallAvg: number;
+  trimesters: DossierTrimester[];
 };
 
 export type ClassWithAvg = {
@@ -445,7 +479,7 @@ export async function getStudentDossier(studentId: string): Promise<StudentDossi
 
     const { data: s } = await supabase
       .from("students")
-      .select("id, full_name, sex, birth_date, class_name, option, status, school_id, schools(name)")
+      .select("id, full_name, avatar_url, sex, birth_date, class_name, option, status, school_id, schools(name)")
       .eq("id", studentId)
       .eq("school_id", school.id)
       .maybeSingle();
@@ -469,25 +503,27 @@ export async function getStudentDossier(studentId: string): Promise<StudentDossi
       .is("archived_at", null)
       .order("graded_at", { ascending: false });
 
-    const bySubject: Record<string, { name: string; short: string; sum: number; coef: number; items: any[] }> = {};
-    for (const g of grades ?? []) {
-      const name = (g as any).subjects?.name ?? "?";
-      if (!bySubject[name]) bySubject[name] = { name, short: (g as any).subjects?.short_name ?? "", sum: 0, coef: 0, items: [] };
-      bySubject[name].sum += ((g as any).score / (g as any).max_score) * 20 * (g as any).coefficient;
-      bySubject[name].coef += (g as any).coefficient;
-      bySubject[name].items.push(g);
-    }
-    const subjects = Object.values(bySubject).map((su) => ({
-      name: su.name,
-      short: su.short,
-      avg: su.coef > 0 ? +(su.sum / su.coef).toFixed(2) : 0,
-      items: su.items,
-    }));
-    const overallAvg = subjects.length ? +(subjects.reduce((a, su) => a + su.avg, 0) / subjects.length).toFixed(2) : 0;
+    const { subjects, overallAvg } = aggregateGrades(grades ?? []);
+
+    // Regroupement des cotations par trimestre (dossiers).
+    const trimesters: DossierTrimester[] = TRIMESTERS.map((meta) => {
+      const gradesT = (grades ?? []).filter((g: any) => trimesterOf(g.graded_at) === meta.index);
+      const agg = aggregateGrades(gradesT);
+      return {
+        index: meta.index,
+        short: meta.short,
+        fr: meta.fr,
+        en: meta.en,
+        subjects: agg.subjects,
+        overallAvg: agg.overallAvg,
+        count: gradesT.length,
+      };
+    }).filter((tr) => tr.count > 0);
 
     return {
       id: (s as any).id,
       fullName: (s as any).full_name,
+      avatarUrl: (s as any).avatar_url ?? null,
       sex: (s as any).sex ?? null,
       birthDate: (s as any).birth_date ?? null,
       className: (s as any).class_name ?? "—",
@@ -497,16 +533,18 @@ export async function getStudentDossier(studentId: string): Promise<StudentDossi
       parents,
       subjects,
       overallAvg,
+      trimesters,
     };
   } catch {
     return null;
   }
 }
 
-export async function getStudentReportData(studentId: string) {
+export async function getStudentReportData(studentId: string, trimester?: number) {
   if (!isLiveMode()) return null;
   try {
     const supabase = createClient();
+    const tri = trimester ?? currentTrimester();
     const { data: student } = await supabase
       .from("students")
       .select("id, full_name, class_name, grade_level, schools(name, city)")
@@ -521,28 +559,10 @@ export async function getStudentReportData(studentId: string) {
       .is("archived_at", null)
       .order("graded_at", { ascending: false });
 
-    // moyenne par matière
-    const bySubject: Record<string, { name: string; short: string; sum: number; coef: number; items: any[] }> = {};
-    for (const g of grades ?? []) {
-      const name = (g as any).subjects?.name ?? "?";
-      if (!bySubject[name]) {
-        bySubject[name] = { name, short: (g as any).subjects?.short_name ?? "", sum: 0, coef: 0, items: [] };
-      }
-      bySubject[name].sum += ((g as any).score / (g as any).max_score) * 20 * (g as any).coefficient;
-      bySubject[name].coef += (g as any).coefficient;
-      bySubject[name].items.push(g);
-    }
-    const subjects = Object.values(bySubject).map((s) => ({
-      name: s.name,
-      short: s.short,
-      avg: s.coef > 0 ? +(s.sum / s.coef).toFixed(2) : 0,
-      items: s.items,
-    }));
-
-    const overallAvg =
-      subjects.length > 0
-        ? +(subjects.reduce((a, s) => a + s.avg, 0) / subjects.length).toFixed(2)
-        : 0;
+    // On ne garde que les cotes du trimestre demandé.
+    const gradesT = (grades ?? []).filter((g: any) => trimesterOf(g.graded_at) === tri);
+    const { subjects, overallAvg } = aggregateGrades(gradesT);
+    const meta = TRIMESTERS.find((m) => m.index === tri) ?? TRIMESTERS[0];
 
     return {
       student: {
@@ -554,6 +574,7 @@ export async function getStudentReportData(studentId: string) {
       },
       subjects,
       overallAvg,
+      trimester: { index: meta.index, short: meta.short, fr: meta.fr, en: meta.en },
     };
   } catch {
     return null;

@@ -4,11 +4,22 @@ import { Logo } from "@/components/Logo";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { getStudentReportData, getMySchool } from "@/lib/school-db";
+import { TRIMESTERS, currentTrimester, schoolYearLabel } from "@/lib/trimester";
 import { PrintButton } from "@/components/school/PrintButton";
 import { PublishButton } from "./PublishButton";
 
-export default async function StudentReport({ params }: { params: { student: string } }) {
-  const [data, school] = await Promise.all([getStudentReportData(params.student), getMySchool()]);
+export default async function StudentReport({
+  params,
+  searchParams,
+}: {
+  params: { student: string };
+  searchParams: { t?: string };
+}) {
+  const selectedTri = Number(searchParams.t) || currentTrimester();
+  const [data, school] = await Promise.all([
+    getStudentReportData(params.student, selectedTri),
+    getMySchool(),
+  ]);
 
   if (!data) {
     return (
@@ -19,7 +30,7 @@ export default async function StudentReport({ params }: { params: { student: str
   }
 
   const { student, subjects, overallAvg } = data;
-  const period = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const period = `${data.trimester.fr} · ${schoolYearLabel()}`;
 
   return (
     <div style={{ padding: 24, maxWidth: 880, margin: "0 auto" }}>
@@ -37,6 +48,27 @@ export default async function StudentReport({ params }: { params: { student: str
           <Icon name="chevL" size={14} />
           <T fr="Retour" en="Back" />
         </Link>
+        <div style={{ display: "flex", gap: 4, alignItems: "center", background: "var(--surface-2)", borderRadius: 9, padding: 3 }}>
+          {TRIMESTERS.map((m) => {
+            const on = m.index === selectedTri;
+            return (
+              <Link
+                key={m.index}
+                href={`/school/reports/${params.student}?t=${m.index}`}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: "5px 12px",
+                  borderRadius: 7,
+                  color: on ? "var(--ink)" : "var(--ink-3)",
+                  background: on ? "var(--surface)" : "transparent",
+                }}
+              >
+                {m.short}
+              </Link>
+            );
+          })}
+        </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <PublishButton studentId={params.student} period={period} hasSignature={!!school?.signatureUrl || !!school?.directorName} />
           <PrintButton />

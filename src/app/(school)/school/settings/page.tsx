@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/KPI";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
 import { ProfileEditForm } from "@/components/ProfileEditForm";
+import { PreferencesCard } from "@/components/settings/PreferencesCard";
 import { SignatureForm } from "./SignatureForm";
 import { T } from "@/lib/i18n";
 import { getMySchool } from "@/lib/school-db";
@@ -41,6 +42,11 @@ export default async function SchoolSettings() {
       <div className="ek-card" style={{ padding: 20 }}>
         <ProfileEditForm initialName={me?.name ?? ""} initialEmail={me?.email ?? ""} />
       </div>
+
+      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 4 }}>
+        <T fr="Préférences" en="Preferences" />
+      </div>
+      <PreferencesCard />
 
       <div className="ek-card" style={{ padding: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>

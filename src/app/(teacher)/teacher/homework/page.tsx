@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { listTeacherHomework } from "@/lib/teacher-db";
+import { DeleteHomeworkButton } from "./DeleteHomeworkButton";
 
 const STATUS_LABEL: Record<string, { fr: string; en: string; tone: string }> = {
   todo:       { fr: "À faire",     en: "To do",       tone: "warn" },
@@ -32,11 +33,11 @@ export default async function HomeworkListPage() {
 
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
         <div className="ek-tablewrap">
-        <div style={{ minWidth: 680 }}>
+        <div style={{ minWidth: 780 }}>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
+            gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1.1fr",
             padding: "12px 18px",
             fontSize: 11,
             fontWeight: 700,
@@ -52,6 +53,7 @@ export default async function HomeworkListPage() {
           <div><T fr="Classe" en="Class" /></div>
           <div><T fr="Échéance" en="Due" /></div>
           <div><T fr="Statut" en="Status" /></div>
+          <div><T fr="Action" en="Action" /></div>
         </div>
         {items.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)", fontSize: 12 }}>
@@ -65,7 +67,7 @@ export default async function HomeworkListPage() {
                 key={h.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
+                  gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1.1fr",
                   padding: "14px 18px",
                   alignItems: "center",
                   fontSize: 12.5,
@@ -80,6 +82,15 @@ export default async function HomeworkListPage() {
                   <span className={`ek-chip ${lbl.tone}`}>
                     <T fr={lbl.fr} en={lbl.en} />
                   </span>
+                </div>
+                <div>
+                  {h.overdue ? (
+                    <DeleteHomeworkButton homeworkId={h.id} />
+                  ) : (
+                    <span style={{ fontSize: 11, color: "var(--ink-4)" }}>
+                      <T fr="—" en="—" />
+                    </span>
+                  )}
                 </div>
               </div>
             );

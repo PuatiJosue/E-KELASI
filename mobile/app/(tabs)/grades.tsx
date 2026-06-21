@@ -2,7 +2,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
 
-import { Card, Chip } from "@/components/Card";
+import { Card } from "@/components/Card";
 import { GradeRing } from "@/components/Charts";
 import { ChildSwitcher } from "@/components/ChildSwitcher";
 import { Icon } from "@/components/Icon";
@@ -10,35 +10,32 @@ import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useChildren } from "@/lib/children";
 import { type Subject } from "@/lib/mock";
-import { listSubjects } from "@/lib/db";
-
-const PERIODS = [
-  { id: "t1", fr: "T1", en: "T1" },
-  { id: "t2", fr: "T2", en: "T2" },
-  { id: "t3", fr: "T3", en: "T3" },
-  { id: "all", fr: "Année", en: "Year" },
-] as const;
+import { listTrimester, type TrimesterReport } from "@/lib/db";
+import { TRIMESTERS, currentTrimester, trimesterMeta } from "@/lib/trimester";
 
 export default function Grades() {
   const t = useTheme();
   const tr = useT();
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]["id"]>("t2");
+  const [period, setPeriod] = useState<number>(currentTrimester());
   const { selectedChild: child, loading: childrenLoading } = useChildren();
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [report, setReport] = useState<TrimesterReport>({ subjects: [], overallAvg: 0, count: 0 });
   const [dataReady, setDataReady] = useState(false);
 
   useEffect(() => {
     if (!child) {
-      setSubjects([]);
+      setReport({ subjects: [], overallAvg: 0, count: 0 });
       setDataReady(true);
       return;
     }
     setDataReady(false);
-    listSubjects(child.id).then((s) => {
-      setSubjects(s);
+    listTrimester(child.id, period).then((r) => {
+      setReport(r);
       setDataReady(true);
     });
-  }, [child?.id]);
+  }, [child?.id, period]);
+
+  const subjects: Subject[] = report.subjects;
+  const periodMeta = trimesterMeta(period);
 
   const ready = !childrenLoading && (child ? dataReady : true);
 
@@ -76,12 +73,13 @@ export default function Grades() {
 
         <View style={{ paddingHorizontal: 20, paddingVertical: 12 }}>
           <View style={{ flexDirection: "row", backgroundColor: t.surface2, borderRadius: 12, padding: 4 }}>
-            {PERIODS.map((p) => {
-              const on = period === p.id;
+            {TRIMESTERS.map((p) => {
+              const on = period === p.index;
+              const isCurrent = currentTrimester() === p.index;
               return (
                 <Pressable
-                  key={p.id}
-                  onPress={() => setPeriod(p.id)}
+                  key={p.index}
+                  onPress={() => setPeriod(p.index)}
                   style={{
                     flex: 1,
                     paddingVertical: 8,
@@ -96,8 +94,11 @@ export default function Grades() {
                   }}
                 >
                   <Text style={{ fontSize: 12.5, fontWeight: "600", color: on ? t.ink : t.ink3, fontFamily: fonts.bodyBold }}>
-                    {tr({ fr: p.fr, en: p.en })}
+                    {p.short}
                   </Text>
+                  {isCurrent && (
+                    <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: t.brand, marginTop: 3 }} />
+                  )}
                 </Pressable>
               );
             })}
@@ -106,25 +107,26 @@ export default function Grades() {
 
         <View style={{ paddingHorizontal: 20, paddingBottom: 20, gap: 14 }}>
           <Card style={{ padding: 18, flexDirection: "row", alignItems: "center", gap: 16 }}>
-            <GradeRing value={child.avg} size={72} stroke={7} />
+            <GradeRing value={report.overallAvg} size={72} stroke={7} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 11, color: t.ink3, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", fontFamily: fonts.body }}>
-                <T fr="Moyenne T2" en="Term 2 average" />
+                {tr({ fr: `Moyenne ${periodMeta.fr}`, en: `${periodMeta.en} average` })}
               </Text>
               <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 2 }}>
-                <Text style={{ fontSize: 32, fontWeight: "700", color: t.ink, fontFamily: fonts.display, letterSpacing: -0.8 }}>{child.avg}</Text>
+                <Text style={{ fontSize: 32, fontWeight: "700", color: t.ink, fontFamily: fonts.display, letterSpacing: -0.8 }}>{report.overallAvg}</Text>
                 <Text style={{ fontSize: 14, color: t.ink3, fontFamily: fonts.body }}>/20</Text>
               </View>
-              {child.rank != null && child.total != null && (
-                <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Text style={{ fontSize: 11, color: t.ink3, fontFamily: fonts.body }}>
-                    <T fr="Classement" en="Rank" /> {child.rank}/{child.total}
-                  </Text>
-                </View>
-              )}
+              <Text style={{ fontSize: 11, color: t.ink3, marginTop: 6, fontFamily: fonts.body }}>
+                {tr({ fr: `${report.count} cotation(s)`, en: `${report.count} grade(s)` })}
+              </Text>
             </View>
           </Card>
 
+          {report.count === 0 ? (
+            <Text style={{ textAlign: "center", color: t.ink3, fontSize: 13, paddingVertical: 24, fontFamily: fonts.body }}>
+              {tr({ fr: "Aucune note pour ce trimestre.", en: "No grades for this term." })}
+            </Text>
+          ) : (
           <Card style={{ padding: 4 }}>
             {subjects.map((s, i) => (
               <View
@@ -165,6 +167,7 @@ export default function Grades() {
               </View>
             ))}
           </Card>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
