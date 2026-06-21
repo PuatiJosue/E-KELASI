@@ -29,7 +29,7 @@ export default async function TeamPage() {
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
-        title={{ fr: "Équipe E-KELASI", en: "E-KELASI team" }}
+        title={{ fr: "Équipe E-KLASS", en: "E-KLASS team" }}
         sub={{
           fr: `${team.length} super admin${team.length > 1 ? "s" : ""}`,
           en: `${team.length} super admin${team.length > 1 ? "s" : ""}`,

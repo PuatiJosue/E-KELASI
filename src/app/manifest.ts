@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "E-KELASI",
-    short_name: "E-KELASI",
+    name: "E-KLASS",
+    short_name: "E-KLASS",
     description: "Suivi scolaire — écoles, professeurs et parents.",
     start_url: "/",
     display: "standalone",

@@ -12,7 +12,7 @@ import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { ratelimit } from "@/lib/rate-limit";
 
-// Plan unique : un seul abonnement E-KELASI. Le priceId vient de l'env
+// Plan unique : un seul abonnement E-KLASS. Le priceId vient de l'env
 // (STRIPE_PRICE_ABONNEMENT), avec repli sur l'ancien nom pour le mode test.
 function abonnementPriceId(): string | null {
   return process.env.STRIPE_PRICE_ABONNEMENT ?? process.env.STRIPE_PRICE_ESSENTIEL ?? null;

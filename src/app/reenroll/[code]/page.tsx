@@ -1,30 +1,27 @@
 import { SchoolLetterhead } from "@/components/school/SchoolLetterhead";
 import { PrintButton } from "@/components/school/PrintButton";
-import { getInscriptionByCode } from "@/lib/inscription-db";
+import { getReenrollmentByCode } from "@/lib/enroll-db";
 
 export const dynamic = "force-dynamic";
 
-const sexLabel = (s?: string) => (s === "M" ? "Masculin" : s === "F" ? "Féminin" : "—");
 function fmt(d: string | null) {
   if (!d) return "—";
   const dt = new Date(d);
   return isNaN(dt.getTime()) ? "—" : dt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export default async function InscriptionConfirmation({ params }: { params: { code: string } }) {
-  const d = await getInscriptionByCode(params.code);
+export default async function ReenrollConfirmation({ params }: { params: { code: string } }) {
+  const d = await getReenrollmentByCode(params.code);
 
   if (!d) {
     return (
       <div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>
-        Confirmation introuvable ou inscription non validée.
+        Confirmation introuvable ou réinscription non validée.
       </div>
     );
   }
 
-  const sd = d.studentData ?? {};
   const pd = d.parentData ?? {};
-  const name = [sd.lastName, sd.middleName, sd.firstName].filter(Boolean).join(" ");
   const extra: { label: string; value: string }[] = Array.isArray(d.extra) ? d.extra : [];
 
   return (
@@ -38,33 +35,20 @@ export default async function InscriptionConfirmation({ params }: { params: { co
           name={d.schoolName}
           subtitle={[d.schoolCommune, d.schoolCity].filter(Boolean).join(", ")}
           logoUrl={d.schoolLogoUrl}
-          rightTitle="Confirmation d'inscription"
+          rightTitle="Confirmation de réinscription"
           rightValue={d.schoolYear || ""}
         />
 
         <div style={{ display: "flex", alignItems: "center", gap: 16, padding: 16, borderRadius: 10, background: "#F4EFE3", marginBottom: 20 }}>
-          {d.photoStudentUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={d.photoStudentUrl} alt="" style={{ width: 64, height: 64, borderRadius: 10, objectFit: "cover" }} />
-          ) : null}
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "var(--font-display)" }}>{name}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "var(--font-display)" }}>{d.studentName}</div>
             <div style={{ fontSize: 13, color: "#4a3f35" }}>
-              Classe : <strong>{d.requestedClass}</strong>{d.option ? ` · ${d.option}` : ""}
+              {d.currentClass ? <>Classe actuelle : <strong>{d.currentClass}</strong></> : null}
+              {d.requestedClass ? <> · Classe demandée : <strong>{d.requestedClass}</strong></> : null}
+              {d.option ? ` · ${d.option}` : ""}
             </div>
           </div>
         </div>
-
-        <Section title="Identité de l'élève" rows={[
-          ["Sexe", sexLabel(sd.sex)],
-          ["Date de naissance", fmt(sd.birthDate)],
-          ["Lieu de naissance", sd.birthPlace],
-          ["Nationalité", sd.nationality],
-          ["Téléphone", sd.studentPhone],
-          ["Email", sd.studentEmail],
-          ["École précédente", [sd.prevSchool, sd.prevClass, sd.prevOption].filter(Boolean).join(" · ")],
-          ["Adresse", [sd.addressCommune, sd.addressCity, sd.addressProvince].filter(Boolean).join(", ")],
-        ]} />
 
         <Section title="Parents / Tuteur" rows={[
           ["Père", pd.fatherName],
@@ -89,14 +73,14 @@ export default async function InscriptionConfirmation({ params }: { params: { co
             <div style={{ borderBottom: "1px solid #1a1410", paddingBottom: 4, fontSize: 11.5, fontWeight: 600 }}>{d.signedBy || "Signature"}</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 11, color: "#8a7c6e", textTransform: "uppercase", letterSpacing: "0.05em" }}>Inscription validée le</div>
+            <div style={{ fontSize: 11, color: "#8a7c6e", textTransform: "uppercase", letterSpacing: "0.05em" }}>Réinscription validée le</div>
             <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4 }}>{fmt(d.createdAt)}</div>
             <div style={{ fontSize: 11, color: "#8a7c6e", marginTop: 10 }}>Code : <strong>{d.verifyCode}</strong></div>
           </div>
         </div>
 
         <div style={{ marginTop: 24, fontSize: 10, color: "#b5a99a", textAlign: "center" }}>
-          Document généré via E-KLASS · vérifiable sur e-kelasi.vercel.app/inscription/{d.verifyCode}
+          Document généré via E-KLASS · vérifiable sur e-kelasi.vercel.app/reenroll/{d.verifyCode}
         </div>
       </div>
 

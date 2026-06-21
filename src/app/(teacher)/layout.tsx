@@ -16,7 +16,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
     getTeacherProfile(),
   ]);
 
-  // École suspendue (abonnement E-KELASI impayé) → accès prof bloqué.
+  // École suspendue (abonnement E-KLASS impayé) → accès prof bloqué.
   if (status === "suspended") {
     return (
       <LangProvider value={lang}>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { Logo } from "@/components/Logo";
+import { SchoolLetterhead } from "@/components/school/SchoolLetterhead";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { getStudentReportData, getMySchool } from "@/lib/school-db";
@@ -86,24 +86,14 @@ export default async function StudentReport({
           color: "#1a1410",
         }}
       >
-        {/* En-tête */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
-          <div>
-            <Logo size={32} withWord />
-            <div style={{ marginTop: 12, fontSize: 16, fontWeight: 700, fontFamily: "var(--font-display)", color: "#1a1410" }}>
-              {student.schoolName}
-            </div>
-            <div style={{ fontSize: 12, color: "#8a7c6e" }}>{student.schoolCity}</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 11, color: "#8a7c6e", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
-              <T fr="Bulletin scolaire" en="Report card" />
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--font-display)", color: "#1a1410", marginTop: 2 }}>
-              {period}
-            </div>
-          </div>
-        </div>
+        {/* En-tête officiel de l'école */}
+        <SchoolLetterhead
+          name={student.schoolName}
+          subtitle={student.schoolCity}
+          logoUrl={school?.logoUrl}
+          rightTitle="Bulletin scolaire"
+          rightValue={period}
+        />
 
         {/* Élève */}
         <div
@@ -234,7 +224,7 @@ export default async function StudentReport({
         </div>
 
         <div style={{ marginTop: 30, fontSize: 10, color: "#b5a99a", textAlign: "center" }}>
-          Bulletin généré via E-KELASI · {new Date().toLocaleDateString("fr-FR")}
+          Bulletin généré via E-KLASS · {new Date().toLocaleDateString("fr-FR")}
         </div>
       </div>
 

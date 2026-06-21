@@ -1,5 +1,5 @@
 // Mock data used while Supabase is not provisioned.
-// Numbers and labels match the E-KELASI design prototype.
+// Numbers and labels match the E-KLASS design prototype.
 
 export const MOCK_MRR_12M = [18, 19.2, 21, 22.5, 24, 26.5, 28, 30.2, 32.5, 34, 37, 39.4].map(
   (v) => v * 1000

@@ -15,7 +15,7 @@ export default async function SchoolBilling({
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxWidth: 640 }}>
       <PageHeader
         title={{ fr: "Abonnement", en: "Subscription" }}
-        sub={{ fr: "Votre abonnement E-KELASI (90 $/mois).", en: "Your E-KELASI subscription ($90/mo)." }}
+        sub={{ fr: "Votre abonnement E-KLASS (90 $/mois).", en: "Your E-KLASS subscription ($90/mo)." }}
       />
 
       {searchParams?.success && (
@@ -62,8 +62,8 @@ export default async function SchoolBilling({
 
       <div style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>
         <T
-          fr="Pas de carte bancaire ? Vous pouvez aussi régler par Mobile Money ou virement — contactez E-KELASI, votre accès sera activé manuellement."
-          en="No card? You can also pay by Mobile Money or transfer — contact E-KELASI and your access will be enabled manually."
+          fr="Pas de carte bancaire ? Vous pouvez aussi régler par Mobile Money ou virement — contactez E-KLASS, votre accès sera activé manuellement."
+          en="No card? You can also pay by Mobile Money or transfer — contact E-KLASS and your access will be enabled manually."
         />
       </div>
     </div>

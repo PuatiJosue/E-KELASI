@@ -16,6 +16,7 @@ export type Child = {
   total?: number | null;
   avatarUrl?: string | null;
   schoolPhone?: string | null;
+  schoolLogoUrl?: string | null;
   sex?: string | null;
   age?: number | null;
   option?: string | null;
@@ -133,7 +134,7 @@ export async function listChildren(): Promise<Child[]> {
   try {
     const { data: links } = await supabase
       .from("parent_links")
-      .select("students!inner(id, full_name, class_name, grade_level, avatar_url, birth_date, sex, status, option, schools(name, phone))")
+      .select("students!inner(id, full_name, class_name, grade_level, avatar_url, birth_date, sex, status, option, schools(name, phone, logo_url))")
       .eq("students.status", "active");
     if (!links) return [];
     const children: Child[] = [];
@@ -148,6 +149,7 @@ export async function listChildren(): Promise<Child[]> {
         avg: await avgForStudent(s.id),
         avatarUrl: s.avatar_url ?? null,
         schoolPhone: s.schools?.phone ?? null,
+        schoolLogoUrl: s.schools?.logo_url ?? null,
         sex: s.sex ?? null,
         age: ageFromBirth(s.birth_date),
         option: s.option ?? null,

@@ -76,7 +76,7 @@ export async function getInscriptionByCode(code: string) {
     const svc = service();
     const { data } = await svc
       .from("inscriptions")
-      .select(COLS + ", schools(name, city, commune)")
+      .select(COLS + ", schools(name, city, commune, logo_url)")
       .eq("verify_code", code)
       .eq("status", "validated")
       .maybeSingle();
@@ -86,6 +86,7 @@ export async function getInscriptionByCode(code: string) {
       schoolName: (data as any).schools?.name ?? "—",
       schoolCity: (data as any).schools?.city ?? "",
       schoolCommune: (data as any).schools?.commune ?? "",
+      schoolLogoUrl: (data as any).schools?.logo_url ?? null,
     };
   } catch {
     return null;

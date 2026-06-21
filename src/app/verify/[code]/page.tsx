@@ -32,7 +32,7 @@ export default async function VerifyDocument({ params }: { params: { code: strin
             <div style={{ textAlign: "center", marginBottom: 18 }}>
               <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
               <h1 style={{ fontSize: 18, fontWeight: 700, color: "#1D6650", fontFamily: "var(--font-display)" }}>Document authentique</h1>
-              <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 4 }}>Émis officiellement via E-KELASI.</p>
+              <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 4 }}>Émis officiellement via E-KLASS.</p>
             </div>
 
             <Row label="Type" value={doc.title} />

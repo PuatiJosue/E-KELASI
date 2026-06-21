@@ -53,9 +53,14 @@ export default async function SchoolSettings() {
           <T fr="Aide & support" en="Help & support" />
         </div>
         <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 8, lineHeight: 1.6 }}>
-          <T fr="Un problème ou une question ? Écrivez-nous :" en="A problem or question? Email us:" />{" "}
-          <a href="mailto:juniorkhonde11@gmail.com" style={{ color: "var(--brand)", fontWeight: 600 }}>
-            juniorkhonde11@gmail.com
+          <T fr="Un problème ou une question ? Contactez l'équipe E-KLASS :" en="A problem or question? Contact the E-KLASS team:" />
+          <br />
+          <a href="mailto:contacte-klass@protonmail.com" style={{ color: "var(--brand)", fontWeight: 600 }}>
+            contacte-klass@protonmail.com
+          </a>
+          {" · "}
+          <a href="tel:+243837610411" style={{ color: "var(--brand)", fontWeight: 600 }}>
+            +243 837 610 411
           </a>
         </div>
       </div>

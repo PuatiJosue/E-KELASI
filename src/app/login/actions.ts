@@ -59,5 +59,5 @@ export async function loginAction(formData: FormData) {
   // Parent ou compte sans rôle : l'espace web est réservé aux écoles et profs.
   // On déconnecte et on informe (les parents utilisent l'app mobile).
   await supabase.auth.signOut();
-  redirect(`/login?error=${encodeURIComponent("Espace réservé aux écoles et aux professeurs. Les parents utilisent l'application mobile E-KELASI.")}`);
+  redirect(`/login?error=${encodeURIComponent("Espace réservé aux écoles et aux professeurs. Les parents utilisent l'application mobile E-KLASS.")}`);
 }

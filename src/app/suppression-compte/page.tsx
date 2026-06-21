@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Suppression de compte — E-KELASI",
-  description: "Comment demander la suppression de votre compte E-KELASI et de vos données.",
+  title: "Suppression de compte — E-KLASS",
+  description: "Comment demander la suppression de votre compte E-KLASS et de vos données.",
 };
 
 export default function AccountDeletionPage() {
@@ -20,16 +20,16 @@ export default function AccountDeletionPage() {
       <h1 style={{ fontSize: 30, fontWeight: 700, fontFamily: "var(--font-display)", letterSpacing: "-0.02em" }}>
         Suppression de compte
       </h1>
-      <p style={{ color: "var(--ink-3)", marginTop: 4, fontSize: 13 }}>Application E-KELASI</p>
+      <p style={{ color: "var(--ink-3)", marginTop: 4, fontSize: 13 }}>Application E-KLASS</p>
 
       <section style={{ marginTop: 28 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--font-display)", marginBottom: 8 }}>
           Comment demander la suppression
         </h2>
         <div style={{ fontSize: 14.5, color: "var(--ink-2)" }}>
-          Pour supprimer votre compte E-KELASI et les données associées, envoyez un e-mail à{" "}
-          <a href="mailto:juniorkhonde11@gmail.com?subject=Suppression%20de%20compte" style={{ color: "var(--brand)", fontWeight: 600 }}>
-            juniorkhonde11@gmail.com
+          Pour supprimer votre compte E-KLASS et les données associées, envoyez un e-mail à{" "}
+          <a href="mailto:contacte-klass@protonmail.com?subject=Suppression%20de%20compte" style={{ color: "var(--brand)", fontWeight: 600 }}>
+            contacte-klass@protonmail.com
           </a>{" "}
           avec l’objet « Suppression de compte », depuis l’adresse e-mail de votre compte. Votre demande
           sera traitée sous 30 jours.

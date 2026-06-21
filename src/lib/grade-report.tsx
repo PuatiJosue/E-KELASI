@@ -5,7 +5,7 @@
 // avec moyenne par matière + moyenne générale.
 
 import React from "react";
-import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 
 // ── Types ───────────────────────────────────────────────────────────
 export type ReportGrade = {
@@ -23,7 +23,7 @@ export type ReportSubject = {
 };
 
 export type ReportData = {
-  school: { name: string; city: string; brandColor?: string | null };
+  school: { name: string; city: string; brandColor?: string | null; logoUrl?: string | null };
   student: { fullName: string; className: string };
   teacherName: string;
   asOf: string;
@@ -35,7 +35,8 @@ export type ReportData = {
 const styles = StyleSheet.create({
   page: { padding: 40, fontFamily: "Helvetica", fontSize: 11, color: "#1A1410" },
   brandBar: { height: 6, marginBottom: 18, borderRadius: 2 },
-  schoolBlock: { marginBottom: 16 },
+  schoolBlock: { marginBottom: 16, flexDirection: "row", alignItems: "center" },
+  schoolLogo: { width: 44, height: 44, marginRight: 12, objectFit: "contain" },
   schoolName: { fontSize: 14, fontWeight: 700 },
   schoolCity: { fontSize: 10, color: "#8A7C6E", marginTop: 2 },
   title: { fontSize: 18, fontWeight: 700, marginTop: 14 },
@@ -71,8 +72,11 @@ function GradeReportDoc({ data }: { data: ReportData }) {
       <Page size="A4" style={styles.page}>
         <View style={[styles.brandBar, { backgroundColor: data.school.brandColor || "#E0701E" }]} />
         <View style={styles.schoolBlock}>
-          <Text style={styles.schoolName}>{data.school.name}</Text>
-          {data.school.city ? <Text style={styles.schoolCity}>{data.school.city}</Text> : null}
+          {data.school.logoUrl ? <Image src={data.school.logoUrl} style={styles.schoolLogo} /> : null}
+          <View>
+            <Text style={styles.schoolName}>{data.school.name}</Text>
+            {data.school.city ? <Text style={styles.schoolCity}>{data.school.city}</Text> : null}
+          </View>
         </View>
 
         <Text style={styles.title}>Bulletin · {data.student.fullName}</Text>
@@ -112,7 +116,7 @@ function GradeReportDoc({ data }: { data: ReportData }) {
           </Text>
         </View>
 
-        <Text style={styles.footer}>Bulletin généré via E-KELASI · {data.asOf}</Text>
+        <Text style={styles.footer}>Bulletin généré via E-KLASS · {data.asOf}</Text>
       </Page>
     </Document>
   );

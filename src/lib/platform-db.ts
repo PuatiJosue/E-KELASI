@@ -1,4 +1,4 @@
-// Couche données — annonces plateforme (super-admin E-KELASI). Service role.
+// Couche données — annonces plateforme (super-admin E-KLASS). Service role.
 
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { isLiveMode } from "@/lib/db";

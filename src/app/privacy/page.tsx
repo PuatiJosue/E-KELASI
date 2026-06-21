@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Politique de confidentialité — E-KELASI",
-  description: "Comment E-KELASI collecte, utilise et protège vos données.",
+  title: "Politique de confidentialité — E-KLASS",
+  description: "Comment E-KLASS collecte, utilise et protège vos données.",
 };
 
 const UPDATED = "8 juin 2026";
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <p style={{ color: "var(--ink-3)", marginTop: 4, fontSize: 13 }}>Dernière mise à jour : {UPDATED}</p>
 
       <Section title="1. Qui sommes-nous">
-        E-KELASI est une plateforme de suivi scolaire qui relie les écoles, les professeurs et les
+        E-KLASS est une plateforme de suivi scolaire qui relie les écoles, les professeurs et les
         parents (site web et application mobile). La présente politique explique quelles données nous
         traitons et pourquoi.
       </Section>
@@ -75,8 +75,8 @@ export default function PrivacyPage() {
 
       <Section title="9. Contact">
         Pour toute question relative à cette politique ou à vos données :{" "}
-        <a href="mailto:juniorkhonde11@gmail.com" style={{ color: "var(--brand)", fontWeight: 600 }}>
-          juniorkhonde11@gmail.com
+        <a href="mailto:contacte-klass@protonmail.com" style={{ color: "var(--brand)", fontWeight: 600 }}>
+          contacte-klass@protonmail.com
         </a>
         .
       </Section>

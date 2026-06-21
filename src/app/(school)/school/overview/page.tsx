@@ -38,7 +38,7 @@ export default async function SchoolOverview() {
             <Icon name="bell" size={16} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 10.5, color: "var(--ink-3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Annonce E-KELASI</div>
+            <div style={{ fontSize: 10.5, color: "var(--ink-3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Annonce E-KLASS</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", marginTop: 1 }}>{a.title}</div>
             <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 2, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{a.body}</div>
           </div>

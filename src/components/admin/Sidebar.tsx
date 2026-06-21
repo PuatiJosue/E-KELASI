@@ -21,7 +21,7 @@ const NAV: NavItem[] = [
 ];
 
 const ORG: NavItem[] = [
-  { id: "team",          href: "/team",          icon: "users",      fr: "Équipe E-KELASI", en: "E-KELASI team" },
+  { id: "team",          href: "/team",          icon: "users",      fr: "Équipe E-KLASS", en: "E-KLASS team" },
   { id: "plans",         href: "/plans",         icon: "creditcard", fr: "Plans & prix",    en: "Plans & pricing" },
   { id: "year-archive",  href: "/year-archive",  icon: "refresh",    fr: "Archive annuelle", en: "Year archive" },
   { id: "settings",      href: "/settings",      icon: "settings",   fr: "Paramètres",      en: "Settings" },
@@ -143,7 +143,7 @@ export function AdminSidebar({
         </div>
         <div style={{ flex: 1, textAlign: "left", minWidth: 0 }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>
-            E-KELASI <span style={{ color: "var(--ink-3)", fontWeight: 500 }}>·</span> Prod
+            E-KLASS <span style={{ color: "var(--ink-3)", fontWeight: 500 }}>·</span> Prod
           </div>
           <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>e-kelasi.vercel.app</div>
         </div>

@@ -116,20 +116,42 @@ export default function Profile() {
             <Text style={{ fontSize: 11, color: t.ink3, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", paddingHorizontal: 4, paddingBottom: 8, paddingTop: 4, fontFamily: fonts.body }}>
               <T fr="Aide & support" en="Help & support" />
             </Text>
-            <Pressable onPress={() => Linking.openURL("mailto:juniorkhonde11@gmail.com")}>
-              <Card style={{ padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: t.surface2, alignItems: "center", justifyContent: "center" }}>
-                  <Icon name="mail" size={16} color={t.ink2} />
+            <Text style={{ fontSize: 12, color: t.ink3, paddingHorizontal: 4, paddingBottom: 8, fontFamily: fonts.body, lineHeight: 17 }}>
+              <T
+                fr="Un problème ? Contactez l'équipe E-KLASS (et non l'école)."
+                en="A problem? Contact the E-KLASS team (not the school)."
+              />
+            </Text>
+            <Card style={{ padding: 4 }}>
+              <Pressable onPress={() => Linking.openURL("mailto:contacte-klass@protonmail.com")}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderBottomWidth: 1, borderBottomColor: t.divider }}>
+                  <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: t.surface2, alignItems: "center", justifyContent: "center" }}>
+                    <Icon name="mail" size={16} color={t.ink2} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, color: t.ink, fontWeight: "500", fontFamily: fonts.body }}>
+                      <T fr="Email" en="Email" />
+                    </Text>
+                    <Text style={{ fontSize: 12, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>contacte-klass@protonmail.com</Text>
+                  </View>
+                  <Icon name="chevR" size={16} color={t.ink4} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, color: t.ink, fontWeight: "500", fontFamily: fonts.body }}>
-                    <T fr="Contacter le support" en="Contact support" />
-                  </Text>
-                  <Text style={{ fontSize: 12, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>juniorkhonde11@gmail.com</Text>
+              </Pressable>
+              <Pressable onPress={() => Linking.openURL("tel:+243837610411")}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 12 }}>
+                  <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: t.surface2, alignItems: "center", justifyContent: "center" }}>
+                    <Icon name="phone" size={16} color={t.ink2} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, color: t.ink, fontWeight: "500", fontFamily: fonts.body }}>
+                      <T fr="Téléphone" en="Phone" />
+                    </Text>
+                    <Text style={{ fontSize: 12, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>+243 837 610 411</Text>
+                  </View>
+                  <Icon name="chevR" size={16} color={t.ink4} />
                 </View>
-                <Icon name="chevR" size={16} color={t.ink4} />
-              </Card>
-            </Pressable>
+              </Pressable>
+            </Card>
           </View>
 
           <Pressable

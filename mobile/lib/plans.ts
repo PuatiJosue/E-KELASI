@@ -1,4 +1,4 @@
-// E-KELASI subscription plans (parents).
+// E-KLASS subscription plans (parents).
 // price_id pointe vers le Stripe Price ID en mode test/prod.
 // À configurer sur stripe.com → Products.
 

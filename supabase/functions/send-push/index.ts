@@ -111,7 +111,7 @@ Deno.serve(async (_req: Request) => {
     for (const tok of userTokens) {
       messages.push({
         to: tok,
-        title: KIND_TITLES[n.kind] ?? "E-KELASI",
+        title: KIND_TITLES[n.kind] ?? "E-KLASS",
         body: n.body,
         data: { screen: KIND_SCREENS[n.kind] ?? "notifications", notificationId: n.id },
         sound: "default",

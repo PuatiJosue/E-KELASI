@@ -1,4 +1,4 @@
-// E-KELASI mobile theme. Mirrors web tokens.css.
+// E-KLASS mobile theme. Mirrors web tokens.css.
 // Use via useTheme() (returns light/dark based on system pref).
 
 import { useColorScheme } from "react-native";

@@ -151,7 +151,7 @@ async function sendReportPdfs(opts: {
       // Élève + école
       const { data: student } = await admin
         .from("students")
-        .select("id, full_name, class_name, school_id, schools(name, city, brand_color)")
+        .select("id, full_name, class_name, school_id, schools(name, city, brand_color, logo_url)")
         .eq("id", studentId)
         .maybeSingle();
       if (!student) continue;
@@ -198,6 +198,7 @@ async function sendReportPdfs(opts: {
           name: school?.name ?? "École",
           city: school?.city ?? "",
           brandColor: school?.brand_color ?? null,
+          logoUrl: school?.logo_url ?? null,
         },
         student: {
           fullName: (student as any).full_name,
