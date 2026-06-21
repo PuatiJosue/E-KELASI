@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { publishBulletinAction } from "../actions";
 
-export function PublishButton({ studentId, period, hasSignature }: { studentId: string; period: string; hasSignature: boolean }) {
+export function PublishButton({ studentId, period, trimester, hasSignature }: { studentId: string; period: string; trimester?: number; hasSignature: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [done, setDone] = useState<string | null>(null);
@@ -13,7 +13,7 @@ export function PublishButton({ studentId, period, hasSignature }: { studentId: 
   const publish = () => {
     if (!confirm("Publier ce bulletin signé aux parents ?")) return;
     startTransition(async () => {
-      const r = await publishBulletinAction(studentId, period);
+      const r = await publishBulletinAction(studentId, period, trimester);
       if (r.ok) { setDone(r.code); router.refresh(); }
       else alert(r.message);
     });
