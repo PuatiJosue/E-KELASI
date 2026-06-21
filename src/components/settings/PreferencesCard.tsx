@@ -97,7 +97,7 @@ export function PreferencesCard() {
       <SettingRow
         icon="mail"
         label={tr("Langue", "Language")}
-        desc={tr("Interface E-KELASI", "E-KELASI interface")}
+        desc={tr("Interface E-KLASS", "E-KLASS interface")}
       >
         <Segmented
           options={[

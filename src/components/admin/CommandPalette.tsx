@@ -44,7 +44,7 @@ export function CommandPalette() {
       { id: "go-payments", label: "Mobile Money",            hint: "Payments", icon: "dollar",   group: "Pages",   run: () => router.push("/payments") },
       { id: "go-support",  label: "Support & tickets",     hint: "Support",   icon: "chat",       group: "Pages",   run: () => router.push("/support") },
       { id: "go-security", label: "Sécurité & journaux",   hint: "Security",  icon: "shield",     group: "Pages",   run: () => router.push("/security") },
-      { id: "go-team",     label: "Équipe E-KELASI",       hint: "Team",      icon: "users",      group: "Pages",   run: () => router.push("/team") },
+      { id: "go-team",     label: "Équipe E-KLASS",       hint: "Team",      icon: "users",      group: "Pages",   run: () => router.push("/team") },
       { id: "go-settings", label: "Paramètres",            hint: "Settings",  icon: "settings",   group: "Pages",   run: () => router.push("/settings") },
       { id: "act-invite",  label: "Inviter une école",     hint: "Action",    icon: "plus",       group: "Actions", run: () => router.push("/schools") },
       { id: "act-sync",    label: "Synchroniser Stripe",   hint: "Action",    icon: "refresh",    group: "Actions", run: () => router.push("/billing") },

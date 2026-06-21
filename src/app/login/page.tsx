@@ -27,7 +27,7 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
             marginBottom: 4,
           }}
         >
-          Espace E-KELASI
+          Espace E-KLASS
         </h1>
         <p
           style={{
@@ -37,7 +37,7 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
             marginBottom: 24,
           }}
         >
-          Connectez-vous à votre compte E-KELASI.
+          Connectez-vous à votre compte E-KLASS.
         </p>
 
         {error && (

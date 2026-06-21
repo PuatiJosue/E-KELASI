@@ -50,7 +50,7 @@ function InviteSchoolModal({ onClose }: { onClose: () => void }) {
   const copyMessage = () => {
     if (!creds) return;
     const msg =
-      `Bonjour, voici vos accès à E-KELASI pour ${creds.school} :\n` +
+      `Bonjour, voici vos accès à E-KLASS pour ${creds.school} :\n` +
       `Site : https://e-kelasi.vercel.app/login\n` +
       `Email : ${creds.email}\n` +
       `Mot de passe : ${creds.password}\n` +

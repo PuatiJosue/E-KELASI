@@ -80,7 +80,7 @@ export default async function ReenrollConfirmation({ params }: { params: { code:
         </div>
 
         <div style={{ marginTop: 24, fontSize: 10, color: "#b5a99a", textAlign: "center" }}>
-          Document généré via E-KELASI · vérifiable sur e-kelasi.vercel.app/reenroll/{d.verifyCode}
+          Document généré via E-KLASS · vérifiable sur e-kelasi.vercel.app/reenroll/{d.verifyCode}
         </div>
       </div>
 

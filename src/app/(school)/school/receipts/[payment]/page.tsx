@@ -81,7 +81,7 @@ export default async function PaymentReceipt({ params }: { params: { payment: st
         </div>
 
         <div style={{ marginTop: 24, fontSize: 10, color: "#b5a99a", textAlign: "center" }}>
-          Reçu généré via E-KELASI · {fmt(new Date().toISOString())}
+          Reçu généré via E-KLASS · {fmt(new Date().toISOString())}
         </div>
       </div>
 

@@ -15,8 +15,8 @@ export function SuspendedNotice() {
         </h1>
         <p style={{ fontSize: 13.5, color: "var(--ink-3)", lineHeight: 1.6, marginBottom: 22 }}>
           <T
-            fr="L'abonnement de votre établissement à E-KELASI n'est pas à jour. L'accès est temporairement suspendu. Contactez E-KELASI pour régulariser et réactiver votre compte."
-            en="Your school's E-KELASI subscription is past due. Access is temporarily suspended. Contact E-KELASI to settle and reactivate your account."
+            fr="L'abonnement de votre établissement à E-KLASS n'est pas à jour. L'accès est temporairement suspendu. Contactez E-KLASS pour régulariser et réactiver votre compte."
+            en="Your school's E-KLASS subscription is past due. Access is temporarily suspended. Contact E-KLASS to settle and reactivate your account."
           />
         </p>
         <LogoutButton />

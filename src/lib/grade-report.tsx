@@ -116,7 +116,7 @@ function GradeReportDoc({ data }: { data: ReportData }) {
           </Text>
         </View>
 
-        <Text style={styles.footer}>Bulletin généré via E-KELASI · {data.asOf}</Text>
+        <Text style={styles.footer}>Bulletin généré via E-KLASS · {data.asOf}</Text>
       </Page>
     </Document>
   );

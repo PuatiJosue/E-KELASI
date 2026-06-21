@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "E-KELASI — Suivi scolaire",
-  description: "E-KELASI — la plateforme de suivi scolaire qui relie écoles, professeurs et parents.",
+  title: "E-KLASS — Suivi scolaire",
+  description: "E-KLASS — la plateforme de suivi scolaire qui relie écoles, professeurs et parents.",
 };
 
 export const viewport: Viewport = {

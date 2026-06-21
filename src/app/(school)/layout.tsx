@@ -23,7 +23,7 @@ export default async function SchoolLayout({ children }: { children: React.React
   const [school, userName] = await Promise.all([getMySchool(), getUserName()]);
   const lang = getLang();
 
-  // École suspendue (abonnement E-KELASI impayé) → accès direction bloqué.
+  // École suspendue (abonnement E-KLASS impayé) → accès direction bloqué.
   if (school?.status === "suspended") {
     return (
       <LangProvider value={lang}>

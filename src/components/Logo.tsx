@@ -32,7 +32,7 @@ export function Logo({
           }}
         >
           <span style={{ color: "var(--gold-600)" }}>E-</span>
-          <span style={{ color: "var(--brand)" }}>KELASI</span>
+          <span style={{ color: "var(--brand)" }}>KLASS</span>
         </span>
       )}
     </div>

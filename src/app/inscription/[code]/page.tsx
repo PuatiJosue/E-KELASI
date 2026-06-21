@@ -96,7 +96,7 @@ export default async function InscriptionConfirmation({ params }: { params: { co
         </div>
 
         <div style={{ marginTop: 24, fontSize: 10, color: "#b5a99a", textAlign: "center" }}>
-          Document généré via E-KELASI · vérifiable sur e-kelasi.vercel.app/inscription/{d.verifyCode}
+          Document généré via E-KLASS · vérifiable sur e-kelasi.vercel.app/inscription/{d.verifyCode}
         </div>
       </div>
 

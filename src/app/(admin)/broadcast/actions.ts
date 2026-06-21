@@ -47,7 +47,7 @@ export async function createPlatformAnnouncement(input: {
       const { data: parents } = await svc.from("profiles").select("id").eq("role", "parent");
       const ids = (parents ?? []).map((p: any) => p.id);
       if (ids.length > 0) {
-        const rows = ids.map((id: string) => ({ user_id: id, kind: "school" as const, body: `📣 E-KELASI : ${title}` }));
+        const rows = ids.map((id: string) => ({ user_id: id, kind: "school" as const, body: `📣 E-KLASS : ${title}` }));
         // Insertion par paquets de 500 pour rester raisonnable.
         for (let i = 0; i < rows.length; i += 500) {
           await svc.from("notifications").insert(rows.slice(i, i + 500));

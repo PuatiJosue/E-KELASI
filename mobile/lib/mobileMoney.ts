@@ -24,9 +24,9 @@ export const MM_PROVIDERS: MMProviderInfo[] = [
   { id: "mpesa",  name: "M-Pesa",       countries: ["KE", "TZ", "MZ", "CD"],       color: "#00A651", emoji: "🟢" },
 ];
 
-// Le numéro qui reçoit les paiements E-KELASI (à changer en config plus tard).
+// Le numéro qui reçoit les paiements E-KLASS (à changer en config plus tard).
 export const RECIPIENT_NUMBER = "+243 828 977 717";
-export const RECIPIENT_NAME = "E-KELASI";
+export const RECIPIENT_NAME = "E-KLASS";
 
 export async function createMobileMoneyPayment(args: {
   plan: PlanId;

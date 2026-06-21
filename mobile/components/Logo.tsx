@@ -27,7 +27,7 @@ export function Logo({ size = 28, withWord = false }: { size?: number; withWord?
             fontWeight: "700",
           }}
         >
-          E-KELASI
+          E-KLASS
         </Text>
       )}
     </View>

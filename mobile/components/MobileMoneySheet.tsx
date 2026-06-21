@@ -125,8 +125,8 @@ export function MobileMoneySheet({
               <>
                 <Text style={{ fontSize: 13, color: t.ink3, marginBottom: 16, lineHeight: 19, fontFamily: fonts.body }}>
                   <T
-                    fr="Choisis ton opérateur. Tu paieras directement vers le numéro E-KELASI."
-                    en="Pick your operator. You'll pay directly to the E-KELASI number."
+                    fr="Choisis ton opérateur. Tu paieras directement vers le numéro E-KLASS."
+                    en="Pick your operator. You'll pay directly to the E-KLASS number."
                   />
                 </Text>
                 <View style={{ gap: 8 }}>

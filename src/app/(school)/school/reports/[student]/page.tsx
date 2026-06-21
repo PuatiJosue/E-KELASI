@@ -224,7 +224,7 @@ export default async function StudentReport({
         </div>
 
         <div style={{ marginTop: 30, fontSize: 10, color: "#b5a99a", textAlign: "center" }}>
-          Bulletin généré via E-KELASI · {new Date().toLocaleDateString("fr-FR")}
+          Bulletin généré via E-KLASS · {new Date().toLocaleDateString("fr-FR")}
         </div>
       </div>
 
