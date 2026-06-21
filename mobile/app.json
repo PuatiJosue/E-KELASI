@@ -24,7 +24,8 @@
         "backgroundColor": "#02122C"
       },
       "package": "com.ekelasi.parent",
-      "versionCode": 9
+      "versionCode": 9,
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "597128095361",
+    "project_id": "e-klass-a4195",
+    "storage_bucket": "e-klass-a4195.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597128095361:android:082c1dee74e265e4880f80",
+        "android_client_info": {
+          "package_name": "com.ekelasi.parent"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDWCgtRN5fG1bnZht5rc6ugSj_zeMZ9cbM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
