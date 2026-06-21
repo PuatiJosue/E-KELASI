@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { useLang, type Lang } from "@/lib/i18n";
 import { setLangAction } from "@/lib/lang-actions";
+import { getNotifPrefAction, setNotifPrefAction, type NotifPref } from "@/lib/notif-actions";
 
 type Appearance = "auto" | "light" | "dark";
-type NotifPref = "all" | "important" | "none";
 
 const APPEARANCE_KEY = "ek-appearance";
-const NOTIF_KEY = "ek-notif-pref";
 
 function applyAppearance(pref: Appearance) {
   if (typeof document === "undefined") return;
@@ -31,15 +30,14 @@ export function PreferencesCard() {
   const [notif, setNotif] = useState<NotifPref>("all");
   const [hydrated, setHydrated] = useState(false);
 
-  // Lecture des préférences locales au montage.
+  // Lecture des préférences au montage : apparence en local, notifications en base.
   useEffect(() => {
     try {
       const a = localStorage.getItem(APPEARANCE_KEY) as Appearance | null;
       if (a === "auto" || a === "light" || a === "dark") setAppearance(a);
-      const n = localStorage.getItem(NOTIF_KEY) as NotifPref | null;
-      if (n === "all" || n === "important" || n === "none") setNotif(n);
     } catch {}
     setHydrated(true);
+    getNotifPrefAction().then(setNotif).catch(() => {});
   }, []);
 
   // En mode auto, suit les changements de thème système en direct.
@@ -66,8 +64,10 @@ export function PreferencesCard() {
   };
 
   const chooseNotif = (n: NotifPref) => {
-    setNotif(n);
-    try { localStorage.setItem(NOTIF_KEY, n); } catch {}
+    setNotif(n); // optimiste
+    startTransition(async () => {
+      await setNotifPrefAction(n);
+    });
   };
 
   const tr = (fr: string, en: string) => (lang === "en" ? en : fr);

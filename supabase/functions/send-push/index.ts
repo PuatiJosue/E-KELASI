@@ -38,6 +38,16 @@ const KIND_SCREENS: Record<string, string> = {
   billing: "profile",
 };
 
+// Préférence "important" : on ne pousse PAS les devoirs et messages du quotidien.
+const NON_IMPORTANT_KINDS = new Set(["hw", "message"]);
+
+// La préférence de l'utilisateur autorise-t-elle ce push ?
+function prefAllows(pref: string | undefined, kind: string): boolean {
+  if (pref === "none") return false;
+  if (pref === "important") return !NON_IMPORTANT_KINDS.has(kind);
+  return true; // 'all' ou valeur inconnue → tout passe
+}
+
 Deno.serve(async (_req: Request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -68,6 +78,16 @@ Deno.serve(async (_req: Request) => {
     .select("user_id, expo_token")
     .in("user_id", userIds);
 
+  // Préférences de notifications des destinataires.
+  const { data: prefRows } = await supabase
+    .from("profiles")
+    .select("id, notif_pref")
+    .in("id", userIds);
+  const prefByUser = (prefRows ?? []).reduce<Record<string, string>>((acc, p) => {
+    acc[p.id] = p.notif_pref ?? "all";
+    return acc;
+  }, {});
+
   if (!tokens || tokens.length === 0) {
     // Marque comme pushed quand même pour ne pas re-scanner indéfiniment
     await supabase
@@ -85,6 +105,8 @@ Deno.serve(async (_req: Request) => {
   // Build Expo Push messages
   const messages: ExpoMessage[] = [];
   for (const n of notifs) {
+    // Respecte la préférence du destinataire (Tout / Important / Aucune).
+    if (!prefAllows(prefByUser[n.user_id], n.kind)) continue;
     const userTokens = tokensByUser[n.user_id] ?? [];
     for (const tok of userTokens) {
       messages.push({
