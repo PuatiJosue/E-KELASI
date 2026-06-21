@@ -6,6 +6,9 @@ import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
 import { getStudentReportData } from "@/lib/school-db";
+import { getBulletinDraft } from "@/lib/bulletin-actions";
+import { renderBulletinPointsPdf } from "@/lib/bulletin-points-pdf";
+import { currentTrimester } from "@/lib/trimester";
 
 type Result = { ok: true; code: string } | { ok: false; message: string };
 
@@ -35,27 +38,72 @@ export async function publishBulletinAction(studentId: string, period: string, t
   const schoolId = staff.school_id;
 
   const svc = service();
+  const tri = trimester ?? currentTrimester();
 
-  // L'élève appartient bien à l'école + récupère la signature de l'école.
+  // L'élève appartient bien à l'école + identité de l'école (en-tête + signature).
   const [{ data: student }, { data: school }] = await Promise.all([
     svc.from("students").select("id, full_name, class_name").eq("id", studentId).eq("school_id", schoolId).maybeSingle(),
-    svc.from("schools").select("name, director_name, signature_url").eq("id", schoolId).maybeSingle(),
+    svc.from("schools").select("name, city, logo_url, brand_color, director_name, signature_url").eq("id", schoolId).maybeSingle(),
   ]);
   if (!student) return { ok: false, message: "Élève introuvable." };
 
-  // Publie les notes du trimestre sélectionné (cohérent avec le bulletin affiché).
-  const report = await getStudentReportData(studentId, trimester);
-  if (!report) return { ok: false, message: "Aucune donnée de bulletin." };
-  if (report.subjects.length === 0) {
-    return { ok: false, message: "Aucune note pour ce trimestre — rien à publier." };
+  // Bulletin encodé/enregistré ; à défaut, dérivé des cotes (Σ barèmes / Σ points).
+  const draft = await getBulletinDraft(studentId, tri);
+  let rows = draft?.rows ?? [];
+  if (rows.length === 0) {
+    const report = await getStudentReportData(studentId, tri);
+    rows = (report?.subjects ?? []).map((s: any) => ({
+      branche: s.name,
+      max: String(s.items.reduce((a: number, it: any) => a + Number(it.max_score || 0), 0)),
+      obtenu: String(s.items.reduce((a: number, it: any) => a + Number(it.score || 0), 0)),
+    }));
+  }
+  if (rows.length === 0) {
+    return { ok: false, message: "Aucune donnée — encodez ou saisissez des notes pour ce trimestre." };
   }
 
-  const code = randomBytes(5).toString("hex").toUpperCase(); // ex. 3F9A2C7B1D
+  const sc: any = school ?? {};
+  const num = (v: string) => { const n = parseFloat((v || "").replace(",", ".")); return isNaN(n) ? 0 : n; };
+  const totalMax = rows.reduce((a, r) => a + num(r.max), 0);
+  const totalObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
+  const percentage = totalMax > 0 ? +((totalObtenu / totalMax) * 100).toFixed(2) : 0;
 
+  // Génère le PDF du bulletin (format points) → URL signée.
+  let fileUrl: string | null = null;
+  try {
+    const pdf = await renderBulletinPointsPdf({
+      school: {
+        name: sc.name ?? "École",
+        city: sc.city ?? null,
+        logoUrl: sc.logo_url ?? null,
+        brandColor: sc.brand_color ?? null,
+        signatureUrl: sc.signature_url ?? null,
+        directorName: sc.director_name ?? null,
+      },
+      student: { fullName: (student as any).full_name, className: (student as any).class_name ?? "—" },
+      period,
+      rows,
+      place: draft?.place ?? "",
+      mention: draft?.mention ?? "",
+    });
+    const path = `bulletins/${studentId}-t${tri}-${Date.now()}.pdf`;
+    const { error: upErr } = await svc.storage.from("grade-reports").upload(path, pdf, { contentType: "application/pdf", upsert: true });
+    if (!upErr) {
+      const { data: signed } = await svc.storage.from("grade-reports").createSignedUrl(path, 60 * 60 * 24 * 365);
+      fileUrl = signed?.signedUrl ?? null;
+    }
+  } catch {
+    // PDF best effort
+  }
+
+  const code = randomBytes(5).toString("hex").toUpperCase();
   const data = {
     className: (student as any).class_name,
-    overallAvg: report.overallAvg,
-    subjects: report.subjects.map((s: any) => ({ name: s.name, avg: s.avg, count: s.items.length })),
+    totalMax, totalObtenu, percentage,
+    place: draft?.place ?? "",
+    mention: draft?.mention ?? "",
+    rows,
+    fileUrl,
   };
 
   const { error } = await svc.from("student_documents").insert({
@@ -64,16 +112,15 @@ export async function publishBulletinAction(studentId: string, period: string, t
     type: "bulletin",
     title: "Bulletin scolaire",
     period: period || null,
-    signed_by: (school as any)?.director_name ?? null,
-    signature_url: (school as any)?.signature_url ?? null,
+    signed_by: sc.director_name ?? null,
+    signature_url: sc.signature_url ?? null,
     verify_code: code,
     data,
     created_by: user.id,
   });
   if (error) return { ok: false, message: "Publication impossible." };
 
-  // Notifie les parents de l'élève (best effort) — le bulletin apparaît
-  // côté parent dans « Documents officiels » + notification/push.
+  // Notifie les parents (best effort) avec le PDF — apparaît côté parent.
   try {
     const { data: links } = await svc
       .from("parent_links")
@@ -86,6 +133,7 @@ export async function publishBulletinAction(studentId: string, period: string, t
           user_id: pid as string,
           kind: "school" as const,
           body: `📄 Bulletin disponible : ${(student as any).full_name}${period ? ` · ${period}` : ""}`,
+          payload: fileUrl ? { file_url: fileUrl, kind: "bulletin_pdf" } : null,
         }))
       );
     }

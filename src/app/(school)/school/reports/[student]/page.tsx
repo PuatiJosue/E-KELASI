@@ -4,10 +4,11 @@ import { SchoolLetterhead } from "@/components/school/SchoolLetterhead";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { getStudentReportData, getMySchool } from "@/lib/school-db";
+import { getBulletinDraft } from "@/lib/bulletin-actions";
 import { TRIMESTERS, currentTrimester, schoolYearLabel } from "@/lib/trimester";
 import { PrintButton } from "@/components/school/PrintButton";
 import { PublishButton } from "./PublishButton";
-import { BulletinTable } from "./BulletinTable";
+import { BulletinTable } from "@/components/school/BulletinTable";
 
 export default async function StudentReport({
   params,
@@ -33,13 +34,17 @@ export default async function StudentReport({
   const { student, subjects } = data;
   const period = `${data.trimester.fr} · ${schoolYearLabel()}`;
 
-  // Pré-remplit le tableau du bulletin : par branche, Max = Σ des barèmes,
-  // Obtenu = Σ des points. L'école peut ensuite éditer / ajouter des lignes.
-  const initialRows = subjects.map((s: any) => {
+  // Bulletin encodé/enregistré (par le prof ou l'école) pour ce trimestre.
+  const draft = await getBulletinDraft(params.student, selectedTri);
+
+  // Pré-remplit : l'encodage enregistré s'il existe, sinon dérivé des cotes
+  // (Max = Σ des barèmes, Obtenu = Σ des points). Éditable + « Enregistrer ».
+  const computedRows = subjects.map((s: any) => {
     const max = s.items.reduce((a: number, it: any) => a + Number(it.max_score || 0), 0);
     const obtenu = s.items.reduce((a: number, it: any) => a + Number(it.score || 0), 0);
     return { branche: s.name, max: String(max), obtenu: String(obtenu) };
   });
+  const initialRows = draft && draft.rows.length > 0 ? draft.rows : computedRows;
 
   return (
     <div style={{ padding: 24, maxWidth: 880, margin: "0 auto" }}>
@@ -131,8 +136,11 @@ export default async function StudentReport({
         {/* Bulletin éditable : Branche · Max · Obtenu + total / pourcentage / place / mention / signature */}
         <BulletinTable
           initialRows={initialRows}
+          initialPlace={draft?.place ?? ""}
+          initialMention={draft?.mention ?? ""}
           signatureUrl={school?.signatureUrl ?? null}
           directorName={school?.directorName ?? null}
+          save={{ studentId: params.student, trimester: selectedTri, period }}
         />
 
         <div style={{ marginTop: 30, fontSize: 10, color: "#b5a99a", textAlign: "center" }}>

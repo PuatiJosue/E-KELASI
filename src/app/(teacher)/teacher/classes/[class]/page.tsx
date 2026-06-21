@@ -114,9 +114,14 @@ export default async function ClassDetail({
               )}
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button style={{ color: "var(--ink-3)", padding: 6, borderRadius: 6 }}>
-                <Icon name="chevR" size={16} />
-              </button>
+              <Link
+                href={`/teacher/bulletins/${s.id}`}
+                className="ek-btn ek-btn-outline"
+                style={{ height: 28, fontSize: 11.5 }}
+              >
+                <Icon name="file" size={12} />
+                <T fr="Bulletin" en="Report" />
+              </Link>
             </div>
           </div>
         ))}

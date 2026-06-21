@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { saveBulletinDraft } from "@/lib/bulletin-actions";
 
 type Row = { branche: string; max: string; obtenu: string };
 
@@ -14,23 +15,52 @@ function mentionFor(pct: number): string {
 }
 
 // Bulletin éditable : tableau Branche / Max / Obtenu (3 colonnes, sans lignes
-// séparatrices), laissé ouvert pour que l'école ajoute des lignes. En bas :
-// total des points, pourcentage, place, mention, signature.
+// séparatrices), laissé ouvert pour ajouter des lignes. En bas : total des
+// points, pourcentage, place, mention, signature. Utilisé côté école ET prof
+// (le prof encode + enregistre ; seule l'école envoie aux parents).
 export function BulletinTable({
   initialRows,
+  initialPlace = "",
+  initialMention = "",
   signatureUrl,
   directorName,
+  save,
 }: {
   initialRows: Row[];
+  initialPlace?: string;
+  initialMention?: string;
   signatureUrl: string | null;
   directorName: string | null;
+  // Si fourni, affiche un bouton « Enregistrer » qui sauvegarde l'encodage.
+  save?: { studentId: string; trimester: number; period: string };
 }) {
   const blank: Row = { branche: "", max: "", obtenu: "" };
   const [rows, setRows] = useState<Row[]>(
     initialRows.length > 0 ? initialRows : [blank, { ...blank }, { ...blank }]
   );
-  const [place, setPlace] = useState("");
-  const [mention, setMention] = useState("");
+  const [place, setPlace] = useState(initialPlace);
+  const [mention, setMention] = useState(initialMention);
+  const [pending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const onSave = () => {
+    if (!save) return;
+    setErr(null);
+    setSaved(false);
+    startTransition(async () => {
+      const res = await saveBulletinDraft({
+        studentId: save.studentId,
+        trimester: save.trimester,
+        period: save.period,
+        rows,
+        place,
+        mention,
+      });
+      if (res.ok) setSaved(true);
+      else setErr(res.message);
+    });
+  };
 
   const num = (v: string) => {
     const n = parseFloat((v || "").replace(",", "."));
@@ -79,9 +109,24 @@ export function BulletinTable({
         </tbody>
       </table>
 
-      <button onClick={addRow} className="report-toolbar" style={{ marginTop: 8, fontSize: 12, fontWeight: 600, color: "#E0701E", background: "none", border: "1px dashed #E0701E", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>
-        + Ajouter une ligne
-      </button>
+      <div className="report-toolbar" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <button onClick={addRow} style={{ fontSize: 12, fontWeight: 600, color: "#E0701E", background: "none", border: "1px dashed #E0701E", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>
+          + Ajouter une ligne
+        </button>
+        {save ? (
+          <>
+            <button
+              onClick={onSave}
+              disabled={pending}
+              style={{ fontSize: 12.5, fontWeight: 700, color: "#fff", background: "#1D6650", border: "none", borderRadius: 8, padding: "7px 14px", cursor: pending ? "default" : "pointer", opacity: pending ? 0.6 : 1 }}
+            >
+              {pending ? "Enregistrement…" : "Enregistrer"}
+            </button>
+            {saved && <span style={{ fontSize: 12, color: "#1D6650", fontWeight: 600 }}>✓ Enregistré</span>}
+            {err && <span style={{ fontSize: 12, color: "#C03A2B", fontWeight: 600 }}>{err}</span>}
+          </>
+        ) : null}
+      </div>
 
       {/* Résumé bas de bulletin */}
       <div style={{ marginTop: 24, borderTop: "2px solid #1a1410", paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
