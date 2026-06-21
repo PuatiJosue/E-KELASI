@@ -90,3 +90,38 @@ export async function createHomeworkAction(args: Args): Promise<Result> {
   revalidatePath("/teacher/dashboard");
   return { ok: true };
 }
+
+// Supprime un devoir (soft-delete via archived_at). N'est autorisé que pour
+// le prof propriétaire du devoir et seulement une fois l'échéance passée.
+// Le devoir archivé disparaît aussi côté parent (la requête mobile filtre
+// archived_at IS NULL).
+export async function deleteHomeworkAction(homeworkId: string): Promise<Result> {
+  if (!isLiveMode()) return { ok: true };
+
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Non authentifié" };
+
+  // Vérifie la propriété + l'échéance avant suppression.
+  const { data: hw } = await supabase
+    .from("homework")
+    .select("teacher_id, due_at")
+    .eq("id", homeworkId)
+    .maybeSingle();
+  if (!hw) return { ok: false, message: "Devoir introuvable." };
+  if (hw.teacher_id !== user.id) return { ok: false, message: "Action non autorisée." };
+  if (new Date(hw.due_at).getTime() >= Date.now()) {
+    return { ok: false, message: "Le délai n'est pas encore passé." };
+  }
+
+  const { error } = await supabase
+    .from("homework")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", homeworkId)
+    .eq("teacher_id", user.id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/teacher/homework");
+  revalidatePath("/teacher/dashboard");
+  return { ok: true };
+}

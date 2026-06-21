@@ -4,6 +4,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { isLiveMode } from "@/lib/db";
+import { trimesterOf } from "@/lib/trimester";
 
 function service() {
   return createServiceClient(
@@ -38,6 +39,7 @@ export type StudentRow = {
   fullName: string;
   className: string;
   avg: number | null;
+  avatarUrl: string | null;
 };
 
 export type GradeRow = {
@@ -58,6 +60,7 @@ export type HomeworkRow = {
   className: string;
   dueAt: string;
   status: string;
+  overdue: boolean;
 };
 
 export type TeacherSubject = {
@@ -178,7 +181,7 @@ export async function listTeacherClasses(): Promise<ClassRow[]> {
   }
 }
 
-export async function listStudentsInClass(className: string): Promise<StudentRow[]> {
+export async function listStudentsInClass(className: string, trimester?: number): Promise<StudentRow[]> {
   if (!isLiveMode()) return [];
   try {
     const supabase = createClient();
@@ -186,19 +189,22 @@ export async function listStudentsInClass(className: string): Promise<StudentRow
     if (!school) return [];
     const { data: students } = await supabase
       .from("students")
-      .select("id, full_name, class_name")
+      .select("id, full_name, class_name, avatar_url")
       .eq("school_id", school.id)
       .eq("class_name", className)
       .order("full_name");
     if (!students) return [];
 
-    // moyenne par élève
+    // moyenne par élève (filtrée sur le trimestre si demandé)
     const ids = students.map((s: any) => s.id);
-    const { data: grades } = await supabase
+    const { data: gradesRaw } = await supabase
       .from("grades")
-      .select("student_id, score, max_score, coefficient")
+      .select("student_id, score, max_score, coefficient, graded_at")
       .in("student_id", ids)
       .is("archived_at", null);
+    const grades = trimester
+      ? (gradesRaw ?? []).filter((g: any) => trimesterOf(g.graded_at) === trimester)
+      : (gradesRaw ?? []);
 
     return students.map((s: any) => {
       const gs = (grades ?? []).filter((g: any) => g.student_id === s.id);
@@ -213,6 +219,7 @@ export async function listStudentsInClass(className: string): Promise<StudentRow
         fullName: s.full_name,
         className: s.class_name,
         avg,
+        avatarUrl: s.avatar_url ?? null,
       };
     });
   } catch {
@@ -325,6 +332,7 @@ export async function listTeacherHomework(): Promise<HomeworkRow[]> {
       .eq("teacher_id", user.id)
       .is("archived_at", null)
       .order("due_at", { ascending: false });
+    const now = Date.now();
     return (data ?? []).map((h: any) => ({
       id: h.id,
       title: h.title,
@@ -332,6 +340,7 @@ export async function listTeacherHomework(): Promise<HomeworkRow[]> {
       className: h.class_name,
       dueAt: new Date(h.due_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }),
       status: h.status,
+      overdue: new Date(h.due_at).getTime() < now,
     }));
   } catch {
     return [];

@@ -17,7 +17,6 @@ import { useAuth } from "@/lib/auth";
 import { useChildren } from "@/lib/children";
 import { type Grade, type Homework } from "@/lib/mock";
 import { hasPendingChild, listAnnouncements, listGrades, listHomework, listThreads, type Announcement, type Child, type Thread } from "@/lib/db";
-import { Linking } from "react-native";
 
 export default function Home() {
   const t = useTheme();
@@ -117,27 +116,6 @@ export default function Home() {
 
         <View style={{ padding: 20, paddingTop: 12, gap: 14 }}>
           <ChildHero child={child} onAvatarChange={() => refresh()} />
-
-          <Pressable
-            onPress={() => child.schoolPhone && Linking.openURL(`tel:${child.schoolPhone}`)}
-            disabled={!child.schoolPhone}
-          >
-            <Card style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: t.brandSoft, alignItems: "center", justifyContent: "center" }}>
-                <Icon name="school" size={18} color={t.brand600} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, color: t.ink3, fontWeight: "600", fontFamily: fonts.body }}>
-                  <T fr="Contact École" en="School contact" />
-                </Text>
-                <Text style={{ fontSize: 13.5, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>{child.school}</Text>
-                <Text style={{ fontSize: 12, color: t.ink3, fontFamily: fonts.body, marginTop: 1 }}>
-                  {child.schoolPhone || tr({ fr: "Numéro non renseigné", en: "No number provided" })}
-                </Text>
-              </View>
-              {child.schoolPhone ? <Icon name="chevR" size={18} color={t.brand} /> : null}
-            </Card>
-          </Pressable>
 
           {announcements.length > 0 && (
             <>
@@ -351,7 +329,7 @@ function ChildHero({ child, onAvatarChange }: { child: Child; onAvatarChange?: (
       </View>
       <View style={{ marginTop: 16 }}>
         <Text style={{ fontSize: 11, color: "white", opacity: 0.85, fontWeight: "600", fontFamily: fonts.body }}>
-          <T fr="Moyenne générale" en="Overall average" />
+          <T fr="Moyenne générale trimestrielle" en="Term overall average" />
         </Text>
         <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 4 }}>
           <Text style={{ fontSize: 36, color: "white", fontWeight: "700", fontFamily: fonts.display, letterSpacing: -1 }}>{child.avg}</Text>

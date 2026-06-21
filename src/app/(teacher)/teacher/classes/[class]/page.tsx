@@ -4,10 +4,19 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { listStudentsInClass } from "@/lib/teacher-db";
+import { TRIMESTERS, currentTrimester, trimesterMeta } from "@/lib/trimester";
 
-export default async function ClassDetail({ params }: { params: { class: string } }) {
+export default async function ClassDetail({
+  params,
+  searchParams,
+}: {
+  params: { class: string };
+  searchParams: { t?: string };
+}) {
   const className = decodeURIComponent(params.class);
-  const students = await listStudentsInClass(className);
+  const selectedTri = Number(searchParams.t) || currentTrimester();
+  const students = await listStudentsInClass(className, selectedTri);
+  const triMeta = trimesterMeta(selectedTri);
 
   const avgClass = students.length > 0 && students.some((s) => s.avg !== null)
     ? +(students.reduce((acc, s) => acc + (s.avg ?? 0), 0) / students.filter((s) => s.avg !== null).length).toFixed(1)
@@ -18,8 +27,8 @@ export default async function ClassDetail({ params }: { params: { class: string 
       <PageHeader
         title={{ fr: className, en: className }}
         sub={{
-          fr: `${students.length} élèves${avgClass !== null ? ` · moyenne classe ${avgClass}/20` : ""}`,
-          en: `${students.length} students${avgClass !== null ? ` · class avg ${avgClass}/20` : ""}`,
+          fr: `${students.length} élèves · ${triMeta.fr}${avgClass !== null ? ` · moyenne classe ${avgClass}/20` : ""}`,
+          en: `${students.length} students · ${triMeta.en}${avgClass !== null ? ` · class avg ${avgClass}/20` : ""}`,
         }}
         right={
           <Link
@@ -32,6 +41,29 @@ export default async function ClassDetail({ params }: { params: { class: string 
           </Link>
         }
       />
+
+      {/* Sélecteur de trimestre : les cotes affichées (moyennes) sont celles du trimestre choisi. */}
+      <div style={{ display: "flex", gap: 4, alignItems: "center", background: "var(--surface-2)", borderRadius: 9, padding: 3, alignSelf: "flex-start" }}>
+        {TRIMESTERS.map((m) => {
+          const on = m.index === selectedTri;
+          return (
+            <Link
+              key={m.index}
+              href={`/teacher/classes/${encodeURIComponent(className)}?t=${m.index}`}
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                padding: "5px 12px",
+                borderRadius: 7,
+                color: on ? "var(--ink)" : "var(--ink-3)",
+                background: on ? "var(--surface)" : "transparent",
+              }}
+            >
+              {m.short}
+            </Link>
+          );
+        })}
+      </div>
 
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
         <div className="ek-tablewrap">
@@ -69,7 +101,7 @@ export default async function ClassDetail({ params }: { params: { class: string 
           >
             <div style={{ color: "var(--ink-3)", fontFamily: "var(--font-display)" }}>{i + 1}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Avatar name={s.fullName} size={32} />
+              <Avatar name={s.fullName} url={s.avatarUrl} size={32} />
               <span style={{ fontWeight: 600, color: "var(--ink)" }}>{s.fullName}</span>
             </div>
             <div style={{ textAlign: "right" }}>

@@ -26,12 +26,22 @@ export default function Profile() {
     router.replace("/");
   };
 
+  // Contact de l'école (téléphone) — déplacé du tableau de bord vers le profil.
+  const schoolPhone = children.find((c) => c.schoolPhone)?.schoolPhone ?? null;
+  const schoolName = children.find((c) => c.school)?.school ?? null;
+
   const groups = [
     {
       title: { fr: "Compte", en: "Account" },
       items: [
         { icon: "user", fr: "Informations personnelles", en: "Personal info", onPress: () => router.push("/account/info") },
-        { icon: "school", fr: "Enfants & écoles", en: "Children & schools", detail: children.length ? String(children.length) : "—", onPress: () => router.push("/account/children") },
+        {
+          icon: "phone",
+          fr: "Contact école",
+          en: "School contact",
+          detail: schoolPhone ?? schoolName ?? "—",
+          onPress: () => schoolPhone && Linking.openURL(`tel:${schoolPhone}`),
+        },
         { icon: "bell", fr: "Annonces de l'école", en: "School announcements", onPress: () => router.push("/announcements") },
         { icon: "file", fr: "Documents officiels", en: "Official documents", onPress: () => router.push("/documents") },
       ],
