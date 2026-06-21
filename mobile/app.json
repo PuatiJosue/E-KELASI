@@ -24,7 +24,7 @@
         "backgroundColor": "#02122C"
       },
       "package": "com.ekelasi.parent",
-      "versionCode": 8
+      "versionCode": 9
     },
     "web": {
       "bundler": "metro",
