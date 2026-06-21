@@ -18,7 +18,7 @@ function service() {
 }
 
 // Publie le bulletin d'un élève comme document officiel signé, visible des parents.
-export async function publishBulletinAction(studentId: string, period: string): Promise<Result> {
+export async function publishBulletinAction(studentId: string, period: string, trimester?: number): Promise<Result> {
   if (!studentId) return { ok: false, message: "Élève invalide." };
   if (!isLiveMode()) return { ok: true, code: "DEMO1234" };
 
@@ -43,8 +43,12 @@ export async function publishBulletinAction(studentId: string, period: string): 
   ]);
   if (!student) return { ok: false, message: "Élève introuvable." };
 
-  const report = await getStudentReportData(studentId);
+  // Publie les notes du trimestre sélectionné (cohérent avec le bulletin affiché).
+  const report = await getStudentReportData(studentId, trimester);
   if (!report) return { ok: false, message: "Aucune donnée de bulletin." };
+  if (report.subjects.length === 0) {
+    return { ok: false, message: "Aucune note pour ce trimestre — rien à publier." };
+  }
 
   const code = randomBytes(5).toString("hex").toUpperCase(); // ex. 3F9A2C7B1D
 
@@ -67,6 +71,27 @@ export async function publishBulletinAction(studentId: string, period: string): 
     created_by: user.id,
   });
   if (error) return { ok: false, message: "Publication impossible." };
+
+  // Notifie les parents de l'élève (best effort) — le bulletin apparaît
+  // côté parent dans « Documents officiels » + notification/push.
+  try {
+    const { data: links } = await svc
+      .from("parent_links")
+      .select("parent_id")
+      .eq("student_id", studentId);
+    const parentIds = [...new Set((links ?? []).map((l: any) => l.parent_id))];
+    if (parentIds.length > 0) {
+      await svc.from("notifications").insert(
+        parentIds.map((pid) => ({
+          user_id: pid as string,
+          kind: "school" as const,
+          body: `📄 Bulletin disponible : ${(student as any).full_name}${period ? ` · ${period}` : ""}`,
+        }))
+      );
+    }
+  } catch {
+    // notification best effort
+  }
 
   revalidatePath(`/school/reports/${studentId}`);
   return { ok: true, code };

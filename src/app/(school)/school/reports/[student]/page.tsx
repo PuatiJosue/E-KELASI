@@ -70,7 +70,7 @@ export default async function StudentReport({
           })}
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <PublishButton studentId={params.student} period={period} hasSignature={!!school?.signatureUrl || !!school?.directorName} />
+          <PublishButton studentId={params.student} period={period} trimester={selectedTri} hasSignature={!!school?.signatureUrl || !!school?.directorName} />
           <PrintButton />
         </div>
       </div>

@@ -39,6 +39,24 @@ export function trimesterMeta(index: number): TrimesterMeta {
   return TRIMESTERS.find((t) => t.index === index) ?? TRIMESTERS[0];
 }
 
+// Date représentative (ISO yyyy-mm-dd) d'un trimestre dans l'année scolaire
+// en cours — utilisée pour caler une cote dans le bon trimestre lors de la saisie.
+export function representativeDateForTrimester(index: number, now = new Date()): string {
+  const m = now.getMonth() + 1;
+  const startYear = m >= 9 ? now.getFullYear() : now.getFullYear() - 1; // année de septembre
+  // mois/jour représentatifs par trimestre
+  const map: Record<number, { year: number; month: number }> = {
+    1: { year: startYear, month: 10 },     // octobre
+    2: { year: startYear + 1, month: 1 },  // janvier
+    3: { year: startYear + 1, month: 4 },  // avril
+    4: { year: startYear + 1, month: 7 },  // juillet
+  };
+  const { year, month } = map[index] ?? map[1];
+  // Si le trimestre choisi est le trimestre courant, on garde la date du jour.
+  if (trimesterOf(now) === index) return now.toISOString().slice(0, 10);
+  return `${year}-${String(month).padStart(2, "0")}-15`;
+}
+
 // Libellé de l'année scolaire d'une date, ex. "2025–2026".
 export function schoolYearLabel(date: Date | string = new Date()): string {
   const d = typeof date === "string" ? new Date(date) : date;

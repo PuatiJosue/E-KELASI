@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
+import { renderAnnouncementPdf } from "@/lib/announcement-pdf";
 
 type Result = { ok: true } | { ok: false; message: string };
 
@@ -43,16 +44,52 @@ export async function createAnnouncement(input: {
   if (!c) return { ok: false, message: "Action réservée à la direction." };
 
   const svc = service();
-  const { error } = await svc.from("announcements").insert({
+  const { data: inserted, error } = await svc.from("announcements").insert({
     school_id: c.schoolId,
     title,
     body,
     event_date: input.eventDate || null,
     created_by: c.userId,
-  });
-  if (error) return { ok: false, message: "Publication impossible." };
+  }).select("id, created_at").single();
+  if (error || !inserted) return { ok: false, message: "Publication impossible." };
 
-  // Notifie les parents des élèves actifs de l'école (best effort).
+  // Génère un PDF de l'annonce (en-tête nom + logo de l'école) → URL signée.
+  let pdfUrl: string | null = null;
+  try {
+    const { data: school } = await svc
+      .from("schools")
+      .select("name, city, logo_url, brand_color")
+      .eq("id", c.schoolId)
+      .maybeSingle();
+    const issuedAt = new Date(inserted.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    const eventDate = input.eventDate
+      ? new Date(input.eventDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+      : null;
+    const pdf = await renderAnnouncementPdf({
+      school: {
+        name: (school as any)?.name ?? "École",
+        city: (school as any)?.city ?? null,
+        logoUrl: (school as any)?.logo_url ?? null,
+        brandColor: (school as any)?.brand_color ?? null,
+      },
+      title,
+      body,
+      eventDate,
+      issuedAt,
+    });
+    const path = `announcements/${inserted.id}.pdf`;
+    const { error: upErr } = await svc.storage
+      .from("grade-reports")
+      .upload(path, pdf, { contentType: "application/pdf", upsert: true });
+    if (!upErr) {
+      const { data: signed } = await svc.storage.from("grade-reports").createSignedUrl(path, 60 * 60 * 24 * 365);
+      pdfUrl = signed?.signedUrl ?? null;
+    }
+  } catch {
+    // PDF best effort — la notification part quand même sans fichier
+  }
+
+  // Notifie les parents des élèves actifs de l'école (best effort), avec le PDF.
   try {
     const { data: students } = await svc
       .from("students")
@@ -71,6 +108,7 @@ export async function createAnnouncement(input: {
           user_id: pid as string,
           kind: "school" as const,
           body: `📢 ${title}`,
+          payload: pdfUrl ? { file_url: pdfUrl, kind: "announcement_pdf" } : null,
         }));
         await svc.from("notifications").insert(rows);
       }

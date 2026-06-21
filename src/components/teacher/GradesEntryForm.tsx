@@ -7,6 +7,7 @@ import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import type { StudentRow, TeacherSubject } from "@/lib/teacher-db";
 import { submitGradesAction, type GradeInput } from "@/app/(teacher)/teacher/grades/actions";
+import { TRIMESTERS, currentTrimester, trimesterOf, representativeDateForTrimester } from "@/lib/trimester";
 
 type Props = {
   classes: string[];
@@ -25,6 +26,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
   const [maxScore, setMaxScore] = useState("20");
   const [coefficient, setCoefficient] = useState("1");
   const [gradedAt, setGradedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [trimester, setTrimester] = useState<number>(currentTrimester());
   const [scores, setScores] = useState<Record<string, string>>({});
   const [students, setStudents] = useState<StudentRow[]>(initialStudents);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +34,18 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
   const [sendPdf, setSendPdf] = useState(false);
 
   const filledCount = Object.values(scores).filter((s) => s.trim() !== "").length;
+
+  // Le trimestre et la date restent synchronisés : choisir un trimestre cale la
+  // date dans ce trimestre ; changer la date met à jour le trimestre affiché.
+  const onChangeTrimester = (v: string) => {
+    const t = Number(v);
+    setTrimester(t);
+    setGradedAt(representativeDateForTrimester(t));
+  };
+  const onChangeDate = (v: string) => {
+    setGradedAt(v);
+    if (v) setTrimester(trimesterOf(v));
+  };
 
   const onChangeClass = (c: string) => {
     setClassName(c);
@@ -85,7 +99,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
   return (
     <>
       <div className="ek-card" style={{ padding: 18 }}>
-        <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 0.8fr 0.8fr 1fr", gap: 12 }}>
+        <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 0.8fr 0.7fr 0.8fr 1fr", gap: 12 }}>
           <Selector label={<T fr="Classe" en="Class" />} value={className} onChange={onChangeClass} options={classes.map((c) => ({ value: c, label: c }))} />
           <ComboField
             label={<T fr="Matière" en="Subject" />}
@@ -103,7 +117,13 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
           />
           <TextField label={<T fr="Sur" en="Out of" />} value={maxScore} onChange={setMaxScore} type="number" />
           <TextField label={<T fr="Coef." en="Coef." />} value={coefficient} onChange={setCoefficient} type="number" step="0.5" />
-          <TextField label={<T fr="Date" en="Date" />} value={gradedAt} onChange={setGradedAt} type="date" />
+          <Selector
+            label={<T fr="Trimestre" en="Term" />}
+            value={String(trimester)}
+            onChange={onChangeTrimester}
+            options={TRIMESTERS.map((m) => ({ value: String(m.index), label: m.short }))}
+          />
+          <TextField label={<T fr="Date" en="Date" />} value={gradedAt} onChange={onChangeDate} type="date" />
         </div>
       </div>
 

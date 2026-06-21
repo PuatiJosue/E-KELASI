@@ -113,7 +113,7 @@ export default function NotificationsScreen() {
                   >
                     <Icon name="download" size={13} color={t.brand600} />
                     <Text style={{ fontSize: 12, color: t.brand600, fontWeight: "600", fontFamily: fonts.bodyBold }}>
-                      <T fr="Télécharger le bulletin" en="Download report" />
+                      <T fr="Ouvrir le PDF" en="Open PDF" />
                     </Text>
                   </Pressable>
                 ) : null}
