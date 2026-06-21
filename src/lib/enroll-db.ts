@@ -67,6 +67,46 @@ export async function listReenrollments(status?: string): Promise<Reenrollment[]
   }
 }
 
+// Confirmation publique de réinscription par code (page imprimable).
+export async function getReenrollmentByCode(code: string) {
+  if (!isLiveMode()) return null;
+  try {
+    const svc = service();
+    const { data } = await svc
+      .from("reenrollments")
+      .select(
+        "id, student_id, school_year, mode, requested_class, option, student_data, parent_data, extra, status, comment, verify_code, signed_by, created_at, students(full_name, class_name), schools(name, city, commune, logo_url, signature_url)"
+      )
+      .eq("verify_code", code)
+      .eq("status", "validated")
+      .maybeSingle();
+    if (!data) return null;
+    const r: any = data;
+    return {
+      id: r.id,
+      studentName: r.students?.full_name ?? "—",
+      currentClass: r.students?.class_name ?? null,
+      schoolYear: r.school_year as string | null,
+      mode: r.mode as string | null,
+      requestedClass: r.requested_class as string | null,
+      option: r.option as string | null,
+      studentData: r.student_data ?? {},
+      parentData: r.parent_data ?? {},
+      extra: r.extra ?? [],
+      signedBy: r.signed_by as string | null,
+      signatureUrl: r.schools?.signature_url ?? null,
+      verifyCode: r.verify_code as string | null,
+      createdAt: r.created_at as string,
+      schoolName: r.schools?.name ?? "—",
+      schoolCity: r.schools?.city ?? "",
+      schoolCommune: r.schools?.commune ?? "",
+      schoolLogoUrl: r.schools?.logo_url ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function countPendingReenrollments(): Promise<number> {
   if (!isLiveMode()) return 0;
   try {

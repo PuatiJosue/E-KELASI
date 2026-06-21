@@ -70,6 +70,11 @@ export function ReenrollmentsManager({
                   {r.status === "validated" && r.verifyCode ? ` · Signé (code ${r.verifyCode})` : ""}
                 </div>
               </div>
+              {r.status === "validated" && r.verifyCode && (
+                <a href={`/reenroll/${r.verifyCode}`} target="_blank" rel="noreferrer" className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>
+                  Document
+                </a>
+              )}
               <span className={`ek-chip ${r.status === "validated" ? "success" : "danger"}`}>
                 {r.status === "validated" ? "Validée" : "Rejetée"}
               </span>

@@ -1,12 +1,14 @@
-import { View, Text, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, Image, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
 
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
+import { Logo } from "@/components/Logo";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
+import { useChildren } from "@/lib/children";
 import { listAnnouncements, type Announcement } from "@/lib/db";
 
 function fmtDate(d: string): string {
@@ -17,15 +19,32 @@ function fmtDate(d: string): string {
 export default function Announcements() {
   const t = useTheme();
   const tr = useT();
+  const { selectedChild } = useChildren();
   const [items, setItems] = useState<Announcement[] | null>(null);
 
   useEffect(() => {
     listAnnouncements().then(setItems).catch(() => setItems([]));
   }, []);
 
+  const schoolName = selectedChild?.school;
+  const schoolLogo = selectedChild?.schoolLogoUrl;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top", "bottom"]}>
       <ScreenHeader title={tr({ fr: "Annonces de l'école", en: "School announcements" })} />
+
+      {schoolName ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 }}>
+          {schoolLogo ? (
+            <Image source={{ uri: schoolLogo }} style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: t.surface2 }} resizeMode="contain" />
+          ) : (
+            <Logo size={32} />
+          )}
+          <Text style={{ fontSize: 15, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold, flex: 1 }} numberOfLines={1}>
+            {schoolName}
+          </Text>
+        </View>
+      ) : null}
       {!items ? (
         <ActivityIndicator color={t.brand} style={{ marginTop: 40 }} />
       ) : items.length === 0 ? (

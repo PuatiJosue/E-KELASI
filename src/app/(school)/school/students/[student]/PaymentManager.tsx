@@ -163,9 +163,12 @@ export function PaymentManager({ studentId, payments }: { studentId: string; pay
                   {fmtDate(p.paidAt)}{p.recordedBy ? ` · ${p.recordedBy}` : ""}{p.comment ? ` · ${p.comment}` : ""}
                 </div>
               </div>
+              <a href={`/school/receipts/${p.id}`} target="_blank" rel="noreferrer" className="ek-btn ek-btn-outline" style={{ height: 28, fontSize: 11.5 }}>
+                <Icon name="file" size={12} /> <T fr="Reçu" en="Receipt" />
+              </a>
               {p.receiptUrl && (
                 <a href={p.receiptUrl} target="_blank" rel="noreferrer" className="ek-btn ek-btn-outline" style={{ height: 28, fontSize: 11.5 }}>
-                  <Icon name="file" size={12} /> <T fr="Reçu" en="Receipt" />
+                  <Icon name="file" size={12} /> <T fr="Scan" en="Scan" />
                 </a>
               )}
               <button onClick={() => remove(p.id)} disabled={pending} title="Supprimer" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)", display: "flex", padding: 4 }}>
