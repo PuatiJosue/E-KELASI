@@ -125,6 +125,12 @@ export default function Library() {
                   ) : (
                     <Icon name="book" size={32} color={b.subjectColor ?? t.brand} />
                   )}
+                  {/* Badge prix / possession */}
+                  <View style={{ position: "absolute", top: 6, left: 6, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, backgroundColor: b.owned ? "#1D6650" : "rgba(20,16,10,0.78)" }}>
+                    <Text style={{ fontSize: 9.5, fontWeight: "800", color: "white" }}>
+                      {b.owned ? (b.priceCents > 0 ? "Acheté" : "Gratuit") : `${(b.priceCents / 100).toFixed(2)} ${b.currency}`}
+                    </Text>
+                  </View>
                 </View>
                 <View style={{ flex: 1, padding: 14 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>

@@ -511,6 +511,10 @@ export type LibraryBook = {
   gradeLevel: string | null;
   addedBy: string;
   publishedYear: number | null;
+  priceCents: number;          // 0 = gratuit
+  currency: string;
+  fileFormat: string | null;   // 'pdf' | 'epub'
+  owned: boolean;              // true si gratuit ou acheté
 };
 
 const DEMO_BOOKS: LibraryBook[] = [
@@ -525,6 +529,10 @@ const DEMO_BOOKS: LibraryBook[] = [
     gradeLevel: "5e",
     addedBy: "Mme Camara",
     publishedYear: 1943,
+    priceCents: 250,
+    currency: "USD",
+    fileFormat: "pdf",
+    owned: false,
   },
   {
     id: "demo-2",
@@ -537,6 +545,10 @@ const DEMO_BOOKS: LibraryBook[] = [
     gradeLevel: "5e",
     addedBy: "M. Ousmane Bâ",
     publishedYear: 1998,
+    priceCents: 0,
+    currency: "USD",
+    fileFormat: "epub",
+    owned: true,
   },
 ];
 
@@ -546,22 +558,44 @@ export async function listLibrary(): Promise<LibraryBook[]> {
     const { data } = await supabase
       .from("library_books")
       .select(
-        "id, title, author, description, cover_url, grade_level, published_year, subjects(name, color), profiles(full_name)"
+        "id, title, author, description, cover_url, grade_level, published_year, price_cents, currency, file_format, subjects(name, color), profiles(full_name)"
       )
       .order("created_at", { ascending: false });
     if (!data) return [];
-    return data.map((b: any) => ({
-      id: b.id,
-      title: b.title,
-      author: b.author,
-      description: b.description,
-      coverUrl: b.cover_url,
-      subjectName: b.subjects?.name ?? null,
-      subjectColor: b.subjects?.color ?? null,
-      gradeLevel: b.grade_level,
-      addedBy: b.profiles?.full_name ?? "?",
-      publishedYear: b.published_year,
-    }));
+
+    // Livres déjà achetés par le parent connecté (pour débloquer la lecture).
+    const ownedIds = new Set<string>();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: purchases } = await supabase
+          .from("library_purchases")
+          .select("book_id")
+          .eq("parent_id", user.id)
+          .eq("status", "paid");
+        (purchases ?? []).forEach((p: any) => ownedIds.add(p.book_id));
+      }
+    } catch { /* ignore */ }
+
+    return data.map((b: any) => {
+      const priceCents = b.price_cents ?? 0;
+      return {
+        id: b.id,
+        title: b.title,
+        author: b.author,
+        description: b.description,
+        coverUrl: b.cover_url,
+        subjectName: b.subjects?.name ?? null,
+        subjectColor: b.subjects?.color ?? null,
+        gradeLevel: b.grade_level,
+        addedBy: b.profiles?.full_name ?? "?",
+        publishedYear: b.published_year,
+        priceCents,
+        currency: b.currency ?? "USD",
+        fileFormat: b.file_format ?? null,
+        owned: priceCents <= 0 || ownedIds.has(b.id),
+      };
+    });
   } catch {
     return [];
   }
@@ -570,6 +604,76 @@ export async function listLibrary(): Promise<LibraryBook[]> {
 export async function getBook(id: string): Promise<LibraryBook | null> {
   const all = await listLibrary();
   return all.find((b) => b.id === id) ?? null;
+}
+
+// ── Achat & lecture de livres ────────────────────────────────────────
+const WEB_API = process.env.EXPO_PUBLIC_WEB_API_URL ?? "";
+
+// Démarre un paiement Stripe (paiement unique) → renvoie l'URL Checkout à ouvrir.
+export async function startBookCheckout(bookId: string): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  if (!isLiveMode || !supabase) return { ok: false, error: "Indisponible en démo." };
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { ok: false, error: "Non connecté." };
+    const r = await fetch(`${WEB_API}/api/stripe/book-checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ bookId }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.url) return { ok: false, error: data.error ?? "Paiement indisponible." };
+    return { ok: true, url: data.url };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? "Erreur réseau." };
+  }
+}
+
+// Récupère l'URL signée du fichier (PDF/EPUB) — seulement si acheté/gratuit.
+export async function getBookFileUrl(bookId: string): Promise<{ ok: true; url: string; format: string | null } | { ok: false; error: string }> {
+  if (!isLiveMode || !supabase) return { ok: false, error: "Indisponible en démo." };
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return { ok: false, error: "Non connecté." };
+    const r = await fetch(`${WEB_API}/api/library/file?bookId=${encodeURIComponent(bookId)}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.url) return { ok: false, error: data.error ?? "Fichier indisponible." };
+    return { ok: true, url: data.url, format: data.format ?? null };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? "Erreur réseau." };
+  }
+}
+
+// Soumet un achat par Mobile Money (validation manuelle par un admin).
+export async function createBookMobileMoneyPurchase(args: {
+  bookId: string;
+  amountCents: number;
+  currency: string;
+  provider: string;
+  senderPhone: string;
+  reference: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isLiveMode || !supabase) return { ok: true };
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "Non connecté." };
+    const { error } = await supabase.from("library_purchases").insert({
+      book_id: args.bookId,
+      parent_id: user.id,
+      amount_cents: args.amountCents,
+      currency: args.currency,
+      method: "mobile_money",
+      status: "pending",
+      provider: args.provider as any,
+      sender_phone: args.senderPhone,
+      reference: args.reference,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? "Erreur réseau." };
+  }
 }
 
 // ── Notifications ────────────────────────────────────────────────────

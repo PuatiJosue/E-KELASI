@@ -23,12 +23,19 @@ export function MobileMoneySheet({
   plan,
   amountCents,
   currency,
+  title,
+  submitPayment,
 }: {
   visible: boolean;
   onClose: (paid: boolean) => void;
-  plan: PlanId;
+  plan?: PlanId;
   amountCents: number;
   currency: string;
+  // Titre optionnel affiché en en-tête (ex. nom du livre).
+  title?: string;
+  // Si fourni, remplace le flux abonnement par un paiement personnalisé
+  // (ex. achat d'un livre). Renvoie le résultat de la soumission.
+  submitPayment?: (args: { provider: MMProvider; senderPhone: string; reference: string }) => Promise<{ ok: true } | { ok: false; error: string }>;
 }) {
   const t = useTheme();
   const tr = useT();
@@ -54,14 +61,16 @@ export function MobileMoneySheet({
   const submit = async () => {
     if (!provider || !senderPhone || !reference) return;
     setBusy(true);
-    const res = await createMobileMoneyPayment({
-      plan,
-      amountCents,
-      currency,
-      provider,
-      senderPhone: senderPhone.trim(),
-      reference: reference.trim(),
-    });
+    const res = submitPayment
+      ? await submitPayment({ provider, senderPhone: senderPhone.trim(), reference: reference.trim() })
+      : await createMobileMoneyPayment({
+          plan: plan!,
+          amountCents,
+          currency,
+          provider,
+          senderPhone: senderPhone.trim(),
+          reference: reference.trim(),
+        });
     setBusy(false);
     if (res.ok) {
       Alert.alert(
@@ -123,6 +132,11 @@ export function MobileMoneySheet({
           <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}>
             {step === "choose" && (
               <>
+                {title ? (
+                  <Text style={{ fontSize: 14, color: t.ink, fontWeight: "700", marginBottom: 6, fontFamily: fonts.bodyBold }}>
+                    {title} · {amountStr}
+                  </Text>
+                ) : null}
                 <Text style={{ fontSize: 13, color: t.ink3, marginBottom: 16, lineHeight: 19, fontFamily: fonts.body }}>
                   <T
                     fr="Choisis ton opérateur. Tu paieras directement vers le numéro E-KLASS."

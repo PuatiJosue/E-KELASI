@@ -239,12 +239,16 @@ export type Database = {
           author: string
           cover_url: string | null
           created_at: string
+          currency: string
           description: string | null
+          file_format: string | null
+          file_path: string | null
           grade_level: string | null
           id: string
           isbn: string | null
+          price_cents: number
           published_year: number | null
-          school_id: string
+          school_id: string | null
           subject_id: string | null
           title: string
           updated_at: string
@@ -254,12 +258,16 @@ export type Database = {
           author: string
           cover_url?: string | null
           created_at?: string
+          currency?: string
           description?: string | null
+          file_format?: string | null
+          file_path?: string | null
           grade_level?: string | null
           id?: string
           isbn?: string | null
+          price_cents?: number
           published_year?: number | null
-          school_id: string
+          school_id?: string | null
           subject_id?: string | null
           title: string
           updated_at?: string
@@ -269,12 +277,16 @@ export type Database = {
           author?: string
           cover_url?: string | null
           created_at?: string
+          currency?: string
           description?: string | null
+          file_format?: string | null
+          file_path?: string | null
           grade_level?: string | null
           id?: string
           isbn?: string | null
+          price_cents?: number
           published_year?: number | null
-          school_id?: string
+          school_id?: string | null
           subject_id?: string | null
           title?: string
           updated_at?: string
@@ -299,6 +311,81 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_purchases: {
+        Row: {
+          amount_cents: number
+          book_id: string
+          created_at: string
+          currency: string
+          id: string
+          method: Database["public"]["Enums"]["library_purchase_method"]
+          parent_id: string
+          provider: Database["public"]["Enums"]["mm_provider"] | null
+          reference: string | null
+          rejection_reason: string | null
+          screenshot_url: string | null
+          sender_phone: string | null
+          status: Database["public"]["Enums"]["library_purchase_status"]
+          stripe_session_id: string | null
+          updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          amount_cents: number
+          book_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          method: Database["public"]["Enums"]["library_purchase_method"]
+          parent_id: string
+          provider?: Database["public"]["Enums"]["mm_provider"] | null
+          reference?: string | null
+          rejection_reason?: string | null
+          screenshot_url?: string | null
+          sender_phone?: string | null
+          status?: Database["public"]["Enums"]["library_purchase_status"]
+          stripe_session_id?: string | null
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          book_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          method?: Database["public"]["Enums"]["library_purchase_method"]
+          parent_id?: string
+          provider?: Database["public"]["Enums"]["mm_provider"] | null
+          reference?: string | null
+          rejection_reason?: string | null
+          screenshot_url?: string | null
+          sender_phone?: string | null
+          status?: Database["public"]["Enums"]["library_purchase_status"]
+          stripe_session_id?: string | null
+          updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_purchases_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "library_books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_purchases_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1173,6 +1260,8 @@ export type Database = {
     }
     Enums: {
       homework_status: "todo" | "inprogress" | "done" | "late"
+      library_purchase_method: "stripe" | "mobile_money"
+      library_purchase_status: "pending" | "paid" | "rejected"
       log_severity: "info" | "warn" | "critical"
       mm_provider: "orange" | "airtel" | "mtn" | "mpesa" | "wave"
       mm_status: "pending" | "validated" | "rejected"
@@ -1323,6 +1412,8 @@ export const Constants = {
   public: {
     Enums: {
       homework_status: ["todo", "inprogress", "done", "late"],
+      library_purchase_method: ["stripe", "mobile_money"],
+      library_purchase_status: ["pending", "paid", "rejected"],
       log_severity: ["info", "warn", "critical"],
       mm_provider: ["orange", "airtel", "mtn", "mpesa", "wave"],
       mm_status: ["pending", "validated", "rejected"],

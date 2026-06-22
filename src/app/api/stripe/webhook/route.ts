@@ -7,6 +7,43 @@ import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
+// Achat d'un livre (paiement unique) : marque l'achat 'paid' et notifie le parent.
+async function handleBookPurchase(session: Stripe.Checkout.Session) {
+  if (session.metadata?.kind !== "book_purchase") return;
+  const bookId = session.metadata.book_id;
+  const parentId = session.metadata.parent_id;
+  if (!bookId || !parentId) return;
+
+  const supabase = service();
+  // Réconcilie la ligne créée au checkout (par ID de session), sinon en crée une.
+  const { data: existing } = await supabase
+    .from("library_purchases")
+    .select("id")
+    .eq("stripe_session_id", session.id)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from("library_purchases").update({ status: "paid" }).eq("id", existing.id);
+  } else {
+    await supabase.from("library_purchases").insert({
+      book_id: bookId,
+      parent_id: parentId,
+      amount_cents: session.amount_total ?? 0,
+      currency: (session.currency ?? "usd").toUpperCase(),
+      method: "stripe",
+      status: "paid",
+      stripe_session_id: session.id,
+    });
+  }
+
+  const { data: book } = await supabase.from("library_books").select("title").eq("id", bookId).maybeSingle();
+  await supabase.from("notifications").insert({
+    user_id: parentId,
+    kind: "school",
+    body: `📖 Achat confirmé : « ${(book as any)?.title ?? "votre livre"} » est disponible dans la bibliothèque.`,
+  });
+}
+
 function service() {
   return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -139,6 +176,9 @@ export async function POST(req: NextRequest) {
   }
 
   switch (event.type) {
+    case "checkout.session.completed":
+      await handleBookPurchase(event.data.object as Stripe.Checkout.Session);
+      break;
     case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.deleted":

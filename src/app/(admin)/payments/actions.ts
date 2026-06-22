@@ -79,6 +79,71 @@ export async function validateMobileMoneyAction(id: string): Promise<Result> {
   return { ok: true };
 }
 
+// ── Achats de livres (Mobile Money) ──────────────────────────────────
+// Valide un achat de livre payé par Mobile Money → le parent obtient l'accès.
+export async function validateBookPurchaseAction(id: string): Promise<Result> {
+  if (!isLiveMode()) return { ok: true };
+
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Non authentifié" };
+
+  const { data: purchase } = await supabase
+    .from("library_purchases")
+    .select("id, parent_id, status, book_id")
+    .eq("id", id)
+    .single();
+  if (!purchase) return { ok: false, message: "Achat introuvable" };
+  if (purchase.status !== "pending") return { ok: false, message: "Déjà traité" };
+
+  const { error } = await supabase
+    .from("library_purchases")
+    .update({ status: "paid", validated_by: user.id, validated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { ok: false, message: error.message };
+
+  const { data: book } = await supabase.from("library_books").select("title").eq("id", purchase.book_id).maybeSingle();
+  await supabase.from("notifications").insert({
+    user_id: purchase.parent_id,
+    kind: "school",
+    body: `📖 Paiement validé : « ${(book as any)?.title ?? "votre livre"} » est disponible dans la bibliothèque.`,
+  });
+
+  revalidatePath("/payments");
+  return { ok: true };
+}
+
+export async function rejectBookPurchaseAction(id: string, reason: string): Promise<Result> {
+  if (!isLiveMode()) return { ok: true };
+
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Non authentifié" };
+
+  const { data: purchase } = await supabase
+    .from("library_purchases")
+    .select("parent_id, status")
+    .eq("id", id)
+    .single();
+  if (!purchase) return { ok: false, message: "Achat introuvable" };
+  if (purchase.status !== "pending") return { ok: false, message: "Déjà traité" };
+
+  const { error } = await supabase
+    .from("library_purchases")
+    .update({ status: "rejected", validated_by: user.id, validated_at: new Date().toISOString(), rejection_reason: reason })
+    .eq("id", id);
+  if (error) return { ok: false, message: error.message };
+
+  await supabase.from("notifications").insert({
+    user_id: purchase.parent_id,
+    kind: "school",
+    body: `Votre achat de livre (Mobile Money) a été refusé : ${reason}`,
+  });
+
+  revalidatePath("/payments");
+  return { ok: true };
+}
+
 export async function rejectMobileMoneyAction(id: string, reason: string): Promise<Result> {
   if (!isLiveMode()) return { ok: true };
 

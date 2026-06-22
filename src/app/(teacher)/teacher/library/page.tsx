@@ -1,29 +1,26 @@
 import { PageHeader } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
-import { listSchoolLibrary, listTeacherSubjects } from "@/lib/teacher-db";
-import { AddBookButton } from "@/components/teacher/AddBookButton";
-import { DeleteBookButton } from "@/components/teacher/DeleteBookButton";
+import { listSchoolLibrary } from "@/lib/teacher-db";
 
 export default async function TeacherLibrary() {
-  const [books, subjects] = await Promise.all([listSchoolLibrary(), listTeacherSubjects()]);
+  const books = await listSchoolLibrary();
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
         title={{ fr: "Bibliothèque", en: "Library" }}
         sub={{
-          fr: `${books.length} livres recommandés · visibles par tous les parents de l'école`,
-          en: `${books.length} books · visible to all parents of the school`,
+          fr: `${books.length} livres · catalogue géré par E-KELASI`,
+          en: `${books.length} books · catalog managed by E-KELASI`,
         }}
-        right={<AddBookButton subjects={subjects} />}
       />
 
       {books.length === 0 ? (
         <div className="ek-card" style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>
           <Icon name="book" size={32} />
           <div style={{ marginTop: 12, fontSize: 13 }}>
-            <T fr="Aucun livre. Ajoute-en un pour commencer la bibliothèque !" en="No books. Add one to start the library!" />
+            <T fr="Aucun livre pour le moment." en="No books yet." />
           </div>
         </div>
       ) : (
@@ -99,7 +96,6 @@ export default async function TeacherLibrary() {
                 <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>
                   <T fr="par" en="by" /> <span style={{ color: "var(--ink-2)", fontWeight: 600 }}>{b.addedBy}</span>
                 </div>
-                {b.mine && <DeleteBookButton id={b.id} title={b.title} />}
               </div>
             </div>
           ))}

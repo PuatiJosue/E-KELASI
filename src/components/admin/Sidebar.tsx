@@ -16,6 +16,7 @@ const NAV: NavItem[] = [
   { id: "broadcast", href: "/broadcast", icon: "bell",      fr: "Diffusion",      en: "Broadcast" },
   { id: "billing",  href: "/billing",  icon: "creditcard", fr: "Abonnements",    en: "Subscriptions" },
   { id: "payments", href: "/payments", icon: "dollar",     fr: "Mobile Money",   en: "Mobile Money" },
+  { id: "library",  href: "/library",  icon: "book",       fr: "Bibliothèque",   en: "Library" },
   { id: "support",  href: "/support",  icon: "chat",       fr: "Support",        en: "Support" },
   { id: "security", href: "/security", icon: "shield",     fr: "Sécurité & logs", en: "Security & logs" },
 ];
