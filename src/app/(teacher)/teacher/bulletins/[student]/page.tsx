@@ -88,6 +88,9 @@ export default async function TeacherBulletin({
           initialRows={initialRows}
           initialPlace={draft?.place ?? ""}
           initialMention={draft?.mention ?? ""}
+          initialTotalObtenu={draft?.totalObtenu ?? ""}
+          initialTotalMax={draft?.totalMax ?? ""}
+          initialPercentage={draft?.percentage ?? ""}
           signatureUrl={b.school.signatureUrl}
           directorName={b.school.directorName}
           save={{ studentId: params.student, trimester: selectedTri, period }}

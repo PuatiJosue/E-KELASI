@@ -22,6 +22,9 @@ export function BulletinTable({
   initialRows,
   initialPlace = "",
   initialMention = "",
+  initialTotalObtenu = "",
+  initialTotalMax = "",
+  initialPercentage = "",
   signatureUrl,
   directorName,
   save,
@@ -29,6 +32,9 @@ export function BulletinTable({
   initialRows: Row[];
   initialPlace?: string;
   initialMention?: string;
+  initialTotalObtenu?: string;
+  initialTotalMax?: string;
+  initialPercentage?: string;
   signatureUrl: string | null;
   directorName: string | null;
   // Si fourni, affiche un bouton « Enregistrer » qui sauvegarde l'encodage.
@@ -40,6 +46,9 @@ export function BulletinTable({
   );
   const [place, setPlace] = useState(initialPlace);
   const [mention, setMention] = useState(initialMention);
+  const [totalObtenu, setTotalObtenu] = useState(initialTotalObtenu);
+  const [totalMaxInput, setTotalMaxInput] = useState(initialTotalMax);
+  const [percentage, setPercentage] = useState(initialPercentage);
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -56,6 +65,9 @@ export function BulletinTable({
         rows,
         place,
         mention,
+        totalObtenu,
+        totalMax: totalMaxInput,
+        percentage,
       });
       if (res.ok) setSaved(true);
       else setErr(res.message);
@@ -66,9 +78,11 @@ export function BulletinTable({
     const n = parseFloat((v || "").replace(",", "."));
     return isNaN(n) ? 0 : n;
   };
-  const totalMax = rows.reduce((a, r) => a + num(r.max), 0);
-  const totalObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
-  const pct = totalMax > 0 ? +((totalObtenu / totalMax) * 100).toFixed(2) : 0;
+  // Sommes calculées : servent de suggestion (placeholder) sous les champs
+  // saisissables. Le prof saisit lui-même les valeurs finales du bulletin.
+  const autoMax = rows.reduce((a, r) => a + num(r.max), 0);
+  const autoObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
+  const autoPct = autoMax > 0 ? +((autoObtenu / autoMax) * 100).toFixed(2) : 0;
 
   const setRow = (i: number, key: keyof Row, value: string) =>
     setRows((prev) => prev.map((r, j) => (j === i ? { ...r, [key]: value } : r)));
@@ -131,17 +145,41 @@ export function BulletinTable({
       {/* Résumé bas de bulletin */}
       <div style={{ marginTop: 24, borderTop: "2px solid #1a1410", paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
         <SummaryRow label="Total des points">
-          <span style={{ fontWeight: 700 }}>{totalObtenu}</span>
-          <span style={{ color: "#8a7c6e" }}> / {totalMax}</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <input
+              value={totalObtenu}
+              onChange={(e) => setTotalObtenu(e.target.value)}
+              inputMode="decimal"
+              placeholder={String(autoObtenu)}
+              style={{ ...summaryInput, minWidth: 70 }}
+            />
+            <span style={{ color: "#8a7c6e", fontWeight: 700 }}>/</span>
+            <input
+              value={totalMaxInput}
+              onChange={(e) => setTotalMaxInput(e.target.value)}
+              inputMode="decimal"
+              placeholder={String(autoMax)}
+              style={{ ...summaryInput, minWidth: 70 }}
+            />
+          </span>
         </SummaryRow>
         <SummaryRow label="Pourcentage">
-          <span style={{ fontWeight: 700, color: pct >= 50 ? "#1D6650" : "#C03A2B" }}>{pct}%</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <input
+              value={percentage}
+              onChange={(e) => setPercentage(e.target.value)}
+              inputMode="decimal"
+              placeholder={String(autoPct)}
+              style={{ ...summaryInput, minWidth: 90 }}
+            />
+            <span style={{ color: "#8a7c6e", fontWeight: 700 }}>%</span>
+          </span>
         </SummaryRow>
         <SummaryRow label="Place">
           <input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="ex. 4e / 28" style={{ ...summaryInput }} />
         </SummaryRow>
         <SummaryRow label="Mention">
-          <input value={mention} onChange={(e) => setMention(e.target.value)} placeholder={mentionFor(pct)} style={{ ...summaryInput }} />
+          <input value={mention} onChange={(e) => setMention(e.target.value)} placeholder={mentionFor(autoPct)} style={{ ...summaryInput }} />
         </SummaryRow>
       </div>
 

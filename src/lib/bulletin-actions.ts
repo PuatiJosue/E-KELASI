@@ -9,6 +9,11 @@ export type BulletinDraft = {
   rows: BulletinRow[];
   place: string;
   mention: string;
+  // Total des points et pourcentage saisis manuellement par le prof.
+  // Vides => calcul automatique (Σ obtenu / Σ max) en repli.
+  totalObtenu: string;
+  totalMax: string;
+  percentage: string;
 };
 
 function service() {
@@ -58,15 +63,22 @@ export async function saveBulletinDraft(input: {
   rows: BulletinRow[];
   place: string;
   mention: string;
+  totalObtenu?: string;
+  totalMax?: string;
+  percentage?: string;
 }): Promise<SaveResult> {
   if (!isLiveMode()) return { ok: true };
   const auth = await authForStudent(input.studentId);
   if (!auth) return { ok: false, message: "Action non autorisée." };
 
   const rows = (input.rows ?? []).filter((r) => r.branche?.trim() || r.max?.trim() || r.obtenu?.trim());
-  const totalMax = rows.reduce((a, r) => a + num(r.max), 0);
-  const totalObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
-  const percentage = totalMax > 0 ? +((totalObtenu / totalMax) * 100).toFixed(2) : 0;
+  // Valeurs saisies par le prof ; à défaut (champ vide), calcul automatique.
+  const autoMax = rows.reduce((a, r) => a + num(r.max), 0);
+  const autoObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
+  const autoPct = autoMax > 0 ? +((autoObtenu / autoMax) * 100).toFixed(2) : 0;
+  const totalMax = input.totalMax?.trim() ? num(input.totalMax) : autoMax;
+  const totalObtenu = input.totalObtenu?.trim() ? num(input.totalObtenu) : autoObtenu;
+  const percentage = input.percentage?.trim() ? num(input.percentage) : autoPct;
 
   const svc = service();
   const { error } = await svc.from("bulletin_drafts").upsert(
@@ -97,7 +109,7 @@ export async function getBulletinDraft(studentId: string, trimester: number): Pr
     const svc = service();
     const { data } = await svc
       .from("bulletin_drafts")
-      .select("rows, place, mention")
+      .select("rows, place, mention, total_obtenu, total_max, percentage")
       .eq("student_id", studentId)
       .eq("trimester", trimester)
       .maybeSingle();
@@ -107,6 +119,9 @@ export async function getBulletinDraft(studentId: string, trimester: number): Pr
       rows: Array.isArray(d.rows) ? d.rows : [],
       place: d.place ?? "",
       mention: d.mention ?? "",
+      totalObtenu: d.total_obtenu != null ? String(d.total_obtenu) : "",
+      totalMax: d.total_max != null ? String(d.total_max) : "",
+      percentage: d.percentage != null ? String(d.percentage) : "",
     };
   } catch {
     return null;

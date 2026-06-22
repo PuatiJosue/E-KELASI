@@ -12,6 +12,11 @@ export type BulletinPointsData = {
   rows: BulletinPointsRow[];
   place: string;
   mention: string;
+  // Total des points et pourcentage saisis par le prof (prioritaires).
+  // Vides => calcul automatique (Σ obtenu / Σ max).
+  totalObtenu?: string;
+  totalMax?: string;
+  percentage?: string;
 };
 
 function num(v: string): number {
@@ -51,9 +56,13 @@ const s = StyleSheet.create({
 
 function Doc({ data }: { data: BulletinPointsData }) {
   const rows = data.rows.filter((r) => r.branche || r.max || r.obtenu);
-  const totalMax = rows.reduce((a, r) => a + num(r.max), 0);
-  const totalObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
-  const pct = totalMax > 0 ? +((totalObtenu / totalMax) * 100).toFixed(2) : 0;
+  const autoMax = rows.reduce((a, r) => a + num(r.max), 0);
+  const autoObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
+  const autoPct = autoMax > 0 ? +((autoObtenu / autoMax) * 100).toFixed(2) : 0;
+  // Valeurs saisies par le prof si présentes, sinon calcul automatique.
+  const totalObtenu = data.totalObtenu?.trim() ? data.totalObtenu : String(autoObtenu);
+  const totalMax = data.totalMax?.trim() ? data.totalMax : String(autoMax);
+  const pct = data.percentage?.trim() ? data.percentage : String(autoPct);
 
   return (
     <Document>

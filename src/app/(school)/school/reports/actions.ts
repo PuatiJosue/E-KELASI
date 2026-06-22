@@ -64,9 +64,13 @@ export async function publishBulletinAction(studentId: string, period: string, t
 
   const sc: any = school ?? {};
   const num = (v: string) => { const n = parseFloat((v || "").replace(",", ".")); return isNaN(n) ? 0 : n; };
-  const totalMax = rows.reduce((a, r) => a + num(r.max), 0);
-  const totalObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
-  const percentage = totalMax > 0 ? +((totalObtenu / totalMax) * 100).toFixed(2) : 0;
+  // Total/pourcentage saisis par le prof (prioritaires), sinon calcul auto.
+  const autoMax = rows.reduce((a, r) => a + num(r.max), 0);
+  const autoObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
+  const autoPct = autoMax > 0 ? +((autoObtenu / autoMax) * 100).toFixed(2) : 0;
+  const totalMax = draft?.totalMax?.trim() ? num(draft.totalMax) : autoMax;
+  const totalObtenu = draft?.totalObtenu?.trim() ? num(draft.totalObtenu) : autoObtenu;
+  const percentage = draft?.percentage?.trim() ? num(draft.percentage) : autoPct;
 
   // Génère le PDF du bulletin (format points) → URL signée.
   let fileUrl: string | null = null;
@@ -85,6 +89,9 @@ export async function publishBulletinAction(studentId: string, period: string, t
       rows,
       place: draft?.place ?? "",
       mention: draft?.mention ?? "",
+      totalObtenu: draft?.totalObtenu ?? "",
+      totalMax: draft?.totalMax ?? "",
+      percentage: draft?.percentage ?? "",
     });
     const path = `bulletins/${studentId}-t${tri}-${Date.now()}.pdf`;
     const { error: upErr } = await svc.storage.from("grade-reports").upload(path, pdf, { contentType: "application/pdf", upsert: true });

@@ -138,6 +138,9 @@ export default async function StudentReport({
           initialRows={initialRows}
           initialPlace={draft?.place ?? ""}
           initialMention={draft?.mention ?? ""}
+          initialTotalObtenu={draft?.totalObtenu ?? ""}
+          initialTotalMax={draft?.totalMax ?? ""}
+          initialPercentage={draft?.percentage ?? ""}
           signatureUrl={school?.signatureUrl ?? null}
           directorName={school?.directorName ?? null}
           save={{ studentId: params.student, trimester: selectedTri, period }}
