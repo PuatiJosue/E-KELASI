@@ -8,8 +8,9 @@ export default function LibrarySuccess() {
         <div style={{ fontSize: 48 }}>📖</div>
         <h1 style={{ fontSize: 22, margin: "16px 0 8px", color: "#1A1410" }}>Paiement réussi !</h1>
         <p style={{ fontSize: 15, color: "#6B5E50", lineHeight: 1.5 }}>
-          Votre livre est maintenant disponible. Revenez dans l'application E-KELASI,
-          onglet <strong>Bibliothèque</strong>, pour le lire ou le télécharger.
+          {"Votre livre est maintenant disponible. Revenez dans l'application E-KELASI, onglet "}
+          <strong>Bibliothèque</strong>
+          {" pour le lire ou le télécharger."}
         </p>
       </div>
     </div>

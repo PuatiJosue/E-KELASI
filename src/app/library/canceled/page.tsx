@@ -6,8 +6,7 @@ export default function LibraryCanceled() {
         <div style={{ fontSize: 48 }}>🛒</div>
         <h1 style={{ fontSize: 22, margin: "16px 0 8px", color: "#1A1410" }}>Paiement annulé</h1>
         <p style={{ fontSize: 15, color: "#6B5E50", lineHeight: 1.5 }}>
-          Aucun montant n'a été débité. Vous pouvez retourner dans l'application
-          E-KELASI et réessayer quand vous voulez.
+          {"Aucun montant n'a été débité. Vous pouvez retourner dans l'application E-KELASI et réessayer quand vous voulez."}
         </p>
       </div>
     </div>
