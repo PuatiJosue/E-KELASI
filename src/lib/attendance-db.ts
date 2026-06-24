@@ -62,6 +62,54 @@ export async function getAttendanceForDate(date: string): Promise<DayAttendance>
   }
 }
 
+// ── Présence des élèves (console école) ─────────────────────────────
+export type StudentLite = { id: string; name: string; className: string };
+export type StudentDayAttendance = Record<string, string>; // studentId -> status
+
+// Tous les élèves actifs de l'école (groupés côté UI par classe).
+export async function listStudentsForAttendance(): Promise<StudentLite[]> {
+  if (!isLiveMode()) return [];
+  try {
+    const school = await getMySchool();
+    if (!school) return [];
+    const svc = service();
+    const { data } = await svc
+      .from("students")
+      .select("id, full_name, class_name")
+      .eq("school_id", school.id)
+      .eq("status", "active")
+      .order("class_name")
+      .order("full_name");
+    return (data ?? []).map((s: any) => ({
+      id: s.id,
+      name: s.full_name,
+      className: s.class_name ?? "—",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// Statuts de présence des élèves de l'école pour une date donnée.
+export async function getStudentAttendanceForDate(date: string): Promise<StudentDayAttendance> {
+  if (!isLiveMode()) return {};
+  try {
+    const school = await getMySchool();
+    if (!school) return {};
+    const svc = service();
+    const { data } = await svc
+      .from("student_attendance")
+      .select("student_id, status")
+      .eq("school_id", school.id)
+      .eq("date", date);
+    const map: StudentDayAttendance = {};
+    for (const r of data ?? []) map[(r as any).student_id] = (r as any).status;
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 export async function getAttendanceReport(from: string, to: string): Promise<AttReportRow[]> {
   if (!isLiveMode()) return [];
   try {
