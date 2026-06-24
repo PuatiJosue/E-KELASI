@@ -29,6 +29,15 @@ export async function registerForPushNotifications(): Promise<string | null> {
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: "#E0701E",
+      sound: "default",
+    });
+    // Canal dédié aux notes : sonnerie + vibration (comme annonces/bulletins).
+    await Notifications.setNotificationChannelAsync("grades", {
+      name: "Notes",
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#1D6650",
+      sound: "default",
     });
   }
 

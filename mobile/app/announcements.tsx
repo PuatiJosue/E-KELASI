@@ -1,4 +1,4 @@
-import { View, Text, Image, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, Image, ScrollView, ActivityIndicator, Pressable, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
 
@@ -67,6 +67,22 @@ export default function Announcements() {
                 <Text style={{ fontSize: 11.5, color: t.ink3, marginTop: 8, fontFamily: fonts.body }}>
                   {a.eventDate ? `📅 ${fmtDate(a.eventDate)} · ` : ""}{fmtDate(a.createdAt)}
                 </Text>
+                {a.attachmentUrl ? (
+                  <Pressable
+                    onPress={() => Linking.openURL(a.attachmentUrl!)}
+                    style={{
+                      marginTop: 10, alignSelf: "flex-start",
+                      paddingVertical: 7, paddingHorizontal: 12, borderRadius: 8,
+                      backgroundColor: t.brandSoft,
+                      flexDirection: "row", alignItems: "center", gap: 6,
+                    }}
+                  >
+                    <Icon name="download" size={13} color={t.brand600} />
+                    <Text style={{ fontSize: 12, color: t.brand600, fontWeight: "600", fontFamily: fonts.bodyBold }} numberOfLines={1}>
+                      {a.attachmentName || tr({ fr: "Ouvrir le document", en: "Open document" })}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             </Card>
           ))}

@@ -193,6 +193,8 @@ export type Announcement = {
   body: string;
   eventDate: string | null;
   createdAt: string;
+  attachmentUrl: string | null;
+  attachmentName: string | null;
 };
 
 export async function listAnnouncements(): Promise<Announcement[]> {
@@ -200,7 +202,7 @@ export async function listAnnouncements(): Promise<Announcement[]> {
   try {
     const { data } = await supabase
       .from("announcements")
-      .select("id, title, body, event_date, created_at")
+      .select("id, title, body, event_date, created_at, attachment_url, attachment_name")
       .order("created_at", { ascending: false })
       .limit(50);
     return (data ?? []).map((a: any) => ({
@@ -209,6 +211,8 @@ export async function listAnnouncements(): Promise<Announcement[]> {
       body: a.body,
       eventDate: a.event_date,
       createdAt: a.created_at,
+      attachmentUrl: a.attachment_url ?? null,
+      attachmentName: a.attachment_name ?? null,
     }));
   } catch {
     return [];

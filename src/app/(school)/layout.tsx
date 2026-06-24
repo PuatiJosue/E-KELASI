@@ -32,9 +32,18 @@ export default async function SchoolLayout({ children }: { children: React.React
     );
   }
 
-  // Branding : si l'école a une couleur custom, on l'applique sur tout le shell.
-  const brandStyle = school?.brandColor
-    ? ({ ["--brand" as string]: school.brandColor } as React.CSSProperties)
+  // Branding : si l'école a une couleur custom, on l'applique sur tout le shell,
+  // y compris les nuances dérivées (boutons, puces, accents, tableau de bord).
+  const c = school?.brandColor;
+  const brandStyle = c
+    ? ({
+        ["--brand" as string]: c,
+        ["--brand-600" as string]: `color-mix(in srgb, ${c} 82%, #000)`,
+        ["--brand-700" as string]: `color-mix(in srgb, ${c} 65%, #000)`,
+        ["--brand-100" as string]: `color-mix(in srgb, ${c} 22%, #fff)`,
+        ["--brand-50" as string]: `color-mix(in srgb, ${c} 10%, #fff)`,
+        ["--brand-soft" as string]: `color-mix(in srgb, ${c} 12%, transparent)`,
+      } as React.CSSProperties)
     : undefined;
 
   return (

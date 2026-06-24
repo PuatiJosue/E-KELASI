@@ -14,7 +14,7 @@ export default async function SchoolClasses() {
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
-        title={{ fr: "Classes", en: "Classes" }}
+        title={{ fr: "Rapport global des classes", en: "Class report" }}
         sub={{
           fr: `${totalStudents} élèves · ${totalTeachers} enseignants · ${rows.length} classes`,
           en: `${totalStudents} students · ${totalTeachers} teachers · ${rows.length} classes`,

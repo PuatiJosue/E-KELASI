@@ -17,6 +17,10 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // Autorise l'envoi de pièces jointes (annonces) via Server Actions (base64).
+    serverActions: { bodySizeLimit: "12mb" },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

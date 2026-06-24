@@ -30,10 +30,14 @@ async function caller(): Promise<{ userId: string; schoolId: string } | null> {
   return { userId: user.id, schoolId: staff.school_id };
 }
 
+// Pièce jointe optionnelle envoyée depuis le navigateur (base64).
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024; // 8 Mo
+
 export async function createAnnouncement(input: {
   title: string;
   body: string;
   eventDate?: string;
+  file?: { name: string; type: string; dataBase64: string };
 }): Promise<Result> {
   const title = input.title?.trim();
   const body = input.body?.trim();
@@ -52,6 +56,31 @@ export async function createAnnouncement(input: {
     created_by: c.userId,
   }).select("id, created_at").single();
   if (error || !inserted) return { ok: false, message: "Publication impossible." };
+
+  // ── Pièce jointe (document) : upload + URL signée + enregistrement ──
+  let attachmentUrl: string | null = null;
+  if (input.file?.dataBase64) {
+    try {
+      const bytes = Buffer.from(input.file.dataBase64, "base64");
+      if (bytes.byteLength > MAX_ATTACHMENT_BYTES) {
+        return { ok: false, message: "Le document dépasse 8 Mo." };
+      }
+      const safeName = (input.file.name || "document").replace(/[^\w.\-]/g, "_");
+      const path = `announcements/attachments/${inserted.id}-${safeName}`;
+      const { error: upErr } = await svc.storage
+        .from("grade-reports")
+        .upload(path, bytes, { contentType: input.file.type || "application/octet-stream", upsert: true });
+      if (!upErr) {
+        const { data: signed } = await svc.storage.from("grade-reports").createSignedUrl(path, 60 * 60 * 24 * 365);
+        attachmentUrl = signed?.signedUrl ?? null;
+        await svc.from("announcements")
+          .update({ attachment_url: attachmentUrl, attachment_name: input.file.name || safeName })
+          .eq("id", inserted.id);
+      }
+    } catch {
+      // L'échec de la pièce jointe ne bloque pas la publication de l'annonce.
+    }
+  }
 
   // Génère un PDF de l'annonce (en-tête nom + logo de l'école) → URL signée.
   let pdfUrl: string | null = null;
@@ -104,11 +133,16 @@ export async function createAnnouncement(input: {
         .in("student_id", studentIds);
       const parentIds = [...new Set((links ?? []).map((l: any) => l.parent_id))];
       if (parentIds.length > 0) {
+        // Le parent reçoit en priorité le document joint par l'école ; à défaut,
+        // le PDF de l'annonce généré automatiquement.
+        const fileUrl = attachmentUrl ?? pdfUrl;
         const rows = parentIds.map((pid) => ({
           user_id: pid as string,
           kind: "school" as const,
           body: `📢 ${title}`,
-          payload: pdfUrl ? { file_url: pdfUrl, kind: "announcement_pdf" } : null,
+          payload: fileUrl
+            ? { file_url: fileUrl, kind: attachmentUrl ? "announcement_doc" : "announcement_pdf" }
+            : null,
         }));
         await svc.from("notifications").insert(rows);
       }

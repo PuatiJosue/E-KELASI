@@ -46,12 +46,34 @@ export function BulletinTable({
   );
   const [place, setPlace] = useState(initialPlace);
   const [mention, setMention] = useState(initialMention);
+  // Totaux & pourcentage : calculés automatiquement à partir des lignes, mais
+  // modifiables manuellement. Une fois un champ édité (« touched »), il garde la
+  // valeur saisie ; sinon il suit le calcul automatique des lignes.
   const [totalObtenu, setTotalObtenu] = useState(initialTotalObtenu);
   const [totalMaxInput, setTotalMaxInput] = useState(initialTotalMax);
   const [percentage, setPercentage] = useState(initialPercentage);
+  const [obtenuTouched, setObtenuTouched] = useState(initialTotalObtenu !== "");
+  const [maxTouched, setMaxTouched] = useState(initialTotalMax !== "");
+  const [pctTouched, setPctTouched] = useState(initialPercentage !== "");
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const num = (v: string) => {
+    const n = parseFloat((v || "").replace(",", "."));
+    return isNaN(n) ? 0 : n;
+  };
+  // Sommes calculées à partir des lignes du tableau.
+  const autoMax = rows.reduce((a, r) => a + num(r.max), 0);
+  const autoObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
+
+  // Valeurs affichées : la saisie manuelle prime, sinon le calcul automatique.
+  const dispObtenu = obtenuTouched ? totalObtenu : (autoObtenu ? String(autoObtenu) : "");
+  const dispMax = maxTouched ? totalMaxInput : (autoMax ? String(autoMax) : "");
+  const baseMax = num(dispMax);
+  const baseObtenu = num(dispObtenu);
+  const autoPct = baseMax > 0 ? +((baseObtenu / baseMax) * 100).toFixed(2) : 0;
+  const dispPct = pctTouched ? percentage : (autoPct ? String(autoPct) : "");
 
   const onSave = () => {
     if (!save) return;
@@ -65,24 +87,14 @@ export function BulletinTable({
         rows,
         place,
         mention,
-        totalObtenu,
-        totalMax: totalMaxInput,
-        percentage,
+        totalObtenu: dispObtenu,
+        totalMax: dispMax,
+        percentage: dispPct,
       });
       if (res.ok) setSaved(true);
       else setErr(res.message);
     });
   };
-
-  const num = (v: string) => {
-    const n = parseFloat((v || "").replace(",", "."));
-    return isNaN(n) ? 0 : n;
-  };
-  // Sommes calculées : servent de suggestion (placeholder) sous les champs
-  // saisissables. Le prof saisit lui-même les valeurs finales du bulletin.
-  const autoMax = rows.reduce((a, r) => a + num(r.max), 0);
-  const autoObtenu = rows.reduce((a, r) => a + num(r.obtenu), 0);
-  const autoPct = autoMax > 0 ? +((autoObtenu / autoMax) * 100).toFixed(2) : 0;
 
   const setRow = (i: number, key: keyof Row, value: string) =>
     setRows((prev) => prev.map((r, j) => (j === i ? { ...r, [key]: value } : r)));
@@ -147,16 +159,16 @@ export function BulletinTable({
         <SummaryRow label="Total des points">
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             <input
-              value={totalObtenu}
-              onChange={(e) => setTotalObtenu(e.target.value)}
+              value={dispObtenu}
+              onChange={(e) => { setObtenuTouched(true); setTotalObtenu(e.target.value); }}
               inputMode="decimal"
               placeholder={String(autoObtenu)}
               style={{ ...summaryInput, minWidth: 70 }}
             />
             <span style={{ color: "#8a7c6e", fontWeight: 700 }}>/</span>
             <input
-              value={totalMaxInput}
-              onChange={(e) => setTotalMaxInput(e.target.value)}
+              value={dispMax}
+              onChange={(e) => { setMaxTouched(true); setTotalMaxInput(e.target.value); }}
               inputMode="decimal"
               placeholder={String(autoMax)}
               style={{ ...summaryInput, minWidth: 70 }}
@@ -166,8 +178,8 @@ export function BulletinTable({
         <SummaryRow label="Pourcentage">
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             <input
-              value={percentage}
-              onChange={(e) => setPercentage(e.target.value)}
+              value={dispPct}
+              onChange={(e) => { setPctTouched(true); setPercentage(e.target.value); }}
               inputMode="decimal"
               placeholder={String(autoPct)}
               style={{ ...summaryInput, minWidth: 90 }}

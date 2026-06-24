@@ -38,6 +38,11 @@ const KIND_SCREENS: Record<string, string> = {
   billing: "profile",
 };
 
+// Canal Android par type (les notes ont leur propre canal sonore).
+const KIND_CHANNELS: Record<string, string> = {
+  grade: "grades",
+};
+
 // Préférence "important" : on ne pousse PAS les devoirs et messages du quotidien.
 const NON_IMPORTANT_KINDS = new Set(["hw", "message"]);
 
@@ -116,7 +121,7 @@ Deno.serve(async (_req: Request) => {
         data: { screen: KIND_SCREENS[n.kind] ?? "notifications", notificationId: n.id },
         sound: "default",
         priority: "high",
-        channelId: "default",
+        channelId: KIND_CHANNELS[n.kind] ?? "default",
       });
     }
   }

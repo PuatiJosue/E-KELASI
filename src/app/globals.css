@@ -239,3 +239,6 @@ h1, h2, h3, h4 {
 
 /* Wrap wide tables so they scroll horizontally instead of breaking layout. */
 .ek-tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Rotation (icône d'actualisation pendant le rafraîchissement). */
+@keyframes ek-spin { to { transform: rotate(360deg); } }

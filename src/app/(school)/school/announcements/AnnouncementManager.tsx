@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
@@ -12,21 +12,47 @@ function fmtDate(d: string) {
   return isNaN(dt.getTime()) ? d : dt.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
+const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8 Mo
+
+// Lit un fichier en base64 (sans le préfixe data:).
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
 export function AnnouncementManager({ announcements }: { announcements: Announcement[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const pickFile = (f: File | null) => {
+    setError(null);
+    if (f && f.size > MAX_FILE_BYTES) { setError("Le document dépasse 8 Mo."); return; }
+    setFile(f);
+  };
 
   const publish = () => {
     setError(null);
     if (!title.trim() || !body.trim()) { setError("Titre et message requis."); return; }
     startTransition(async () => {
-      const r = await createAnnouncement({ title, body, eventDate: eventDate || undefined });
-      if (r.ok) { setTitle(""); setBody(""); setEventDate(""); router.refresh(); }
-      else setError(r.message);
+      const filePayload = file
+        ? { name: file.name, type: file.type, dataBase64: await fileToBase64(file) }
+        : undefined;
+      const r = await createAnnouncement({ title, body, eventDate: eventDate || undefined, file: filePayload });
+      if (r.ok) {
+        setTitle(""); setBody(""); setEventDate(""); setFile(null);
+        if (fileRef.current) fileRef.current.value = "";
+        router.refresh();
+      } else setError(r.message);
     });
   };
 
@@ -66,6 +92,26 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
             </div>
             <input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} style={{ ...inp, width: 170 }} />
           </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-2)", marginBottom: 4 }}>
+              <T fr="Pièce jointe (optionnel)" en="Attachment (optional)" />
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,image/*,application/pdf"
+              onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
+              style={{ fontSize: 12, color: "var(--ink-2)" }}
+            />
+            {file && (
+              <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 3 }}>
+                📎 {file.name}
+                <button onClick={() => pickFile(null)} style={{ marginLeft: 8, background: "none", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: 11 }}>
+                  <T fr="retirer" en="remove" />
+                </button>
+              </div>
+            )}
+          </div>
           <button onClick={publish} disabled={pending} className="ek-btn ek-btn-primary" style={{ height: 38, fontSize: 13, marginLeft: "auto", opacity: pending ? 0.6 : 1 }}>
             <Icon name="bell" size={14} />
             {pending ? "Publication…" : <T fr="Publier aux parents" en="Publish to parents" />}
@@ -94,6 +140,17 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
               <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6 }}>
                 {a.eventDate ? `📅 ${fmtDate(a.eventDate)} · ` : ""}Publiée le {fmtDate(a.createdAt)}
               </div>
+              {a.attachmentUrl && (
+                <a
+                  href={a.attachmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 12, fontWeight: 600, color: "var(--brand-600)" }}
+                >
+                  <Icon name="download" size={13} />
+                  {a.attachmentName || <T fr="Document joint" en="Attachment" />}
+                </a>
+              )}
             </div>
             <button onClick={() => remove(a.id)} disabled={pending} title="Supprimer" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)", display: "flex", padding: 4 }}>
               <Icon name="trash" size={15} />
