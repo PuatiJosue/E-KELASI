@@ -123,8 +123,8 @@ export default async function TeacherDashboard() {
           ) : (
             classes.map((c, i) => (
               <Link
-                key={c.className}
-                href={`/teacher/classes/${encodeURIComponent(c.className)}`}
+                key={c.key}
+                href={`/teacher/classes/${encodeURIComponent(c.className)}?option=${encodeURIComponent(c.option ?? "")}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -148,10 +148,10 @@ export default async function TeacherDashboard() {
                     fontFamily: "var(--font-display)",
                   }}
                 >
-                  {c.className.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+                  {c.label.split(" ").map((w) => w[0]).join("").slice(0, 2)}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{c.className}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{c.label}</div>
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{c.studentCount} <T fr="élèves" en="students" /></div>
                 </div>
                 <Icon name="chevR" size={16} style={{ color: "var(--ink-3)" }} />

@@ -20,8 +20,8 @@ export default async function ClassesPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
         {classes.map((c) => (
           <Link
-            key={c.className}
-            href={`/teacher/classes/${encodeURIComponent(c.className)}`}
+            key={c.key}
+            href={`/teacher/classes/${encodeURIComponent(c.className)}?option=${encodeURIComponent(c.option ?? "")}`}
             className="ek-card"
             style={{ padding: 18, display: "flex", alignItems: "center", gap: 14 }}
           >
@@ -40,10 +40,10 @@ export default async function ClassesPage() {
                 fontFamily: "var(--font-display)",
               }}
             >
-              {c.className.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+              {c.label.split(" ").map((w) => w[0]).join("").slice(0, 2)}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{c.className}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{c.label}</div>
               <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>
                 {c.studentCount} <T fr="élèves" en="students" />
               </div>

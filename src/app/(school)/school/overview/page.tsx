@@ -73,7 +73,7 @@ export default async function SchoolOverview() {
         ) : (
           classes.map((c, i) => (
             <div
-              key={c.className}
+              key={c.label}
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr auto auto",
@@ -99,10 +99,10 @@ export default async function SchoolOverview() {
                     fontFamily: "var(--font-display)",
                   }}
                 >
-                  {c.className.split(" ").map((w) => w[0]).join("").slice(0, 2)}
+                  {c.label.split(" ").map((w) => w[0]).join("").slice(0, 2)}
                 </div>
                 <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{c.className}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{c.label}</div>
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{c.studentCount} <T fr="élèves" en="students" /></div>
                 </div>
               </div>

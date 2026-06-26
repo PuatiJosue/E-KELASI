@@ -190,8 +190,8 @@ function OverviewTab({ matrix, rows }: { matrix: ClassReportMatrix; rows: ClassD
               </div>
             ) : (
               rows.map((r, i) => (
-                <div key={r.className} style={{ display: "grid", gridTemplateColumns: "1.4fr 0.8fr 0.8fr 2fr", padding: "12px 18px", alignItems: "center", fontSize: 12.5, borderTop: i > 0 ? "1px solid var(--divider)" : "none" }}>
-                  <div style={{ fontWeight: 600, color: "var(--ink)" }}>{r.className}</div>
+                <div key={r.label} style={{ display: "grid", gridTemplateColumns: "1.4fr 0.8fr 0.8fr 2fr", padding: "12px 18px", alignItems: "center", fontSize: 12.5, borderTop: i > 0 ? "1px solid var(--divider)" : "none" }}>
+                  <div style={{ fontWeight: 600, color: "var(--ink)" }}>{r.label}</div>
                   <div style={{ textAlign: "center", color: "var(--ink-2)", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}><Icon name="user" size={13} /> {r.studentCount}</div>
                   <div style={{ textAlign: "center", color: "var(--ink-2)", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}><Icon name="users" size={13} /> {r.teacherCount}</div>
                   <div style={{ color: "var(--ink-3)", fontSize: 11.5 }}>{r.teacherNames.length > 0 ? r.teacherNames.join(", ") : "—"}</div>

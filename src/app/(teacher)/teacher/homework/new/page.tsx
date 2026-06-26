@@ -12,7 +12,7 @@ export default async function NewHomeworkPage() {
         title={{ fr: "Nouveau devoir", en: "New homework" }}
         sub={{ fr: "Les parents seront notifiés à la création.", en: "Parents will be notified on creation." }}
       />
-      <NewHomeworkForm classes={classes.map((c) => c.className)} subjects={subjects} />
+      <NewHomeworkForm classes={[...new Set(classes.map((c) => c.className))]} subjects={subjects} />
     </div>
   );
 }

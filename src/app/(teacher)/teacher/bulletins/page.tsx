@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function TeacherBulletinsIndex() {
   const classes = await listTeacherClasses();
   const withStudents = await Promise.all(
-    classes.map(async (c) => ({ className: c.className, students: await listStudentsInClass(c.className) }))
+    classes.map(async (c) => ({ key: c.key, label: c.label, students: await listStudentsInClass(c.className, c.option) }))
   );
 
   const total = withStudents.reduce((a, c) => a + c.students.length, 0);
@@ -31,9 +31,9 @@ export default async function TeacherBulletinsIndex() {
         </div>
       ) : (
         withStudents.map((c) => (
-          <div key={c.className} className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+          <div key={c.key} className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
             <div style={{ padding: "12px 18px", borderBottom: "1px solid var(--divider)", fontSize: 13, fontWeight: 700, color: "var(--ink)", background: "var(--surface-2)" }}>
-              {c.className} <span style={{ color: "var(--ink-3)", fontWeight: 500 }}>· {c.students.length} <T fr="élèves" en="students" /></span>
+              {c.label} <span style={{ color: "var(--ink-3)", fontWeight: 500 }}>· {c.students.length} <T fr="élèves" en="students" /></span>
             </div>
             {c.students.length === 0 ? (
               <div style={{ padding: 18, fontSize: 12.5, color: "var(--ink-3)" }}>

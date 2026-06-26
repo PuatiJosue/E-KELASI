@@ -40,8 +40,8 @@ export default async function TeacherProfilePage() {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {classes.map((c) => (
-            <span key={c.className} className="ek-chip brand" style={{ padding: "6px 12px", fontSize: 13 }}>
-              {c.className} · {c.studentCount}
+            <span key={c.key} className="ek-chip brand" style={{ padding: "6px 12px", fontSize: 13 }}>
+              {c.label} · {c.studentCount}
             </span>
           ))}
           {classes.length === 0 && (

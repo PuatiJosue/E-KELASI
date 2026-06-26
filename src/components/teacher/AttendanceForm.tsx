@@ -8,9 +8,12 @@ import { T } from "@/lib/i18n";
 import type { StudentRow, StudentAttendanceMap } from "@/lib/teacher-db";
 import { saveAttendanceAction } from "@/app/(teacher)/teacher/attendance/actions";
 
+type ClassOption = { key: string; label: string; className: string; option: string | null };
+
 type Props = {
-  classes: string[];
+  classes: ClassOption[];
   initialClassName: string;
+  initialOption: string;
   initialDate: string;
   initialStudents: StudentRow[];
   initialAttendance: StudentAttendanceMap;
@@ -25,11 +28,14 @@ const STATUSES: { value: Status; fr: string; en: string; color: string }[] = [
   { value: "justified", fr: "Justifié",  en: "Excused",   color: "#3A6DBC" },
 ];
 
-export function AttendanceForm({ classes, initialClassName, initialDate, initialStudents, initialAttendance }: Props) {
+export function AttendanceForm({ classes, initialClassName, initialOption, initialDate, initialStudents, initialAttendance }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const [className, setClassName] = useState(initialClassName);
+  const [classSel, setClassSel] = useState(() => {
+    const c = classes.find((c) => c.className === initialClassName && (c.option ?? "") === (initialOption ?? ""));
+    return c?.key ?? classes[0]?.key ?? "";
+  });
   const [date, setDate] = useState(initialDate);
   const [statuses, setStatuses] = useState<Record<string, Status>>(initialAttendance as Record<string, Status>);
   const [error, setError] = useState<string | null>(null);
@@ -38,19 +44,22 @@ export function AttendanceForm({ classes, initialClassName, initialDate, initial
   const students = initialStudents;
   const markedCount = students.filter((s) => statuses[s.id]).length;
 
-  const reload = (nextClass: string, nextDate: string) => {
-    router.replace(`/teacher/attendance?class=${encodeURIComponent(nextClass)}&date=${encodeURIComponent(nextDate)}`);
+  const reload = (key: string, nextDate: string) => {
+    const c = classes.find((c) => c.key === key);
+    router.replace(
+      `/teacher/attendance?class=${encodeURIComponent(c?.className ?? "")}&option=${encodeURIComponent(c?.option ?? "")}&date=${encodeURIComponent(nextDate)}`
+    );
   };
 
-  const onChangeClass = (c: string) => {
-    setClassName(c);
+  const onChangeClass = (key: string) => {
+    setClassSel(key);
     setSuccess(null);
-    reload(c, date);
+    reload(key, date);
   };
   const onChangeDate = (d: string) => {
     setDate(d);
     setSuccess(null);
-    reload(className, d);
+    reload(classSel, d);
   };
 
   const setStatus = (studentId: string, status: Status) => {
@@ -89,9 +98,9 @@ export function AttendanceForm({ classes, initialClassName, initialDate, initial
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Selector
             label={<T fr="Classe" en="Class" />}
-            value={className}
+            value={classSel}
             onChange={onChangeClass}
-            options={classes.map((c) => ({ value: c, label: c }))}
+            options={classes.map((c) => ({ value: c.key, label: c.label }))}
           />
           <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={labelStyle}><T fr="Date" en="Date" /></span>

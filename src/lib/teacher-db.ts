@@ -6,6 +6,7 @@ import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { isLiveMode } from "@/lib/db";
 import { trimesterOf, schoolYearLabel } from "@/lib/trimester";
 import { formatDateFr } from "@/lib/grade-report";
+import { classLabel, classKey, normOption } from "@/lib/classes";
 
 function service() {
   return createServiceClient(
@@ -30,7 +31,10 @@ export type TeacherSchool = {
 };
 
 export type ClassRow = {
-  className: string;
+  className: string;        // class_name brut
+  option: string | null;   // option/filière
+  key: string;             // clé composite (value de <select>, clés React)
+  label: string;           // « Niveau — Option » pour l'affichage
   studentCount: number;
   subjects: string[];
 };
@@ -158,43 +162,58 @@ export async function listTeacherSubjects(): Promise<TeacherSubject[]> {
 }
 
 export async function listTeacherClasses(): Promise<ClassRow[]> {
-  if (!isLiveMode()) return [{ className: "5ème B", studentCount: 28, subjects: ["Mathématiques"] }];
+  if (!isLiveMode()) return [{ className: "5ème B", option: null, key: "5ème B", label: "5ème B", studentCount: 28, subjects: ["Mathématiques"] }];
   try {
     const supabase = createClient();
     const school = await getTeacherSchool();
     if (!school) return [];
     const { data: students } = await supabase
       .from("students")
-      .select("class_name")
+      .select("class_name, option")
       .eq("school_id", school.id);
-    const grouped = (students ?? []).reduce<Record<string, number>>((acc, s: any) => {
-      const c = s.class_name ?? "—";
-      acc[c] = (acc[c] ?? 0) + 1;
-      return acc;
-    }, {});
-    return Object.entries(grouped).map(([className, count]) => ({
-      className,
-      studentCount: count,
-      subjects: [],
-    }));
+    // Une classe = couple (class_name, option) : on regroupe par clé composite.
+    const grouped = new Map<string, { className: string; option: string | null; count: number }>();
+    for (const s of (students ?? []) as any[]) {
+      const className = s.class_name ?? "—";
+      const option = normOption(s.option);
+      const key = classKey(className, option);
+      const cur = grouped.get(key) ?? { className, option, count: 0 };
+      cur.count += 1;
+      grouped.set(key, cur);
+    }
+    return [...grouped.entries()]
+      .map(([key, g]) => ({
+        className: g.className,
+        option: g.option,
+        key,
+        label: classLabel(g.className, g.option),
+        studentCount: g.count,
+        subjects: [],
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   } catch {
     return [];
   }
 }
 
-export async function listStudentsInClass(className: string, trimester?: number): Promise<StudentRow[]> {
+export async function listStudentsInClass(className: string, option?: string | null, trimester?: number): Promise<StudentRow[]> {
   if (!isLiveMode()) return [];
   try {
     const supabase = createClient();
     const school = await getTeacherSchool();
     if (!school) return [];
-    const { data: students } = await supabase
+    const { data: studentsRaw } = await supabase
       .from("students")
-      .select("id, full_name, class_name, avatar_url")
+      .select("id, full_name, class_name, option, avatar_url")
       .eq("school_id", school.id)
       .eq("class_name", className)
       .order("full_name");
-    if (!students) return [];
+    if (!studentsRaw) return [];
+
+    // Filtre par option côté JS : robuste si un niveau mêle élèves avec/sans option.
+    const wantOption = normOption(option);
+    const students = studentsRaw.filter((s: any) => normOption(s.option) === wantOption);
+    if (students.length === 0) return [];
 
     // moyenne par élève (filtrée sur le trimestre si demandé)
     const ids = students.map((s: any) => s.id);
@@ -255,7 +274,7 @@ export async function getTeacherStudentBulletin(studentId: string, trimester: nu
     const svc = service();
     const { data: student } = await svc
       .from("students")
-      .select("full_name, class_name, school_id, schools(name, city, logo_url, signature_url, director_name)")
+      .select("full_name, class_name, option, school_id, schools(name, city, logo_url, signature_url, director_name)")
       .eq("id", studentId)
       .maybeSingle();
     if (!student || (student as any).school_id !== schoolId) return null;
@@ -284,7 +303,7 @@ export async function getTeacherStudentBulletin(studentId: string, trimester: nu
     }));
 
     return {
-      student: { fullName: s.full_name, className: s.class_name ?? "—" },
+      student: { fullName: s.full_name, className: classLabel(s.class_name, s.option) },
       school: {
         name: s.schools?.name ?? "École",
         city: s.schools?.city ?? "",
@@ -429,7 +448,7 @@ export async function listTeacherGradeHistory(): Promise<GradeHistoryRow[]> {
     if (!user) return [];
     const { data } = await supabase
       .from("grades")
-      .select("id, kind, score, max_score, coefficient, graded_at, students(full_name, class_name), subjects(name)")
+      .select("id, kind, score, max_score, coefficient, graded_at, students(full_name, class_name, option), subjects(name)")
       .eq("teacher_id", user.id)
       .is("archived_at", null)
       .order("graded_at", { ascending: false });
@@ -444,7 +463,7 @@ export async function listTeacherGradeHistory(): Promise<GradeHistoryRow[]> {
         schoolYear: schoolYearLabel(g.graded_at),
         trimester: trimesterOf(g.graded_at),
         trimesterShort: `T${trimesterOf(g.graded_at)}`,
-        className: g.students?.class_name ?? "—",
+        className: classLabel(g.students?.class_name, g.students?.option),
         studentName: g.students?.full_name ?? "?",
         subjectName: g.subjects?.name ?? "?",
         kind: g.kind ?? "—",

@@ -9,18 +9,24 @@ import type { StudentRow, TeacherSubject } from "@/lib/teacher-db";
 import { submitGradesAction, type GradeInput } from "@/app/(teacher)/teacher/grades/actions";
 import { TRIMESTERS, currentTrimester, trimesterOf, representativeDateForTrimester } from "@/lib/trimester";
 
+type ClassOption = { key: string; label: string; className: string; option: string | null };
+
 type Props = {
-  classes: string[];
+  classes: ClassOption[];
   subjects: TeacherSubject[];
   initialClassName: string;
+  initialOption: string;
   initialStudents: StudentRow[];
 };
 
-export function GradesEntryForm({ classes, subjects, initialClassName, initialStudents }: Props) {
+export function GradesEntryForm({ classes, subjects, initialClassName, initialOption, initialStudents }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const [className, setClassName] = useState(initialClassName);
+  const [classSel, setClassSel] = useState(() => {
+    const c = classes.find((c) => c.className === initialClassName && (c.option ?? "") === (initialOption ?? ""));
+    return c?.key ?? classes[0]?.key ?? "";
+  });
   const [subjectName, setSubjectName] = useState(subjects[0]?.name ?? "");
   const [kind, setKind] = useState("Contrôle");
   const [maxScore, setMaxScore] = useState("20");
@@ -47,11 +53,14 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
     if (v) setTrimester(trimesterOf(v));
   };
 
-  const onChangeClass = (c: string) => {
-    setClassName(c);
+  const onChangeClass = (key: string) => {
+    setClassSel(key);
     setScores({});
+    const c = classes.find((c) => c.key === key);
     // recharge la page avec la nouvelle classe (le server component refetch)
-    router.replace(`/teacher/grades?class=${encodeURIComponent(c)}`);
+    router.replace(
+      `/teacher/grades?class=${encodeURIComponent(c?.className ?? "")}&option=${encodeURIComponent(c?.option ?? "")}`
+    );
   };
 
   const onSubmit = () => {
@@ -100,7 +109,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialSt
     <>
       <div className="ek-card" style={{ padding: 18 }}>
         <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 0.8fr 0.7fr 0.8fr 1fr", gap: 12 }}>
-          <Selector label={<T fr="Classe" en="Class" />} value={className} onChange={onChangeClass} options={classes.map((c) => ({ value: c, label: c }))} />
+          <Selector label={<T fr="Classe" en="Class" />} value={classSel} onChange={onChangeClass} options={classes.map((c) => ({ value: c.key, label: c.label }))} />
           <ComboField
             label={<T fr="Matière" en="Subject" />}
             value={subjectName}

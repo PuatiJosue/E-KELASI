@@ -3,6 +3,7 @@
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { getMySchool } from "@/lib/school-db";
 import { isLiveMode } from "@/lib/db";
+import { classLabel } from "@/lib/classes";
 
 function service() {
   return createServiceClient(
@@ -75,16 +76,18 @@ export async function listStudentsForAttendance(): Promise<StudentLite[]> {
     const svc = service();
     const { data } = await svc
       .from("students")
-      .select("id, full_name, class_name, matricule")
+      .select("id, full_name, class_name, option, matricule")
       .eq("school_id", school.id)
       .eq("status", "active")
       .order("class_name")
+      .order("option")
       .order("matricule")
       .order("full_name");
     return (data ?? []).map((s: any) => ({
       id: s.id,
       name: s.full_name,
-      className: s.class_name ?? "—",
+      // className porte le libellé composite → la vue regroupe par option.
+      className: classLabel(s.class_name, s.option),
       matricule: s.matricule ?? "—",
     }));
   } catch {

@@ -4,6 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { listStudentsInClass } from "@/lib/teacher-db";
+import { classLabel, normOption } from "@/lib/classes";
 import { TRIMESTERS, currentTrimester, trimesterMeta } from "@/lib/trimester";
 
 export default async function ClassDetail({
@@ -11,11 +12,14 @@ export default async function ClassDetail({
   searchParams,
 }: {
   params: { class: string };
-  searchParams: { t?: string };
+  searchParams: { t?: string; option?: string };
 }) {
   const className = decodeURIComponent(params.class);
+  const option = normOption(searchParams.option);
+  const label = classLabel(className, option);
+  const optionQs = `&option=${encodeURIComponent(option ?? "")}`;
   const selectedTri = Number(searchParams.t) || currentTrimester();
-  const students = await listStudentsInClass(className, selectedTri);
+  const students = await listStudentsInClass(className, option, selectedTri);
   const triMeta = trimesterMeta(selectedTri);
 
   const avgClass = students.length > 0 && students.some((s) => s.avg !== null)
@@ -25,14 +29,14 @@ export default async function ClassDetail({
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
-        title={{ fr: className, en: className }}
+        title={{ fr: label, en: label }}
         sub={{
           fr: `${students.length} élèves · ${triMeta.fr}${avgClass !== null ? ` · moyenne classe ${avgClass}/20` : ""}`,
           en: `${students.length} students · ${triMeta.en}${avgClass !== null ? ` · class avg ${avgClass}/20` : ""}`,
         }}
         right={
           <Link
-            href={`/teacher/grades?class=${encodeURIComponent(className)}`}
+            href={`/teacher/grades?class=${encodeURIComponent(className)}${optionQs}`}
             className="ek-btn ek-btn-primary"
             style={{ height: 32, fontSize: 12 }}
           >
@@ -49,7 +53,7 @@ export default async function ClassDetail({
           return (
             <Link
               key={m.index}
-              href={`/teacher/classes/${encodeURIComponent(className)}?t=${m.index}`}
+              href={`/teacher/classes/${encodeURIComponent(className)}?t=${m.index}${optionQs}`}
               style={{
                 fontSize: 12,
                 fontWeight: 600,

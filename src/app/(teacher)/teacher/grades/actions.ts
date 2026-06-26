@@ -7,6 +7,7 @@ import { isLiveMode } from "@/lib/db";
 import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
 import { formatDateFr } from "@/lib/grade-report";
 import { renderNotePdf } from "@/lib/note-pdf";
+import { classLabel } from "@/lib/classes";
 
 export type GradeInput = { studentId: string; score: number };
 
@@ -152,7 +153,7 @@ async function sendNotePdfs(opts: {
     try {
       const { data: student } = await admin
         .from("students")
-        .select("full_name, class_name")
+        .select("full_name, class_name, option")
         .eq("id", item.studentId)
         .maybeSingle();
       if (!student) continue;
@@ -165,7 +166,7 @@ async function sendNotePdfs(opts: {
           brandColor: sc.brand_color ?? null,
         },
         studentName: (student as any).full_name,
-        className: (student as any).class_name ?? "—",
+        className: classLabel((student as any).class_name, (student as any).option),
         subject: opts.subject,
         kind: opts.kind,
         score: item.score,

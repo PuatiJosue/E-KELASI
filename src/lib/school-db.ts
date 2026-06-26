@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
 import { TRIMESTERS, trimesterOf, currentTrimester } from "@/lib/trimester";
+import { classLabel, classKey, normOption } from "@/lib/classes";
 
 // Agrège une liste de cotes en moyennes par matière + moyenne générale.
 function aggregateGrades(grades: any[]): { subjects: DossierSubject[]; overallAvg: number } {
@@ -75,7 +76,9 @@ export type SchoolStudentRow = {
 };
 
 export type ClassDirectoryRow = {
-  className: string;
+  className: string;        // class_name brut
+  option: string | null;   // option/filière
+  label: string;           // « Niveau — Option » pour l'affichage
   studentCount: number;
   teacherCount: number;
   teacherNames: string[];
@@ -111,6 +114,8 @@ export type StudentDossier = {
 
 export type ClassWithAvg = {
   className: string;
+  option: string | null;
+  label: string;
   studentCount: number;
   avg: number | null;
 };
@@ -195,7 +200,7 @@ export async function getSchoolKpis(): Promise<SchoolKpis> {
 
     const [{ count: students }, { data: students2 }, { count: teachers }] = await Promise.all([
       supabase.from("students").select("*", { count: "exact", head: true }).eq("school_id", school.id),
-      supabase.from("students").select("class_name").eq("school_id", school.id),
+      supabase.from("students").select("class_name, option").eq("school_id", school.id),
       supabase
         .from("school_staff")
         .select("*", { count: "exact", head: true })
@@ -203,7 +208,10 @@ export async function getSchoolKpis(): Promise<SchoolKpis> {
         .eq("role", "teacher"),
     ]);
 
-    const classes = new Set((students2 ?? []).map((s: any) => s.class_name).filter(Boolean)).size;
+    // Une classe = couple (class_name, option) → on compte les clés distinctes.
+    const classes = new Set(
+      (students2 ?? []).filter((s: any) => s.class_name).map((s: any) => classKey(s.class_name, s.option))
+    ).size;
 
     // grades du mois en cours
     const monthStart = new Date();
@@ -390,18 +398,21 @@ export async function listSchoolParents(): Promise<SchoolParentRow[]> {
 
 export async function listClassesWithAvg(): Promise<ClassWithAvg[]> {
   const students = await listSchoolStudents();
-  const grouped: Record<string, { count: number; sum: number; n: number }> = {};
+  const grouped: Record<string, { className: string; option: string | null; count: number; sum: number; n: number }> = {};
   for (const s of students) {
-    const c = s.className;
-    if (!grouped[c]) grouped[c] = { count: 0, sum: 0, n: 0 };
-    grouped[c].count++;
+    const option = normOption(s.option);
+    const key = classKey(s.className, option);
+    if (!grouped[key]) grouped[key] = { className: s.className, option, count: 0, sum: 0, n: 0 };
+    grouped[key].count++;
     if (s.avg !== null) {
-      grouped[c].sum += s.avg;
-      grouped[c].n++;
+      grouped[key].sum += s.avg;
+      grouped[key].n++;
     }
   }
-  return Object.entries(grouped).map(([className, g]) => ({
-    className,
+  return Object.values(grouped).map((g) => ({
+    className: g.className,
+    option: g.option,
+    label: classLabel(g.className, g.option),
     studentCount: g.count,
     avg: g.n > 0 ? +(g.sum / g.n).toFixed(1) : null,
   }));
@@ -587,24 +598,31 @@ export async function getClassDirectory(): Promise<{
       }
     }
 
-    // Regroupe les élèves par classe.
-    const byClass: Record<string, SchoolStudentRow[]> = {};
-    for (const s of students) (byClass[s.className] ||= []).push(s);
+    // Regroupe les élèves par classe (couple class_name + option).
+    const byClass: Record<string, { className: string; option: string | null; list: SchoolStudentRow[] }> = {};
+    for (const s of students) {
+      const option = normOption(s.option);
+      const key = classKey(s.className, option);
+      (byClass[key] ||= { className: s.className, option, list: [] }).list.push(s);
+    }
 
-    const rows: ClassDirectoryRow[] = Object.entries(byClass)
-      .map(([className, list]) => {
+    const rows: ClassDirectoryRow[] = Object.values(byClass)
+      .map(({ className, option, list }) => {
         const withAvg = list.filter((s) => s.avg !== null) as { avg: number }[];
         const avg = withAvg.length ? +(withAvg.reduce((a, s) => a + s.avg, 0) / withAvg.length).toFixed(1) : null;
+        // Les devoirs n'ont pas d'option : on réutilise les profs du niveau pour chaque option.
         const tset = teachersByClass[className] ?? new Set<string>();
         return {
           className,
+          option,
+          label: classLabel(className, option),
           studentCount: list.length,
           teacherCount: tset.size,
           teacherNames: [...tset].map((id) => teacherName.get(id) ?? "").filter(Boolean),
           avg,
         };
       })
-      .sort((a, b) => a.className.localeCompare(b.className));
+      .sort((a, b) => a.label.localeCompare(b.label));
 
     return { rows, totalStudents: students.length, totalTeachers: teacherIds.length };
   } catch {
