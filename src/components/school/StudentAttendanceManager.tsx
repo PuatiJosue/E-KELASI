@@ -78,11 +78,12 @@ export function StudentAttendanceManager({
   });
 
   const exportCsv = () => {
-    const header = ["N°", "Nom et prénoms", "Classe", "Date", "Statut"];
+    const header = ["N°", "Matricule", "Nom et prénoms", "Classe", "Date", "Statut"];
     const lines = [
       header,
       ...current.map((s, i) => [
         i + 1,
+        s.matricule,
         s.name,
         s.className,
         dateFr,
@@ -103,7 +104,7 @@ export function StudentAttendanceManager({
     const rows = current
       .map((s, i) => {
         const st = labelOf(marks[s.id] ?? "");
-        return `<tr><td class="num">${i + 1}</td><td>${escapeHtml(s.name)}</td><td style="color:${st?.color ?? "#888"};font-weight:600">${st?.fr ?? "—"}</td></tr>`;
+        return `<tr><td class="num">${i + 1}</td><td class="mat">${escapeHtml(s.matricule)}</td><td>${escapeHtml(s.name)}</td><td style="color:${st?.color ?? "#888"};font-weight:600">${st?.fr ?? "—"}</td></tr>`;
       })
       .join("");
     const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Présences — ${escapeHtml(selected)}</title>
@@ -116,12 +117,13 @@ export function StudentAttendanceManager({
   th{background:#1f3a8a;color:#fff;text-align:left;padding:8px 10px;text-transform:uppercase;font-size:10px;letter-spacing:.04em}
   td{padding:8px 10px;border-bottom:1px solid #e5e7eb}
   td.num{color:#888;width:48px}
+  td.mat{font-family:'Courier New',monospace;color:#444;width:96px;white-space:nowrap}
   .totals{margin-top:16px;font-size:12px;display:flex;gap:18px;flex-wrap:wrap}
   .totals b{font-weight:700}
 </style></head><body>
   <h1>${escapeHtml(schoolName)}</h1>
   <div class="sub">Liste de présence — ${escapeHtml(selected)} · ${dateFr} · ${current.length} élève(s)</div>
-  <table><thead><tr><th>N°</th><th>Nom et prénoms</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>N°</th><th>Matricule</th><th>Nom et prénoms</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="totals">
     <span>Présents : <b>${counts.present}</b></span>
     <span>Retards : <b>${counts.late}</b></span>
@@ -202,6 +204,7 @@ export function StudentAttendanceManager({
           <div style={{ minWidth: 640 }}>
             <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "10px 18px", fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.05em", background: "var(--surface-2)" }}>
               <div>N°</div>
+              <div><T fr="Matricule" en="Student ID" /></div>
               <div><T fr="Nom et prénoms" en="Full name" /></div>
               <div><T fr="Statut" en="Status" /></div>
             </div>
@@ -210,6 +213,7 @@ export function StudentAttendanceManager({
               return (
                 <div key={s.id} style={{ display: "grid", gridTemplateColumns: GRID, padding: "10px 18px", alignItems: "center", borderTop: "1px solid var(--divider)" }}>
                   <div style={{ color: "var(--ink-3)", fontSize: 12, fontFamily: "var(--font-display)" }}>{i + 1}</div>
+                  <div style={{ color: "var(--ink-2)", fontSize: 12.5, fontFamily: "var(--font-display)", letterSpacing: "0.02em" }}>{s.matricule}</div>
                   <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: 13 }}>{s.name}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {STATUSES.map((st) => {
@@ -254,7 +258,7 @@ export function StudentAttendanceManager({
   );
 }
 
-const GRID = "0.4fr 2fr 2.4fr";
+const GRID = "0.4fr 1.1fr 2fr 2.4fr";
 
 function Dot({ color, label }: { color: string; label: string }) {
   return (

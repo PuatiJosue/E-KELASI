@@ -63,7 +63,7 @@ export async function getAttendanceForDate(date: string): Promise<DayAttendance>
 }
 
 // ── Présence des élèves (console école) ─────────────────────────────
-export type StudentLite = { id: string; name: string; className: string };
+export type StudentLite = { id: string; name: string; className: string; matricule: string };
 export type StudentDayAttendance = Record<string, string>; // studentId -> status
 
 // Tous les élèves actifs de l'école (groupés côté UI par classe).
@@ -75,15 +75,17 @@ export async function listStudentsForAttendance(): Promise<StudentLite[]> {
     const svc = service();
     const { data } = await svc
       .from("students")
-      .select("id, full_name, class_name")
+      .select("id, full_name, class_name, matricule")
       .eq("school_id", school.id)
       .eq("status", "active")
       .order("class_name")
+      .order("matricule")
       .order("full_name");
     return (data ?? []).map((s: any) => ({
       id: s.id,
       name: s.full_name,
       className: s.class_name ?? "—",
+      matricule: s.matricule ?? "—",
     }));
   } catch {
     return [];
