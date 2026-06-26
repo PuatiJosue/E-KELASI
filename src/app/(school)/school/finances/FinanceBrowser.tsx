@@ -28,6 +28,24 @@ export function FinanceBrowser({ rows }: { rows: FeeSummaryRow[] }) {
     });
   }, [rows, query, onlyPaid]);
 
+  // Regroupe les élèves filtrés par classe, avec total payé par devise par classe.
+  const groups = useMemo(() => {
+    const map = new Map<string, { className: string; students: FeeSummaryRow[]; totals: Map<string, number> }>();
+    for (const r of filtered) {
+      const g = map.get(r.className) ?? { className: r.className, students: [], totals: new Map<string, number>() };
+      g.students.push(r);
+      for (const t of r.totals) g.totals.set(t.currency, (g.totals.get(t.currency) ?? 0) + t.total);
+      map.set(r.className, g);
+    }
+    return [...map.values()]
+      .map((g) => ({
+        ...g,
+        students: g.students.sort((a, b) => a.fullName.localeCompare(b.fullName)),
+        totalLabel: [...g.totals.entries()].map(([c, v]) => fmt(v, c)).join(" + ") || "—",
+      }))
+      .sort((a, b) => a.className.localeCompare(b.className));
+  }, [filtered]);
+
   return (
     <>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -48,59 +66,81 @@ export function FinanceBrowser({ rows }: { rows: FeeSummaryRow[] }) {
         </label>
       </div>
 
-      <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
-        <div className="ek-tablewrap">
-          <div style={{ minWidth: 720 }}>
+      {groups.length === 0 ? (
+        <div className="ek-card" style={{ padding: 40, textAlign: "center", color: "var(--ink-3)", fontSize: 13 }}>
+          <T fr="Aucun élève." en="No student." />
+        </div>
+      ) : (
+        groups.map((g) => (
+          <div key={g.className} className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+            {/* En-tête de classe avec total payé de la classe */}
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "2fr 1.2fr 1.3fr 0.8fr 1.2fr",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
                 padding: "12px 18px",
-                fontSize: 11,
-                fontWeight: 700,
-                color: "var(--ink-3)",
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-                background: "var(--surface-2)",
+                background: "var(--brand-soft)",
                 borderBottom: "1px solid var(--border)",
+                flexWrap: "wrap",
               }}
             >
-              <div><T fr="Élève" en="Student" /></div>
-              <div><T fr="Classe" en="Class" /></div>
-              <div><T fr="Total payé" en="Total paid" /></div>
-              <div style={{ textAlign: "center" }}><T fr="Paiements" en="Payments" /></div>
-              <div><T fr="Dernier" en="Last" /></div>
+              <Icon name="users" size={16} stroke={2} />
+              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--brand-600)" }}>{g.className}</span>
+              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>
+                {g.students.length} <T fr="élève(s)" en="student(s)" />
+              </span>
+              <span style={{ marginLeft: "auto", fontSize: 12.5, color: "var(--ink-2)" }}>
+                <T fr="Total classe" en="Class total" /> : <strong style={{ color: "var(--ink)" }}>{g.totalLabel}</strong>
+              </span>
             </div>
-            {filtered.map((r, i) => (
-              <Link
-                key={r.studentId}
-                href={`/school/students/${r.studentId}`}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 1.2fr 1.3fr 0.8fr 1.2fr",
-                  padding: "12px 18px",
-                  alignItems: "center",
-                  fontSize: 12.5,
-                  borderTop: i > 0 ? "1px solid var(--divider)" : "none",
-                }}
-              >
-                <div style={{ fontWeight: 600, color: "var(--ink)" }}>{r.fullName}</div>
-                <div style={{ color: "var(--ink-3)" }}>{r.className}</div>
-                <div style={{ color: r.count > 0 ? "var(--ink)" : "var(--ink-3)", fontWeight: 600 }}>
-                  {r.totals.length > 0 ? r.totals.map((t) => fmt(t.total, t.currency)).join(" + ") : "—"}
+
+            <div className="ek-tablewrap">
+              <div style={{ minWidth: 640 }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "2.4fr 1.6fr 0.8fr 1.4fr",
+                    padding: "10px 18px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--ink-3)",
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    background: "var(--surface-2)",
+                  }}
+                >
+                  <div><T fr="Élève" en="Student" /></div>
+                  <div><T fr="Total payé" en="Total paid" /></div>
+                  <div style={{ textAlign: "center" }}><T fr="Paiements" en="Payments" /></div>
+                  <div><T fr="Dernier" en="Last" /></div>
                 </div>
-                <div style={{ textAlign: "center", color: "var(--ink-2)" }}>{r.count || "—"}</div>
-                <div style={{ color: "var(--ink-3)" }}>{fmtDate(r.lastPaidAt)}</div>
-              </Link>
-            ))}
-            {filtered.length === 0 && (
-              <div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)", fontSize: 13 }}>
-                <T fr="Aucun élève." en="No student." />
+                {g.students.map((r, i) => (
+                  <Link
+                    key={r.studentId}
+                    href={`/school/students/${r.studentId}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "2.4fr 1.6fr 0.8fr 1.4fr",
+                      padding: "11px 18px",
+                      alignItems: "center",
+                      fontSize: 12.5,
+                      borderTop: "1px solid var(--divider)",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, color: "var(--ink)" }}>{r.fullName}</div>
+                    <div style={{ color: r.count > 0 ? "var(--ink)" : "var(--ink-3)", fontWeight: 600 }}>
+                      {r.totals.length > 0 ? r.totals.map((t) => fmt(t.total, t.currency)).join(" + ") : "—"}
+                    </div>
+                    <div style={{ textAlign: "center", color: "var(--ink-2)" }}>{r.count || "—"}</div>
+                    <div style={{ color: "var(--ink-3)" }}>{fmtDate(r.lastPaidAt)}</div>
+                  </Link>
+                ))}
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      </div>
+        ))
+      )}
     </>
   );
 }

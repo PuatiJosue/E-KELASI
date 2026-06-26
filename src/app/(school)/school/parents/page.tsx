@@ -28,11 +28,11 @@ export default async function SchoolParents() {
           </div>
         ) : (
           <div className="ek-tablewrap">
-            <div style={{ minWidth: 820 }}>
+            <div style={{ minWidth: 960 }}>
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "2fr 1.8fr 0.9fr 1fr",
+                  gridTemplateColumns: "1.8fr 1.8fr 1.5fr 0.8fr 0.9fr",
                   padding: "12px 18px",
                   fontSize: 11,
                   fontWeight: 700,
@@ -44,6 +44,7 @@ export default async function SchoolParents() {
                 }}
               >
                 <div><T fr="Parent" en="Parent" /></div>
+                <div><T fr="Coordonnées" en="Contact" /></div>
                 <div><T fr="Enfant(s)" en="Child(ren)" /></div>
                 <div><T fr="Statut" en="Status" /></div>
                 <div style={{ textAlign: "right" }}><T fr="Action" en="Action" /></div>
@@ -53,7 +54,7 @@ export default async function SchoolParents() {
                   key={p.parentId}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2fr 1.8fr 0.9fr 1fr",
+                    gridTemplateColumns: "1.8fr 1.8fr 1.5fr 0.8fr 0.9fr",
                     padding: "12px 18px",
                     alignItems: "center",
                     fontSize: 12.5,
@@ -65,6 +66,14 @@ export default async function SchoolParents() {
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600, color: "var(--ink)" }}>{p.fullName}</div>
                       <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{p.email}</div>
+                    </div>
+                  </div>
+                  <div style={{ color: "var(--ink-2)", fontSize: 11.5, minWidth: 0 }}>
+                    <div>
+                      <span style={{ color: "var(--ink-3)" }}>☎ </span>{p.phone || "—"}
+                    </div>
+                    <div style={{ marginTop: 2, color: "var(--ink-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <T fr="Adr." en="Addr." /> : {p.address || "—"}
                     </div>
                   </div>
                   <div style={{ color: "var(--ink-3)", fontSize: 11.5 }}>

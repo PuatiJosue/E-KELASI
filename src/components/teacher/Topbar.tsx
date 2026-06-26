@@ -10,6 +10,8 @@ const LABELS: Record<string, { fr: string; en: string }> = {
   dashboard: { fr: "Tableau de bord", en: "Dashboard" },
   classes:   { fr: "Mes classes",     en: "My classes" },
   grades:    { fr: "Saisie des notes", en: "Enter grades" },
+  history:   { fr: "Historique des notes", en: "Grade history" },
+  journal:   { fr: "Journal de bord", en: "Class logbook" },
   homework:  { fr: "Devoirs",         en: "Homework" },
   library:   { fr: "Bibliothèque",    en: "Library" },
   messages:  { fr: "Messagerie",      en: "Inbox" },

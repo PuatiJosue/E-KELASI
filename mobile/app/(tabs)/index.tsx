@@ -1,9 +1,9 @@
 // Home / Dashboard — greeting, child hero, recent grades, homework, messages preview.
 
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Svg, { Path } from "react-native-svg";
 
 import { Logo } from "@/components/Logo";
@@ -32,6 +32,27 @@ export default function Home() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [dataReady, setDataReady] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Actualisation manuelle (tirer vers le bas) de toutes les données de l'accueil.
+  const reload = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        listThreads().then(setThreads).catch(() => {}),
+        listAnnouncements().then(setAnnouncements).catch(() => {}),
+        refresh(),
+        selectedChild
+          ? Promise.all([listGrades(5, selectedChild.id), listHomework(selectedChild.grade)]).then(([g, h]) => {
+              setGrades(g);
+              setHomework(h);
+            })
+          : Promise.resolve(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selectedChild?.id, selectedChild?.grade, refresh]);
 
   // Messagerie + annonces : une seule fois.
   useEffect(() => {
@@ -109,7 +130,10 @@ export default function Home() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 20 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={t.brand} />}
+      >
         <HeaderGreeting parentName={parentName} onBell={() => router.push("/notifications")} />
 
         <ChildSwitcher style={{ paddingVertical: 6 }} />

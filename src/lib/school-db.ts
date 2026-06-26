@@ -119,6 +119,8 @@ export type SchoolParentRow = {
   parentId: string;
   fullName: string;
   email: string;
+  phone: string;
+  address: string;
   students: string[];
   status: "active" | "blocked";
 };
@@ -351,16 +353,18 @@ export async function listSchoolParents(): Promise<SchoolParentRow[]> {
 
     const { data: links } = await supabase
       .from("parent_links")
-      .select("parent_id, student_id, access_status, profiles!parent_links_parent_id_fkey(full_name, email)")
+      .select("parent_id, student_id, access_status, profiles!parent_links_parent_id_fkey(full_name, email, phone, address)")
       .in("student_id", ids);
 
-    const byParent = new Map<string, { parentId: string; fullName: string; email: string; students: string[]; anyActive: boolean }>();
+    const byParent = new Map<string, { parentId: string; fullName: string; email: string; phone: string; address: string; students: string[]; anyActive: boolean }>();
     for (const l of links ?? []) {
       const pid = (l as any).parent_id;
       const cur = byParent.get(pid) ?? {
         parentId: pid,
         fullName: (l as any).profiles?.full_name ?? "?",
         email: (l as any).profiles?.email ?? "",
+        phone: (l as any).profiles?.phone ?? "",
+        address: (l as any).profiles?.address ?? "",
         students: [] as string[],
         anyActive: false,
       };
@@ -374,6 +378,8 @@ export async function listSchoolParents(): Promise<SchoolParentRow[]> {
       parentId: p.parentId,
       fullName: p.fullName,
       email: p.email,
+      phone: p.phone,
+      address: p.address,
       students: p.students,
       status: p.anyActive ? "active" : "blocked",
     }));
