@@ -1,7 +1,7 @@
 import { KPI, PageHeader } from "@/components/KPI";
 import { MRRChart, Donut } from "@/components/Charts";
 import { T } from "@/lib/i18n";
-import { getOverview, type PlanSlice } from "@/lib/db";
+import { getOverview, getCommsFlowThisMonth, type PlanSlice } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 
 const PLAN_META: Record<PlanSlice["plan"], { label: string; color: string }> = {
@@ -26,7 +26,10 @@ function EmptyState({ fr, en }: { fr: string; en: string }) {
 }
 
 export default async function OverviewPage() {
-  const { mrr12m, topSchools, planDistribution, kpis } = await getOverview();
+  const [{ mrr12m, topSchools, planDistribution, kpis }, comms] = await Promise.all([
+    getOverview(),
+    getCommsFlowThisMonth(),
+  ]);
 
   // Profil réel pour le bonjour personnalisé.
   let firstName = "";
@@ -68,6 +71,31 @@ export default async function OverviewPage() {
         <KPI label={<T fr="Parents abonnés" en="Paying parents" />} value={kpis.parents} />
         <KPI label={<T fr="Churn rate" en="Churn rate" />} value={kpis.churn} accent="var(--accent)" />
         <KPI label={<T fr="Écoles partenaires" en="Partner schools" />} value={kpis.schools} />
+      </div>
+
+      {/* Flux de données — communications école → familles ce mois */}
+      <div className="ek-card" style={{ padding: 20 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+              <T fr="Flux de données" en="Data flow" />
+            </div>
+            <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+              <T
+                fr="Messages, bulletins et notes envoyés des écoles vers les familles ce mois-ci"
+                en="Messages, report cards and grades sent from schools to families this month"
+              />
+            </div>
+          </div>
+          <div style={{ fontSize: 30, fontWeight: 700, color: "var(--brand-600)", fontFamily: "var(--font-display)", fontVariantNumeric: "tabular-nums" }}>
+            {comms.total.toLocaleString("fr-FR")}
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 16 }}>
+          <FlowStat color="var(--info)" value={comms.messages} label={<T fr="Messages" en="Messages" />} />
+          <FlowStat color="var(--brand)" value={comms.bulletins} label={<T fr="Bulletins & annonces" en="Reports & announcements" />} />
+          <FlowStat color="var(--accent)" value={comms.notes} label={<T fr="Notes" en="Grades" />} />
+        </div>
       </div>
 
       <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
@@ -204,6 +232,20 @@ export default async function OverviewPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function FlowStat({ color, value, label }: { color: string; value: number; label: React.ReactNode }) {
+  return (
+    <div style={{ padding: "12px 14px", borderRadius: 10, background: "var(--surface-2)", display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+        <span style={{ width: 9, height: 9, borderRadius: "50%", background: color }} />
+        <span style={{ fontSize: 18, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)", fontVariantNumeric: "tabular-nums" }}>
+          {value.toLocaleString("fr-FR")}
+        </span>
+      </div>
+      <span style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{label}</span>
     </div>
   );
 }

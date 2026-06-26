@@ -86,6 +86,34 @@
   --accent-50: #15241D;
 }
 
+/* ── Police (data-font) — choisie dans Paramètres › Apparence ───────── */
+[data-font="editorial"] {
+  --font-display: 'Bricolage Grotesque', Georgia, 'Times New Roman', serif;
+  --font-body: Georgia, 'Times New Roman', serif;
+}
+[data-font="geometric"] {
+  --font-display: 'Plus Jakarta Sans', ui-rounded, 'Segoe UI', system-ui, sans-serif;
+  --font-body: ui-rounded, 'Segoe UI', system-ui, sans-serif;
+}
+[data-font="jakarta"] {
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* ── Style des cartes (data-card-style) ────────────────────────────── */
+[data-card-style="flat"] {
+  --card-border: 1px solid var(--border);
+  --card-shadow: none;
+}
+[data-card-style="elevated"] {
+  --card-border: 1px solid transparent;
+  --card-shadow: 0 2px 6px rgba(20, 16, 10, 0.06), 0 14px 36px rgba(20, 16, 10, 0.10);
+}
+[data-card-style="outlined"] {
+  --card-border: 1.5px solid var(--border-strong);
+  --card-shadow: none;
+}
+
 html, body {
   margin: 0;
   padding: 0;
