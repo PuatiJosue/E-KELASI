@@ -1,14 +1,15 @@
 import { PageHeader } from "@/components/KPI";
-import { getClassDirectory, listSchoolTeachers } from "@/lib/school-db";
+import { getClassDirectory, listSchoolTeachers, getClassReportMatrix } from "@/lib/school-db";
 import { listAssignments, listFormOptions } from "@/lib/courses-db";
 import { ClassesTabs } from "./ClassesTabs";
 
 export default async function SchoolClasses() {
-  const [{ rows, totalStudents, totalTeachers }, teachers, assignments, options] = await Promise.all([
+  const [{ rows, totalStudents, totalTeachers }, teachers, assignments, options, matrix] = await Promise.all([
     getClassDirectory(),
     listSchoolTeachers(),
     listAssignments(),
     listFormOptions(),
+    getClassReportMatrix(),
   ]);
 
   return (
@@ -16,8 +17,8 @@ export default async function SchoolClasses() {
       <PageHeader
         title={{ fr: "Rapport global des classes", en: "Class report" }}
         sub={{
-          fr: `${totalStudents} élèves · ${totalTeachers} enseignants · ${rows.length} classes`,
-          en: `${totalStudents} students · ${totalTeachers} teachers · ${rows.length} classes`,
+          fr: "Taux de réussite par option et niveau, du primaire aux humanités.",
+          en: "Success rate by option and level, from primary to secondary.",
         }}
       />
       <ClassesTabs
@@ -27,6 +28,7 @@ export default async function SchoolClasses() {
         teachers={teachers}
         assignments={assignments}
         options={options}
+        matrix={matrix}
       />
     </div>
   );

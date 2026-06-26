@@ -407,6 +407,143 @@ export async function listClassesWithAvg(): Promise<ClassWithAvg[]> {
   }));
 }
 
+// ── Rapport global des classes : taux de réussite par niveau × option ──
+export type ClassReportLevel = {
+  key: string;
+  label: string;
+  group: "base" | "secondaire";
+  byOption: Record<string, number | null>; // moyenne /20 par option
+  overall: number | null;                   // moyenne /20 du niveau
+  students: number;
+};
+export type ClassReportMatrix = {
+  levels: ClassReportLevel[];
+  options: string[];
+  best: { label: string; value: number } | null;
+  worst: { label: string; value: number } | null;
+  avgRatePct: number | null; // taux moyen de réussite (%)
+  totalStudents: number;
+};
+
+// Liste canonique des niveaux (système congolais), de la 1re primaire aux humanités.
+const REPORT_LEVELS: { key: string; label: string; group: "base" | "secondaire" }[] = [
+  { key: "p1", label: "1re année primaire", group: "base" },
+  { key: "p2", label: "2e année primaire", group: "base" },
+  { key: "p3", label: "3e année primaire", group: "base" },
+  { key: "p4", label: "4e année primaire", group: "base" },
+  { key: "p5", label: "5e année primaire", group: "base" },
+  { key: "p6", label: "6e année primaire", group: "base" },
+  { key: "b7", label: "7e année (éducation de base)", group: "base" },
+  { key: "b8", label: "8e année (éducation de base)", group: "base" },
+  { key: "h1", label: "1re année des humanités", group: "secondaire" },
+  { key: "h2", label: "2e année des humanités", group: "secondaire" },
+  { key: "h3", label: "3e année des humanités", group: "secondaire" },
+  { key: "h4", label: "4e année des humanités", group: "secondaire" },
+];
+
+// Domaines/options officiels de l'enseignement secondaire (RDC) + Professionnelle.
+const REPORT_OPTIONS = ["Sciences", "Technique", "Commercial et gestion", "Pédagogie", "Littéraire", "Nutrition", "Arts et métiers", "Professionnelle"];
+
+const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+function levelKeyOf(raw: string): string | null {
+  const s = norm(raw);
+  const digit = (s.match(/(\d+)/)?.[1]) ?? "";
+  if (s.includes("primaire")) return digit && +digit >= 1 && +digit <= 6 ? `p${digit}` : null;
+  if (s.includes("humanit") || s.includes("secondaire")) return digit && +digit >= 1 && +digit <= 4 ? `h${digit}` : null;
+  if (s.includes("base") || s.includes("annee")) {
+    if (s.includes("7")) return "b7";
+    if (s.includes("8")) return "b8";
+  }
+  return null;
+}
+
+function optionLabelOf(raw: string | null): string | null {
+  const s = norm(raw ?? "");
+  if (!s) return null;
+  if (s.includes("profession")) return "Professionnelle";
+  if (s.includes("pedagog")) return "Pédagogie";
+  if (s.includes("commerc") || s.includes("gestion") || s.includes("comptab")) return "Commercial et gestion";
+  if (s.includes("nutri") || s.includes("hotel") || s.includes("restaur")) return "Nutrition";
+  if (s.includes("art") || s.includes("couture") || s.includes("esthet") || s.includes("artisan") || s.includes("coupe")) return "Arts et métiers";
+  if (s.includes("litt") || s.includes("latin") || s.includes("philo") || s.includes("langue")) return "Littéraire";
+  if (s.includes("techni") || s.includes("electr") || s.includes("mecani") || s.includes("construc") || s.includes("informat")) return "Technique";
+  if (s.includes("scien") || s.includes("math") || s.includes("physi") || s.includes("bio") || s.includes("chimi")) return "Sciences";
+  return null;
+}
+
+export async function getClassReportMatrix(): Promise<ClassReportMatrix> {
+  const empty: ClassReportMatrix = { levels: [], options: REPORT_OPTIONS, best: null, worst: null, avgRatePct: null, totalStudents: 0 };
+  if (!isLiveMode()) return empty;
+  try {
+    const students = await listSchoolStudents();
+    // Accumulateurs : somme + n par (niveau, option) et par niveau.
+    const cell = new Map<string, { sum: number; n: number }>(); // key: levelKey|option
+    const lvl = new Map<string, { sum: number; n: number; students: number }>();
+    let gSum = 0, gN = 0;
+
+    for (const st of students) {
+      const lk = levelKeyOf(st.gradeLevel || st.className);
+      if (!lk) continue;
+      const lv = lvl.get(lk) ?? { sum: 0, n: 0, students: 0 };
+      lv.students += 1;
+      if (st.avg !== null) {
+        lv.sum += st.avg; lv.n += 1;
+        gSum += st.avg; gN += 1;
+        const ok = optionLabelOf(st.option);
+        if (ok) {
+          const ck = `${lk}|${ok}`;
+          const c = cell.get(ck) ?? { sum: 0, n: 0 };
+          c.sum += st.avg; c.n += 1;
+          cell.set(ck, c);
+        }
+      }
+      lvl.set(lk, lv);
+    }
+
+    const levels: ClassReportLevel[] = REPORT_LEVELS.map((L) => {
+      const byOption: Record<string, number | null> = {};
+      for (const opt of REPORT_OPTIONS) {
+        const c = cell.get(`${L.key}|${opt}`);
+        byOption[opt] = c && c.n > 0 ? +(c.sum / c.n).toFixed(1) : null;
+      }
+      const lv = lvl.get(L.key);
+      return {
+        key: L.key,
+        label: L.label,
+        group: L.group,
+        byOption,
+        overall: lv && lv.n > 0 ? +(lv.sum / lv.n).toFixed(1) : null,
+        students: lv?.students ?? 0,
+      };
+    });
+
+    // Meilleure / pire performance (parmi les cellules option×niveau renseignées).
+    let best: { label: string; value: number } | null = null;
+    let worst: { label: string; value: number } | null = null;
+    for (const L of levels) {
+      for (const opt of REPORT_OPTIONS) {
+        const v = L.byOption[opt];
+        if (v === null) continue;
+        const label = `${opt} · ${L.label}`;
+        if (!best || v > best.value) best = { label, value: v };
+        if (!worst || v < worst.value) worst = { label, value: v };
+      }
+    }
+
+    return {
+      levels,
+      options: REPORT_OPTIONS,
+      best,
+      worst,
+      avgRatePct: gN > 0 ? Math.round((gSum / gN / 20) * 100) : null,
+      totalStudents: students.length,
+    };
+  } catch {
+    return empty;
+  }
+}
+
 // Annuaire : effectifs élèves + enseignants par classe (+ moyenne).
 export async function getClassDirectory(): Promise<{
   rows: ClassDirectoryRow[];
