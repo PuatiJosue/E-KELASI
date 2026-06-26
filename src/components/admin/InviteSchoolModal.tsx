@@ -27,7 +27,7 @@ function InviteSchoolModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [creds, setCreds] = useState<{ email: string; password: string; school: string } | null>(null);
+  const [invite, setInvite] = useState<{ code: string; school: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -36,8 +36,8 @@ function InviteSchoolModal({ onClose }: { onClose: () => void }) {
     setError(null);
     startTransition(async () => {
       const result = await inviteSchoolAction(form);
-      if (result.ok && result.credentials) {
-        setCreds(result.credentials);
+      if (result.ok && result.invite) {
+        setInvite(result.invite);
         router.refresh();
       } else if (result.ok) {
         onClose();
@@ -48,13 +48,12 @@ function InviteSchoolModal({ onClose }: { onClose: () => void }) {
   };
 
   const copyMessage = () => {
-    if (!creds) return;
+    if (!invite) return;
     const msg =
-      `Bonjour, voici vos accès à E-KLASS pour ${creds.school} :\n` +
-      `Site : https://e-kelasi.vercel.app/login\n` +
-      `Email : ${creds.email}\n` +
-      `Mot de passe : ${creds.password}\n` +
-      `(Changez votre mot de passe après la première connexion.)`;
+      `Bonjour, voici l'accès à E-KLASS pour ${invite.school} :\n` +
+      `1. Allez sur https://e-kelasi.vercel.app/school-signup\n` +
+      `2. Saisissez votre code d'accès : ${invite.code}\n` +
+      `3. Créez votre email et votre mot de passe de connexion.`;
     navigator.clipboard?.writeText(msg).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -94,21 +93,20 @@ function InviteSchoolModal({ onClose }: { onClose: () => void }) {
             <Icon name="close" size={18} />
           </button>
         </div>
-        {creds ? (
+        {invite ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ padding: "10px 12px", borderRadius: 9, background: "var(--accent-100)", color: "var(--accent)", fontSize: 12, fontWeight: 600 }}>
-              <T fr="Compte direction créé ✅" en="Headmaster account created ✅" />
+              <T fr="École créée ✅ — code d'accès généré" en="School created ✅ — access code generated" />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 14, borderRadius: 10, border: "1px solid var(--border-strong)", background: "var(--surface-2)" }}>
-              <CredRow label={<T fr="École" en="School" />} value={creds.school} />
-              <CredRow label="Site" value="e-kelasi.vercel.app/login" />
-              <CredRow label="Email" value={creds.email} />
-              <CredRow label={<T fr="Mot de passe" en="Password" />} value={creds.password} mono />
+              <CredRow label={<T fr="École" en="School" />} value={invite.school} />
+              <CredRow label={<T fr="Page" en="Page" />} value="e-kelasi.vercel.app/school-signup" />
+              <CredRow label={<T fr="Code d'accès" en="Access code" />} value={invite.code} mono />
             </div>
             <div style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.4 }}>
               <T
-                fr="Transmets ces accès au directeur (WhatsApp, SMS…). Le mot de passe ne sera plus réaffiché."
-                en="Share these with the headmaster (WhatsApp, SMS…). The password won't be shown again."
+                fr="Transmets ce code à la direction (WhatsApp, SMS…). Elle crée elle-même son email et son mot de passe sur la page d'inscription. Le code ne sera plus réaffiché."
+                en="Share this code with the school (WhatsApp, SMS…). They set their own email and password on the signup page. The code won't be shown again."
               />
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -129,40 +127,52 @@ function InviteSchoolModal({ onClose }: { onClose: () => void }) {
           </div>
           <Field label={<T fr="Nom du directeur" en="Headmaster name" />} name="director_name" required placeholder="M. Kabongo" />
           <Field
-            label={<T fr="Email du directeur" en="Headmaster email" />}
-            name="contact_email"
+            label={<T fr="Email de l'école" en="School email" />}
+            name="email"
             type="email"
-            required
-            placeholder="direction@ecole.cd"
+            placeholder="contact@ecole.cd"
           />
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>
-              <T fr="Plan initial" en="Initial plan" />
-            </label>
-            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-              {(["standard", "pro"] as const).map((p, i) => (
-                <label
-                  key={p}
-                  style={{
-                    flex: 1,
-                    padding: "10px 12px",
-                    borderRadius: 9,
-                    border: "1px solid var(--border-strong)",
-                    background: "var(--surface)",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <input type="radio" name="plan" value={p} defaultChecked={i === 0} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
-                    {p === "pro" ? "Pro" : "Standard"}
-                  </span>
-                </label>
-              ))}
-            </div>
+          <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label={<T fr="Téléphone" en="Phone" />} name="phone" placeholder="+243 …" />
+            <Field label={<T fr="Adresse" en="Address" />} name="address" placeholder="Avenue, n°…" />
           </div>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>
+              <T fr="Informations complémentaires" en="Additional notes" />
+            </span>
+            <textarea
+              name="notes"
+              rows={3}
+              placeholder="Numéro d'agrément, contact secondaire, remarques…"
+              style={{
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid var(--border-strong)",
+                background: "var(--surface)",
+                fontSize: 13,
+                color: "var(--ink)",
+                fontFamily: "inherit",
+                resize: "vertical",
+              }}
+            />
+          </label>
+
+          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>
+              <T fr="Documents (optionnel)" en="Documents (optional)" />
+            </span>
+            <input
+              name="documents"
+              type="file"
+              multiple
+              accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"
+              style={{ fontSize: 12.5, color: "var(--ink-2)" }}
+            />
+            <span style={{ fontSize: 11, color: "var(--ink-3)" }}>
+              <T fr="PDF, images ou documents Office — 8 Mo max par fichier." en="PDF, images or Office docs — 8 MB max per file." />
+            </span>
+          </label>
 
           {error && (
             <div

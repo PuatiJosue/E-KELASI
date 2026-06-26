@@ -7,8 +7,17 @@ import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
 
 type Result =
-  | { ok: true; message: string; credentials?: { email: string; password: string; school: string } }
+  | { ok: true; message: string; invite?: { code: string; school: string } }
   | { ok: false; message: string };
+
+// Alphabet sans caractères ambigus (0/O, 1/I/L) pour faciliter la dictée —
+// identique aux codes profs.
+const CODE_ALPHABET = "ACDEFGHJKMNPQRTVWXY3479";
+function generateCode(): string {
+  let s = "";
+  for (let i = 0; i < 8; i++) s += CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)];
+  return s.slice(0, 4) + "-" + s.slice(4); // ex: XK3F-7P9M
+}
 
 function service() {
   return createServiceClient(
@@ -28,40 +37,34 @@ function slugify(s: string) {
     .slice(0, 56);
 }
 
-// Mot de passe temporaire robuste, 4 classes garanties, sans caractères ambigus.
-function genPassword(len = 12): string {
-  const lower = "abcdefghijkmnpqrstuvwxyz";
-  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  const digit = "23456789";
-  const spec = "!@#$%&*?-";
-  const all = lower + upper + digit + spec;
-  const pick = (set: string) => set[crypto.randomInt(set.length)];
-  const pw = [pick(lower), pick(upper), pick(digit), pick(spec)];
-  while (pw.length < len) pw.push(pick(all));
-  for (let i = pw.length - 1; i > 0; i--) {
-    const j = crypto.randomInt(i + 1);
-    [pw[i], pw[j]] = [pw[j], pw[i]];
-  }
-  return pw.join("");
-}
+const MAX_DOC_BYTES = 8 * 1024 * 1024; // 8 Mo (= limite du bucket school-docs)
 
 export async function inviteSchoolAction(formData: FormData): Promise<Result> {
   const name = String(formData.get("name") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const country = String(formData.get("country_code") ?? "").trim().toUpperCase();
   const directorName = String(formData.get("director_name") ?? "").trim();
-  const contact = String(formData.get("contact_email") ?? "").trim().toLowerCase();
-  const plan = String(formData.get("plan") ?? "standard") as "standard" | "pro";
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  const docs = formData.getAll("documents").filter((d): d is File => d instanceof File && d.size > 0);
 
-  if (!name || !city || country.length !== 2 || !contact || !directorName) {
+  if (!name || !city || country.length !== 2 || !directorName) {
     return { ok: false, message: "Champs invalides." };
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, message: "Email de l'école invalide." };
+  }
+  for (const d of docs) {
+    if (d.size > MAX_DOC_BYTES) return { ok: false, message: `Le document « ${d.name} » dépasse 8 Mo.` };
   }
 
   if (!isLiveMode()) {
     return {
       ok: true,
       message: "Invitation simulée (mode démo).",
-      credentials: { email: contact, password: genPassword(), school: name },
+      invite: { code: generateCode(), school: name },
     };
   }
 
@@ -81,60 +84,139 @@ export async function inviteSchoolAction(formData: FormData): Promise<Result> {
 
   const svc = service();
 
-  // 1) Crée la fiche école (slug unique).
+  // 1) Crée la fiche école (slug unique, plan standard par défaut).
   const slug = slugify(name) + "-" + crypto.randomBytes(2).toString("hex");
   const { data: school, error: schoolErr } = await svc
     .from("schools")
-    .insert({ name, slug, city, country_code: country, plan, status: "onboarding" })
+    .insert({
+      name,
+      slug,
+      city,
+      country_code: country,
+      plan: "standard",
+      status: "onboarding",
+      director_name: directorName,
+      email: email || null,
+      phone: phone || null,
+      address: address || null,
+      notes: notes || null,
+    })
     .select("id")
     .single();
   if (schoolErr || !school) {
     return { ok: false, message: "Création de l'école impossible." };
   }
 
-  // 2) Crée le compte direction (déjà confirmé, mot de passe temporaire).
-  const password = genPassword();
-  const { data: created, error: authErr } = await svc.auth.admin.createUser({
-    email: contact,
+  // 2) Documents attachés (optionnels) → bucket privé + fiche school_documents.
+  for (const file of docs) {
+    try {
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const safeName = (file.name || "document").replace(/[^\w.\-]/g, "_");
+      const path = `${school.id}/${crypto.randomUUID()}-${safeName}`;
+      const { error: upErr } = await svc.storage
+        .from("school-docs")
+        .upload(path, bytes, { contentType: file.type || "application/octet-stream", upsert: true });
+      if (upErr) continue; // best-effort : on n'échoue pas l'invitation pour un doc
+      const { data: signed } = await svc.storage.from("school-docs").createSignedUrl(path, 60 * 60 * 24 * 365);
+      await svc.from("school_documents").insert({
+        school_id: school.id,
+        name: file.name || safeName,
+        url: signed?.signedUrl ?? path,
+        created_by: user.id,
+      });
+    } catch {
+      // best-effort
+    }
+  }
+
+  // 3) Génère un code d'accès unique (rétry max 5 si collision improbable).
+  for (let tries = 0; tries < 5; tries++) {
+    const code = generateCode();
+    const { error } = await svc.from("school_access_codes").insert({
+      code,
+      school_id: school.id,
+      director_name: directorName,
+      created_by: user.id,
+    });
+    if (!error) {
+      revalidatePath("/schools");
+      return {
+        ok: true,
+        message: `École « ${name} » créée. Transmets ce code d'accès à la direction.`,
+        invite: { code, school: name },
+      };
+    }
+    if (!error.message.toLowerCase().includes("duplicate")) {
+      return { ok: false, message: "Impossible de générer le code d'accès." };
+    }
+  }
+  return { ok: false, message: "Trop de collisions de code, réessaie." };
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// L'école consomme son code d'accès sur /school-signup pour créer son compte
+// direction (email + mot de passe choisis par elle). Calqué sur les profs.
+export async function redeemSchoolCodeAction(args: {
+  code: string;
+  email: string;
+  password: string;
+}): Promise<{ ok: true } | { ok: false; message: string }> {
+  const code = (args.code ?? "").trim().toUpperCase();
+  const email = (args.email ?? "").trim().toLowerCase();
+  const password = args.password ?? "";
+  if (!code || !email || !password) return { ok: false, message: "Tous les champs sont obligatoires." };
+  if (!EMAIL_RE.test(email)) return { ok: false, message: "Email invalide." };
+  if (password.length < 8) return { ok: false, message: "Mot de passe : au moins 8 caractères." };
+
+  if (!isLiveMode()) return { ok: true };
+
+  const admin = service();
+
+  // 1. Vérifie le code (encore non consommé).
+  const { data: row, error: rowErr } = await admin
+    .from("school_access_codes")
+    .select("code, school_id, director_name, redeemed_at")
+    .eq("code", code)
+    .maybeSingle();
+  if (rowErr) return { ok: false, message: "Code invalide." };
+  if (!row) return { ok: false, message: "Code inconnu." };
+  if (row.redeemed_at) return { ok: false, message: "Code déjà utilisé." };
+
+  // 2. Crée l'utilisateur Supabase Auth (confirmé d'office).
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: directorName },
+    user_metadata: { full_name: row.director_name ?? undefined },
   });
-  if (authErr || !created?.user) {
-    // Rollback de l'école pour ne pas laisser de fiche orpheline.
-    await svc.from("schools").delete().eq("id", school.id);
-    const dup = (authErr?.message ?? "").toLowerCase().includes("already");
-    return {
-      ok: false,
-      message: dup ? "Cet email a déjà un compte. Utilise une autre adresse." : "Création du compte direction impossible.",
-    };
+  if (createErr || !created?.user) {
+    return { ok: false, message: "Impossible de créer le compte (email déjà utilisé ?)." };
   }
-  const directorId = created.user.id;
+  const userId = created.user.id;
 
-  // 3) Profil direction + rattachement à l'école.
-  const { error: profErr } = await svc.from("profiles").insert({
-    id: directorId,
-    email: contact,
-    full_name: directorName,
+  // 3. Profil direction + lien school_staff (service_role contourne la RLS).
+  await admin.from("profiles").upsert({
+    id: userId,
+    email,
+    full_name: row.director_name ?? email,
     role: "school_admin",
     locale: "fr",
   });
-  const { error: staffErr } = await svc.from("school_staff").insert({
-    school_id: school.id,
-    user_id: directorId,
-    role: "school_admin",
-  });
-  if (profErr || staffErr) {
-    // Rollback complet.
-    await svc.auth.admin.deleteUser(directorId);
-    await svc.from("schools").delete().eq("id", school.id);
-    return { ok: false, message: "Rattachement de la direction impossible." };
-  }
+  const { error: staffErr } = await admin
+    .from("school_staff")
+    .upsert(
+      { school_id: row.school_id, user_id: userId, role: "school_admin" },
+      { onConflict: "school_id,user_id" }
+    );
+  if (staffErr) return { ok: false, message: "Liaison à l'école échouée." };
 
-  revalidatePath("/schools");
-  return {
-    ok: true,
-    message: `École « ${name} » créée. Transmets ces identifiants à la direction.`,
-    credentials: { email: contact, password, school: name },
-  };
+  // 4. École active + code marqué consommé.
+  await admin.from("schools").update({ status: "active" }).eq("id", row.school_id);
+  await admin
+    .from("school_access_codes")
+    .update({ redeemed_by: userId, redeemed_at: new Date().toISOString() })
+    .eq("code", code);
+
+  return { ok: true };
 }
