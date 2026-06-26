@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
+import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
 
 type Result = { ok: true } | { ok: false; message: string };
 
@@ -41,6 +42,32 @@ export type StaffInput = {
   notes?: string;
 };
 
+// Cours attribués au prof : matière (libre/résolue) + classe + option + heures.
+export type CourseInput = {
+  subjectName: string;
+  className: string;
+  option?: string;
+  weeklyHours?: number;
+};
+
+// Remplace les attributions de cours du membre par la liste fournie (ajout/retrait/édition).
+async function syncCourses(svc: ReturnType<typeof service>, schoolId: string, staffId: string, courses: CourseInput[]) {
+  await svc.from("course_assignments").delete().eq("school_id", schoolId).eq("staff_id", staffId);
+  const valid = courses.filter((c) => c.subjectName?.trim() && c.className?.trim());
+  for (const c of valid) {
+    const subjectId = await resolveOrCreateSubjectId(schoolId, c.subjectName);
+    if (!subjectId) continue;
+    await svc.from("course_assignments").insert({
+      school_id: schoolId,
+      staff_id: staffId,
+      subject_id: subjectId,
+      class_name: c.className.trim(),
+      option: c.option?.trim() || null,
+      weekly_hours: c.weeklyHours && c.weeklyHours > 0 ? c.weeklyHours : 0,
+    });
+  }
+}
+
 function toRow(input: StaffInput) {
   return {
     full_name: input.fullName.trim(),
@@ -56,19 +83,26 @@ function toRow(input: StaffInput) {
   };
 }
 
-export async function createStaff(input: StaffInput): Promise<Result> {
+export async function createStaff(input: StaffInput, courses?: CourseInput[]): Promise<Result> {
   if (!input.fullName?.trim()) return { ok: false, message: "Le nom est requis." };
   if (!isLiveMode()) return { ok: true };
   const schoolId = await callerSchoolId();
   if (!schoolId) return { ok: false, message: "Action réservée à la direction." };
   const svc = service();
-  const { error } = await svc.from("staff_members").insert({ school_id: schoolId, ...toRow(input) });
-  if (error) return { ok: false, message: "Enregistrement impossible." };
+  const { data: created, error } = await svc
+    .from("staff_members")
+    .insert({ school_id: schoolId, ...toRow(input) })
+    .select("id")
+    .single();
+  if (error || !created) return { ok: false, message: "Enregistrement impossible." };
+  if (courses && courses.length > 0) await syncCourses(svc, schoolId, created.id, courses);
   revalidatePath("/school/staff");
+  revalidatePath("/school/courses");
+  revalidatePath("/school/classes");
   return { ok: true };
 }
 
-export async function updateStaff(id: string, input: StaffInput): Promise<Result> {
+export async function updateStaff(id: string, input: StaffInput, courses?: CourseInput[]): Promise<Result> {
   if (!id) return { ok: false, message: "Fiche invalide." };
   if (!input.fullName?.trim()) return { ok: false, message: "Le nom est requis." };
   if (!isLiveMode()) return { ok: true };
@@ -77,7 +111,10 @@ export async function updateStaff(id: string, input: StaffInput): Promise<Result
   const svc = service();
   const { error } = await svc.from("staff_members").update(toRow(input)).eq("id", id).eq("school_id", schoolId);
   if (error) return { ok: false, message: "Mise à jour impossible." };
+  if (courses) await syncCourses(svc, schoolId, id, courses);
   revalidatePath("/school/staff");
+  revalidatePath("/school/courses");
+  revalidatePath("/school/classes");
   return { ok: true };
 }
 

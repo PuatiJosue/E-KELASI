@@ -32,6 +32,7 @@ export async function createAssignment(input: {
   staffId: string;
   subjectId: string;
   className: string;
+  option?: string;
   weeklyHours: number;
 }): Promise<Result> {
   if (!input.staffId || !input.subjectId || !input.className?.trim()) {
@@ -46,6 +47,7 @@ export async function createAssignment(input: {
     staff_id: input.staffId,
     subject_id: input.subjectId,
     class_name: input.className.trim(),
+    option: input.option?.trim() || null,
     weekly_hours: input.weeklyHours > 0 ? input.weeklyHours : 0,
   });
   if (error) {

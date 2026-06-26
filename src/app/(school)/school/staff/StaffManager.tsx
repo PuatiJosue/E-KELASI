@@ -5,12 +5,22 @@ import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { createClient } from "@/lib/supabase/client";
-import { createStaff, updateStaff, deleteStaff, type StaffInput } from "./actions";
+import { createStaff, updateStaff, deleteStaff, type StaffInput, type CourseInput } from "./actions";
 import { STAFF_CATEGORIES, CATEGORY_LABEL, type StaffMember } from "@/lib/staff-types";
 
 const EMPTY: StaffInput = { fullName: "", category: "enseignant", status: "active" };
 
-export function StaffManager({ staff }: { staff: StaffMember[] }) {
+type CourseRow = { subjectName: string; className: string; option: string; weeklyHours: number };
+
+export function StaffManager({
+  staff, coursesByStaff = {}, subjectOptions = [], classOptions = [], optionOptions = [],
+}: {
+  staff: StaffMember[];
+  coursesByStaff?: Record<string, CourseRow[]>;
+  subjectOptions?: string[];
+  classOptions?: string[];
+  optionOptions?: string[];
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<string>("all");
@@ -94,6 +104,10 @@ export function StaffManager({ staff }: { staff: StaffMember[] }) {
       {(adding || editing) && (
         <StaffForm
           initial={editing ?? undefined}
+          initialCourses={editing ? coursesByStaff[editing.id] ?? [] : []}
+          subjectOptions={subjectOptions}
+          classOptions={classOptions}
+          optionOptions={optionOptions}
           onClose={() => { setAdding(false); setEditing(null); }}
           onSaved={() => { setAdding(false); setEditing(null); router.refresh(); }}
         />
@@ -117,7 +131,17 @@ function Pill({ on, onClick, label }: { on: boolean; onClick: () => void; label:
   );
 }
 
-function StaffForm({ initial, onClose, onSaved }: { initial?: StaffMember; onClose: () => void; onSaved: () => void }) {
+function StaffForm({
+  initial, initialCourses = [], subjectOptions, classOptions, optionOptions, onClose, onSaved,
+}: {
+  initial?: StaffMember;
+  initialCourses?: CourseRow[];
+  subjectOptions: string[];
+  classOptions: string[];
+  optionOptions: string[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const [pending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,8 +158,15 @@ function StaffForm({ initial, onClose, onSaved }: { initial?: StaffMember; onClo
       : { ...EMPTY }
   );
   const [photoPreview, setPhotoPreview] = useState<string | null>(initial?.photoUrl ?? null);
+  const [courses, setCourses] = useState<CourseRow[]>(initialCourses);
 
   const set = (k: keyof StaffInput, v: string) => setF((p) => ({ ...p, [k]: v }));
+  const isTeacher = f.category === "enseignant";
+
+  const addCourse = () => setCourses((p) => [...p, { subjectName: "", className: "", option: "", weeklyHours: 0 }]);
+  const setCourse = (i: number, k: keyof CourseRow, v: string) =>
+    setCourses((p) => p.map((c, j) => (j === i ? { ...c, [k]: k === "weeklyHours" ? (parseFloat(v.replace(",", ".")) || 0) : v } : c)));
+  const removeCourse = (i: number) => setCourses((p) => p.filter((_, j) => j !== i));
 
   const save = async () => {
     setError(null);
@@ -156,9 +187,15 @@ function StaffForm({ initial, onClose, onSaved }: { initial?: StaffMember; onClo
       setUploading(false);
     }
 
+    const coursePayload: CourseInput[] = isTeacher
+      ? courses.filter((c) => c.subjectName.trim() && c.className.trim())
+      : [];
+
     startTransition(async () => {
       const payload = { ...f, photoUrl };
-      const r = initial ? await updateStaff(initial.id, payload) : await createStaff(payload);
+      const r = initial
+        ? await updateStaff(initial.id, payload, isTeacher ? coursePayload : undefined)
+        : await createStaff(payload, isTeacher ? coursePayload : undefined);
       if (r.ok) onSaved();
       else setError(r.message);
     });
@@ -221,6 +258,41 @@ function StaffForm({ initial, onClose, onSaved }: { initial?: StaffMember; onClo
         <Field label="Qualifications"><input value={f.qualifications} onChange={(e) => set("qualifications", e.target.value)} placeholder="ex. Licence en pédagogie" style={inp} /></Field>
         <Field label="Adresse"><input value={f.address} onChange={(e) => set("address", e.target.value)} style={inp} /></Field>
         <Field label="Notes"><textarea value={f.notes} onChange={(e) => set("notes", e.target.value)} rows={2} style={{ ...inp, resize: "vertical" }} /></Field>
+
+        {/* Cours / Classes / Options — uniquement pour les enseignants */}
+        {isTeacher && (
+          <div style={{ borderTop: "1px solid var(--divider)", paddingTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>Cours, classes & options</div>
+              <button type="button" onClick={addCourse} style={linkBtn}>+ Ajouter un cours</button>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
+              Plusieurs classes possibles. Classe et option : choisis dans la liste (synchronisée avec les élèves) ou tape une nouvelle valeur.
+            </div>
+
+            <datalist id="dl-subjects">{subjectOptions.map((o) => <option key={o} value={o} />)}</datalist>
+            <datalist id="dl-classes">{classOptions.map((o) => <option key={o} value={o} />)}</datalist>
+            <datalist id="dl-options">{optionOptions.map((o) => <option key={o} value={o} />)}</datalist>
+
+            {courses.length === 0 ? (
+              <div style={{ fontSize: 12, color: "var(--ink-3)" }}>Aucun cours. Cliquez sur « + Ajouter un cours ».</div>
+            ) : (
+              courses.map((c, i) => (
+                <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6, padding: 10, borderRadius: 10, background: "var(--surface-2)" }}>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input list="dl-subjects" value={c.subjectName} onChange={(e) => setCourse(i, "subjectName", e.target.value)} placeholder="Cours / matière" style={{ ...inp, flex: 2 }} />
+                    <input value={c.weeklyHours ? String(c.weeklyHours) : ""} onChange={(e) => setCourse(i, "weeklyHours", e.target.value)} inputMode="decimal" placeholder="h/sem" style={{ ...inp, width: 72 }} />
+                    <button type="button" onClick={() => removeCourse(i)} title="Retirer" style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 4px" }}>×</button>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input list="dl-classes" value={c.className} onChange={(e) => setCourse(i, "className", e.target.value)} placeholder="Classe" style={{ ...inp, flex: 1 }} />
+                    <input list="dl-options" value={c.option} onChange={(e) => setCourse(i, "option", e.target.value)} placeholder="Section / option" style={{ ...inp, flex: 1 }} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         {error && <div style={{ color: "var(--danger)", fontSize: 12, fontWeight: 600 }}>{error}</div>}
 
