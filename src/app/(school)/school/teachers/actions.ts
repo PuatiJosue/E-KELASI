@@ -29,47 +29,88 @@ function generateCode(): string {
   return s.slice(0, 4) + "-" + s.slice(4); // ex: XK3F-7P9M
 }
 
-// ── 1. École : générer un code d'accès pour un nouveau prof ──────────
-export async function inviteTeacherAction(args: { fullName: string; address?: string }): Promise<GenResult> {
-  const fullName = (args.fullName ?? "").trim();
-  const address = (args.address ?? "").trim() || null;
-  if (!fullName) return { ok: false, message: "Le nom est obligatoire." };
-  if (fullName.length > 120) return { ok: false, message: "Nom trop long." };
-  if (address && address.length > 240) return { ok: false, message: "Adresse trop longue." };
-  if (!isLiveMode()) return { ok: true, code: generateCode() };
-
+// École connectée → school_id si elle est direction, sinon null.
+async function callerSchoolId(): Promise<string | null> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false, message: "Non authentifié" };
-
+  if (!user) return null;
   const { data: staff } = await supabase
     .from("school_staff")
     .select("school_id")
     .eq("user_id", user.id)
     .eq("role", "school_admin")
     .maybeSingle();
-  if (!staff) return { ok: false, message: "Vous n'êtes pas direction d'une école." };
+  return staff?.school_id ?? null;
+}
 
-  // Génère un code unique (rétry max 5 si collision improbable).
+// ── 1. École : générer un code d'accès DEPUIS la fiche du prof ───────
+// La direction a déjà rempli la fiche (identité, cours, classes, options) ;
+// on génère un code rattaché à cette fiche, pré-rempli avec son identité.
+// Régénération : tout code en attente pour cette fiche est d'abord révoqué.
+export async function generateCodeForStaffAction(staffId: string): Promise<GenResult> {
+  if (!staffId) return { ok: false, message: "Fiche invalide." };
+  if (!isLiveMode()) return { ok: true, code: generateCode() };
+
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Action réservée à la direction." };
+
+  const { data: { user } } = await createClient().auth.getUser();
+  const admin = service();
+
+  // Lit la fiche (service role) en vérifiant qu'elle appartient à l'école.
+  const { data: member } = await admin
+    .from("staff_members")
+    .select("id, full_name, address, category, linked_user_id")
+    .eq("id", staffId)
+    .eq("school_id", schoolId)
+    .maybeSingle();
+  if (!member) return { ok: false, message: "Fiche introuvable." };
+  if (member.linked_user_id) return { ok: false, message: "Ce prof a déjà un compte actif." };
+  if (member.category !== "enseignant") return { ok: false, message: "Réservé aux enseignants." };
+  if (!member.full_name?.trim()) return { ok: false, message: "Complétez d'abord le nom de la fiche." };
+
+  // Révoque un éventuel code en attente pour cette fiche (régénération).
+  await admin.from("teacher_access_codes").delete().eq("staff_id", staffId).is("redeemed_at", null);
+
   for (let tries = 0; tries < 5; tries++) {
     const code = generateCode();
-    const { error } = await supabase.from("teacher_access_codes").insert({
+    const { error } = await admin.from("teacher_access_codes").insert({
       code,
-      school_id: staff.school_id,
-      full_name: fullName,
-      address,
-      created_by: user.id,
+      school_id: schoolId,
+      staff_id: staffId,
+      full_name: member.full_name,
+      address: member.address ?? null,
+      created_by: user?.id ?? null,
     });
     if (!error) {
+      revalidatePath("/school/staff");
       revalidatePath("/school/teachers");
       return { ok: true, code };
     }
     if (!error.message.toLowerCase().includes("duplicate")) {
-      console.warn("[invite-teacher] insert error:", error.message);
+      console.warn("[generate-staff-code] insert error:", error.message);
       return { ok: false, message: "Impossible de générer le code." };
     }
   }
   return { ok: false, message: "Trop de collisions de code, réessaie." };
+}
+
+// ── 1b. École : révoquer le code en attente d'une fiche ──────────────
+export async function revokeStaffCodeAction(staffId: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!staffId) return { ok: false, message: "Fiche invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Action réservée à la direction." };
+  const admin = service();
+  const { error } = await admin
+    .from("teacher_access_codes")
+    .delete()
+    .eq("staff_id", staffId)
+    .eq("school_id", schoolId)
+    .is("redeemed_at", null);
+  if (error) return { ok: false, message: "Révocation refusée." };
+  revalidatePath("/school/staff");
+  return { ok: true };
 }
 
 // ── 2. Prof : consommer un code pour créer son compte ────────────────
@@ -94,7 +135,7 @@ export async function redeemTeacherCodeAction(args: {
   // 1. Vérifie le code (encore non consommé)
   const { data: row, error: rowErr } = await admin
     .from("teacher_access_codes")
-    .select("code, school_id, full_name, address, redeemed_at")
+    .select("code, school_id, staff_id, full_name, address, redeemed_at")
     .eq("code", code)
     .maybeSingle();
   if (rowErr) {
@@ -138,13 +179,23 @@ export async function redeemTeacherCodeAction(args: {
     return { ok: false, message: "Liaison à l'école échouée." };
   }
 
-  // 4. Marque le code comme consommé
+  // 4. Rattache le compte créé à la fiche du personnel (le cas échéant)
+  if (row.staff_id) {
+    const { error: linkErr } = await admin
+      .from("staff_members")
+      .update({ linked_user_id: userId })
+      .eq("id", row.staff_id);
+    if (linkErr) console.warn("[redeem-teacher] link staff error:", linkErr.message);
+  }
+
+  // 5. Marque le code comme consommé
   await admin
     .from("teacher_access_codes")
     .update({ redeemed_by: userId, redeemed_at: new Date().toISOString() })
     .eq("code", code);
 
   revalidatePath("/school/teachers");
+  revalidatePath("/school/staff");
   return { ok: true };
 }
 

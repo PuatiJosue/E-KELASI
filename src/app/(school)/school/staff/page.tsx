@@ -1,13 +1,14 @@
 import { PageHeader } from "@/components/KPI";
-import { listStaff } from "@/lib/staff-db";
+import { listStaff, listPendingCodeStaffIds } from "@/lib/staff-db";
 import { listAssignments, listFormOptions } from "@/lib/courses-db";
 import { StaffManager } from "./StaffManager";
 
 export default async function SchoolStaff() {
-  const [staff, assignments, formOptions] = await Promise.all([
+  const [staff, assignments, formOptions, pendingCodeStaffIds] = await Promise.all([
     listStaff(),
     listAssignments(),
     listFormOptions(),
+    listPendingCodeStaffIds(),
   ]);
   const active = staff.filter((s) => s.status === "active").length;
 
@@ -34,6 +35,7 @@ export default async function SchoolStaff() {
       <StaffManager
         staff={staff}
         coursesByStaff={coursesByStaff}
+        pendingCodeStaffIds={pendingCodeStaffIds}
         subjectOptions={formOptions.subjects.map((s) => s.name)}
         classOptions={formOptions.classes}
         optionOptions={formOptions.options}

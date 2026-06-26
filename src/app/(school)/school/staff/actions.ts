@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
 import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
+import { composeFullName } from "@/lib/staff-types";
 
 type Result = { ok: true } | { ok: false; message: string };
 
@@ -31,6 +32,9 @@ async function callerSchoolId(): Promise<string | null> {
 
 export type StaffInput = {
   fullName: string;
+  lastName?: string;    // Nom
+  middleName?: string;  // Post-nom
+  firstName?: string;   // Prénom
   category: string;
   phone?: string;
   email?: string;
@@ -69,8 +73,13 @@ async function syncCourses(svc: ReturnType<typeof service>, schoolId: string, st
 }
 
 function toRow(input: StaffInput) {
+  // full_name dérivé des parties (Nom Post-nom Prénom) ; repli sur le champ libre.
+  const fullName = composeFullName(input.lastName, input.middleName, input.firstName) || input.fullName.trim();
   return {
-    full_name: input.fullName.trim(),
+    full_name: fullName,
+    last_name: input.lastName?.trim() || null,
+    middle_name: input.middleName?.trim() || null,
+    first_name: input.firstName?.trim() || null,
     category: input.category || "autre",
     phone: input.phone?.trim() || null,
     email: input.email?.trim() || null,

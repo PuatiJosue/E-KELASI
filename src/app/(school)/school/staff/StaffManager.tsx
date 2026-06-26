@@ -6,22 +6,25 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { createClient } from "@/lib/supabase/client";
 import { createStaff, updateStaff, deleteStaff, type StaffInput, type CourseInput } from "./actions";
-import { STAFF_CATEGORIES, CATEGORY_LABEL, type StaffMember } from "@/lib/staff-types";
+import { generateCodeForStaffAction, revokeStaffCodeAction } from "@/app/(school)/school/teachers/actions";
+import { STAFF_CATEGORIES, CATEGORY_LABEL, composeFullName, splitFullName, type StaffMember } from "@/lib/staff-types";
 
-const EMPTY: StaffInput = { fullName: "", category: "enseignant", status: "active" };
+const EMPTY: StaffInput = { fullName: "", lastName: "", middleName: "", firstName: "", category: "enseignant", status: "active" };
 
 type CourseRow = { subjectName: string; className: string; option: string; weeklyHours: number };
 
 export function StaffManager({
-  staff, coursesByStaff = {}, subjectOptions = [], classOptions = [], optionOptions = [],
+  staff, coursesByStaff = {}, pendingCodeStaffIds = [], subjectOptions = [], classOptions = [], optionOptions = [],
 }: {
   staff: StaffMember[];
   coursesByStaff?: Record<string, CourseRow[]>;
+  pendingCodeStaffIds?: string[];
   subjectOptions?: string[];
   classOptions?: string[];
   optionOptions?: string[];
 }) {
   const router = useRouter();
+  const pendingSet = useMemo(() => new Set(pendingCodeStaffIds), [pendingCodeStaffIds]);
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<string>("all");
   const [editing, setEditing] = useState<StaffMember | null>(null);
@@ -95,6 +98,14 @@ export function StaffManager({
                 <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
                   <button onClick={() => setEditing(s)} style={linkBtn}>Modifier</button>
                 </div>
+                {s.category === "enseignant" && (
+                  <AccessCodeControl
+                    staffId={s.id}
+                    linked={!!s.linkedUserId}
+                    pending={pendingSet.has(s.id)}
+                    onChanged={() => router.refresh()}
+                  />
+                )}
               </div>
             </div>
           ))}
@@ -131,6 +142,77 @@ function Pill({ on, onClick, label }: { on: boolean; onClick: () => void; label:
   );
 }
 
+// Code d'accès généré depuis la fiche enseignant (déjà remplie par la direction).
+function AccessCodeControl({
+  staffId, linked, pending, onChanged,
+}: {
+  staffId: string;
+  linked: boolean;
+  pending: boolean;
+  onChanged: () => void;
+}) {
+  const [busy, startTransition] = useTransition();
+  const [code, setCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (linked) {
+    return (
+      <div style={{ marginTop: 8, fontSize: 11.5, color: "var(--accent)", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+        <Icon name="check" size={13} /> Compte actif
+      </div>
+    );
+  }
+
+  const generate = () => {
+    setError(null);
+    startTransition(async () => {
+      const r = await generateCodeForStaffAction(staffId);
+      if (r.ok) { setCode(r.code); onChanged(); }
+      else setError(r.message);
+    });
+  };
+  const revoke = () => {
+    setError(null);
+    startTransition(async () => {
+      const r = await revokeStaffCodeAction(staffId);
+      if (r.ok) { setCode(null); onChanged(); }
+      else setError(r.message);
+    });
+  };
+  const copy = async () => {
+    if (!code) return;
+    try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* ignore */ }
+  };
+
+  return (
+    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+      {code ? (
+        <div style={{ padding: "8px 10px", borderRadius: 9, background: "var(--brand-soft)", border: "1px dashed var(--brand-600)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <code style={{ fontFamily: "var(--font-mono)", fontSize: 15, letterSpacing: 1.5, color: "var(--brand-600)", fontWeight: 700 }}>{code}</code>
+          <button type="button" onClick={copy} style={linkBtn}>{copied ? "✓ Copié" : "Copier"}</button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <button type="button" onClick={generate} disabled={busy} style={linkBtn}>
+            {busy ? "…" : pending ? "Régénérer le code" : "Générer un code d'accès"}
+          </button>
+          {pending && (
+            <button type="button" onClick={revoke} disabled={busy} style={{ ...linkBtn, color: "var(--danger)" }}>Révoquer</button>
+          )}
+        </div>
+      )}
+      {pending && !code && (
+        <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>Un code est en attente (affiché une seule fois à la génération).</div>
+      )}
+      {code && (
+        <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>À remettre au prof. Affiché une seule fois.</div>
+      )}
+      {error && <div style={{ fontSize: 11, color: "var(--danger)", fontWeight: 600 }}>{error}</div>}
+    </div>
+  );
+}
+
 function StaffForm({
   initial, initialCourses = [], subjectOptions, classOptions, optionOptions, onClose, onSaved,
 }: {
@@ -147,16 +229,19 @@ function StaffForm({
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [f, setF] = useState<StaffInput>(
-    initial
-      ? {
-          fullName: initial.fullName, category: initial.category, phone: initial.phone ?? "",
-          email: initial.email ?? "", qualifications: initial.qualifications ?? "",
-          hireDate: initial.hireDate ?? "", status: initial.status, address: initial.address ?? "",
-          notes: initial.notes ?? "", photoUrl: initial.photoUrl ?? "",
-        }
-      : { ...EMPTY }
-  );
+  const [f, setF] = useState<StaffInput>(() => {
+    if (!initial) return { ...EMPTY };
+    // Fiches existantes (full_name seul) : on pré-remplit par découpage heuristique.
+    const parts = initial.lastName || initial.middleName || initial.firstName
+      ? { lastName: initial.lastName ?? "", middleName: initial.middleName ?? "", firstName: initial.firstName ?? "" }
+      : splitFullName(initial.fullName);
+    return {
+      fullName: initial.fullName, ...parts, category: initial.category, phone: initial.phone ?? "",
+      email: initial.email ?? "", qualifications: initial.qualifications ?? "",
+      hireDate: initial.hireDate ?? "", status: initial.status, address: initial.address ?? "",
+      notes: initial.notes ?? "", photoUrl: initial.photoUrl ?? "",
+    };
+  });
   const [photoPreview, setPhotoPreview] = useState<string | null>(initial?.photoUrl ?? null);
   const [courses, setCourses] = useState<CourseRow[]>(initialCourses);
 
@@ -170,7 +255,8 @@ function StaffForm({
 
   const save = async () => {
     setError(null);
-    if (!f.fullName.trim()) { setError("Le nom est requis."); return; }
+    if (!f.lastName?.trim()) { setError("Le nom est requis."); return; }
+    const fullName = composeFullName(f.lastName, f.middleName, f.firstName);
 
     let photoUrl = f.photoUrl;
     const file = fileRef.current?.files?.[0];
@@ -192,7 +278,7 @@ function StaffForm({
       : [];
 
     startTransition(async () => {
-      const payload = { ...f, photoUrl };
+      const payload = { ...f, fullName, photoUrl };
       const r = initial
         ? await updateStaff(initial.id, payload, isTeacher ? coursePayload : undefined)
         : await createStaff(payload, isTeacher ? coursePayload : undefined);
@@ -236,7 +322,11 @@ function StaffForm({
           </div>
         </div>
 
-        <Field label="Nom complet *"><input value={f.fullName} onChange={(e) => set("fullName", e.target.value)} style={inp} /></Field>
+        <Field label="Nom *"><input value={f.lastName ?? ""} onChange={(e) => set("lastName", e.target.value)} placeholder="Nom de famille" style={inp} /></Field>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Field label="Post-nom" flex><input value={f.middleName ?? ""} onChange={(e) => set("middleName", e.target.value)} style={inp} /></Field>
+          <Field label="Prénom" flex><input value={f.firstName ?? ""} onChange={(e) => set("firstName", e.target.value)} style={inp} /></Field>
+        </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Field label="Catégorie" flex>
             <select value={f.category} onChange={(e) => set("category", e.target.value)} style={inp}>

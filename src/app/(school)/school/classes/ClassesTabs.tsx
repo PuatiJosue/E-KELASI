@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { KPI } from "@/components/KPI";
 import { T } from "@/lib/i18n";
-import { InviteTeacherButton } from "@/components/school/InviteTeacherButton";
 import { CoursesManager } from "../courses/CoursesManager";
 import type { ClassDirectoryRow, SchoolTeacherRow, ClassReportMatrix, ClassReportLevel } from "@/lib/school-db";
 import type { Assignment, FormOptions } from "@/lib/courses-db";
@@ -239,7 +239,10 @@ function ProfsTab({ teachers }: { teachers: SchoolTeacherRow[] }) {
   return (
     <>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <InviteTeacherButton />
+        <Link href="/school/staff" className="ek-btn ek-btn-primary" style={{ height: 32, fontSize: 12 }}>
+          <Icon name="plus" size={14} stroke={2.5} />
+          <T fr="Ajouter un prof" en="Add teacher" />
+        </Link>
       </div>
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
         <div className="ek-tablewrap">

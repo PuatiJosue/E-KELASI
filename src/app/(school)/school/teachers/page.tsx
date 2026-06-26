@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
+import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { listSchoolTeachers } from "@/lib/school-db";
-import { InviteTeacherButton } from "@/components/school/InviteTeacherButton";
 
 export default async function SchoolTeachers() {
   const teachers = await listSchoolTeachers();
@@ -17,7 +18,12 @@ export default async function SchoolTeachers() {
           fr: `${teacherCount} professeurs · ${adminCount} membre(s) direction`,
           en: `${teacherCount} teachers · ${adminCount} admin(s)`,
         }}
-        right={<InviteTeacherButton />}
+        right={
+          <Link href="/school/staff" className="ek-btn ek-btn-primary" style={{ height: 32, fontSize: 12 }}>
+            <Icon name="plus" size={14} stroke={2.5} />
+            <T fr="Ajouter un prof" en="Add teacher" />
+          </Link>
+        }
       />
 
       <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
