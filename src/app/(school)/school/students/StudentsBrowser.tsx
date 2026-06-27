@@ -108,10 +108,29 @@ export function StudentsBrowser({ students }: { students: SchoolStudentRow[] }) 
                     borderTop: i > 0 ? "1px solid var(--divider)" : "none",
                   }}
                 >
-                  <Link href={`/school/students/${s.id}`} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                    <Avatar name={s.fullName} url={s.avatarUrl} size={32} />
-                    <span style={{ fontWeight: 600, color: "var(--ink)" }}>{s.fullName}</span>
-                  </Link>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <Link href={`/school/students/${s.id}`} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                      <Avatar name={s.fullName} url={s.avatarUrl} size={32} />
+                      <span style={{ fontWeight: 600, color: "var(--ink)" }}>{s.fullName}</span>
+                    </Link>
+                    {s.option ? (
+                      <span
+                        title={s.option}
+                        style={{
+                          flexShrink: 0,
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          background: "var(--brand-soft)",
+                          color: "var(--brand-600)",
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {s.option}
+                      </span>
+                    ) : null}
+                  </div>
                   <div style={{ color: "var(--ink-3)", fontSize: 11.5 }}>
                     {s.parentNames.length > 0 ? s.parentNames.join(", ") : "—"}
                   </div>
