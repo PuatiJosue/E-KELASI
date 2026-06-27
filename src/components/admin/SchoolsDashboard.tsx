@@ -220,7 +220,7 @@ tfoot td{font-weight:700;border-top:2px solid #1a1410}</style></head><body>
                       <div style={{ textAlign: "center", color: "var(--ink-2)" }}>{s.documents}</div>
                       <div><span className={`ek-chip ${st.cls}`}>{frEn(st.fr, st.en)}</span></div>
                       <div style={{ textAlign: "right" }}>
-                        <Link href={`/schools`} style={{ color: "var(--brand-600)", fontSize: 12, fontWeight: 600 }}>
+                        <Link href={`/schools/${s.id}`} style={{ color: "var(--brand-600)", fontSize: 12, fontWeight: 600 }}>
                           <T fr="Voir" en="View" /> →
                         </Link>
                       </div>

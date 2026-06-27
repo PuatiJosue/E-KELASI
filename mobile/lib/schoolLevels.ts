@@ -2,7 +2,7 @@
 
 export const CLASS_GROUPS: { group: string; items: string[] }[] = [
   {
-    group: "Éducation de base",
+    group: "Primaire",
     items: [
       "1re année primaire",
       "2e année primaire",
@@ -10,8 +10,8 @@ export const CLASS_GROUPS: { group: string; items: string[] }[] = [
       "4e année primaire",
       "5e année primaire",
       "6e année primaire",
-      "7e année (éducation de base)",
-      "8e année (éducation de base)",
+      "7e année du primaire",
+      "8e année du primaire",
     ],
   },
   {
@@ -27,7 +27,7 @@ export const CLASS_GROUPS: { group: string; items: string[] }[] = [
 
 export const ALL_CLASSES: string[] = CLASS_GROUPS.flatMap((g) => g.items);
 
-// Options / filières — à partir de la 8e année (éducation de base) et en humanités.
+// Options / filières — uniquement aux humanités (le primaire n'a pas d'option).
 export const OPTIONS: string[] = [
   "Sciences",
   "Technique",
@@ -38,9 +38,9 @@ export const OPTIONS: string[] = [
   "Arts et métiers",
 ];
 
-// Classes nécessitant une option (8e année et tout le secondaire/humanités).
+// Classes nécessitant une option : uniquement les humanités. Le primaire (y
+// compris 7e et 8e année du primaire) est « libre », sans option.
 const OPTION_CLASSES = new Set<string>([
-  "8e année (éducation de base)",
   "1re année des humanités",
   "2e année des humanités",
   "3e année des humanités",

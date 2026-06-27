@@ -102,7 +102,7 @@ function OverviewTab({ matrix, rows }: { matrix: ClassReportMatrix; rows: ClassD
               <T fr="Taux de réussite par option et niveau" en="Success rate by option and level" />
             </div>
             <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-              <T fr="Du primaire aux humanités. Les options concernent surtout les humanités." en="From primary to secondary. Options mainly apply to secondary." />
+              <T fr="Le primaire est libre (sans option) ; les options ne concernent que les humanités." en="Primary is free (no option); options only apply to secondary (humanités)." />
             </div>
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
@@ -129,8 +129,8 @@ function OverviewTab({ matrix, rows }: { matrix: ClassReportMatrix; rows: ClassD
               </div>
             </div>
 
-            <GroupBlock title="Éducation de base" levels={base} options={options} />
-            <GroupBlock title="Enseignement secondaire" levels={secondaire} options={options} />
+            <GroupBlock title="Primaire" levels={base} options={options} showOptions={false} />
+            <GroupBlock title="Humanités" levels={secondaire} options={options} showOptions />
           </div>
         </div>
 
@@ -205,7 +205,7 @@ function OverviewTab({ matrix, rows }: { matrix: ClassReportMatrix; rows: ClassD
   );
 }
 
-function GroupBlock({ title, levels, options }: { title: string; levels: ClassReportLevel[]; options: string[] }) {
+function GroupBlock({ title, levels, options, showOptions }: { title: string; levels: ClassReportLevel[]; options: string[]; showOptions: boolean }) {
   if (levels.length === 0) return null;
   return (
     <>
@@ -215,7 +215,14 @@ function GroupBlock({ title, levels, options }: { title: string; levels: ClassRe
       {levels.map((L) => (
         <div key={L.key} style={{ display: "grid", gridTemplateColumns: `200px repeat(${options.length}, 1fr) 96px`, alignItems: "center", borderTop: "1px solid var(--divider)", minHeight: 52 }}>
           <div style={{ padding: "8px 14px", fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>{L.label}</div>
-          {options.map((o) => <Cell key={o} value={L.byOption[o]} />)}
+          {showOptions ? (
+            options.map((o) => <Cell key={o} value={L.byOption[o]} />)
+          ) : (
+            // Primaire : pas d'option → niveau « libre » (une seule colonne fusionnée).
+            <div style={{ gridColumn: `span ${options.length}`, display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 4px" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-3)", fontStyle: "italic" }}>Libre — sans option</span>
+            </div>
+          )}
           <Cell value={L.overall} strong />
         </div>
       ))}

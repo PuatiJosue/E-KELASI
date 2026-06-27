@@ -437,6 +437,7 @@ export type ClassReportMatrix = {
 };
 
 // Liste canonique des niveaux (système congolais), de la 1re primaire aux humanités.
+// Le primaire est « libre » (sans option) ; les options ne concernent que les humanités.
 const REPORT_LEVELS: { key: string; label: string; group: "base" | "secondaire" }[] = [
   { key: "p1", label: "1re année primaire", group: "base" },
   { key: "p2", label: "2e année primaire", group: "base" },
@@ -444,8 +445,8 @@ const REPORT_LEVELS: { key: string; label: string; group: "base" | "secondaire" 
   { key: "p4", label: "4e année primaire", group: "base" },
   { key: "p5", label: "5e année primaire", group: "base" },
   { key: "p6", label: "6e année primaire", group: "base" },
-  { key: "b7", label: "7e année (éducation de base)", group: "base" },
-  { key: "b8", label: "8e année (éducation de base)", group: "base" },
+  { key: "b7", label: "7e année du primaire", group: "base" },
+  { key: "b8", label: "8e année du primaire", group: "base" },
   { key: "h1", label: "1re année des humanités", group: "secondaire" },
   { key: "h2", label: "2e année des humanités", group: "secondaire" },
   { key: "h3", label: "3e année des humanités", group: "secondaire" },
@@ -460,8 +461,15 @@ const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[�
 function levelKeyOf(raw: string): string | null {
   const s = norm(raw);
   const digit = (s.match(/(\d+)/)?.[1]) ?? "";
-  if (s.includes("primaire")) return digit && +digit >= 1 && +digit <= 6 ? `p${digit}` : null;
+  if (s.includes("primaire")) {
+    if (digit && +digit >= 1 && +digit <= 6) return `p${digit}`;
+    // 7e / 8e année du primaire (anciennement « éducation de base »).
+    if (digit === "7") return "b7";
+    if (digit === "8") return "b8";
+    return null;
+  }
   if (s.includes("humanit") || s.includes("secondaire")) return digit && +digit >= 1 && +digit <= 4 ? `h${digit}` : null;
+  // Compatibilité avec les anciens libellés « 7e/8e année (éducation de base) ».
   if (s.includes("base") || s.includes("annee")) {
     if (s.includes("7")) return "b7";
     if (s.includes("8")) return "b8";
