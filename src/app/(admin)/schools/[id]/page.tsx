@@ -78,7 +78,7 @@ export default async function SchoolDossierPage({ params }: { params: { id: stri
         {/* Codes d'accès */}
         <Card title="Codes d'accès direction">
           {d.accessCodes.length === 0 ? (
-            <div style={{ padding: "14px 0", color: "var(--ink-3)", fontSize: 12.5 }}>Aucun code d'accès généré.</div>
+            <div style={{ padding: "14px 0", color: "var(--ink-3)", fontSize: 12.5 }}>Aucun code d&apos;accès généré.</div>
           ) : (
             d.accessCodes.map((c, i) => (
               <div key={c.code + i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderTop: "1px solid var(--divider)" }}>
