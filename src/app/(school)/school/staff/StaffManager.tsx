@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { createClient } from "@/lib/supabase/client";
@@ -24,11 +24,21 @@ export function StaffManager({
   optionOptions?: string[];
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const pendingSet = useMemo(() => new Set(pendingCodeStaffIds), [pendingCodeStaffIds]);
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<string>("all");
   const [editing, setEditing] = useState<StaffMember | null>(null);
-  const [adding, setAdding] = useState(false);
+  // Ouvre directement le formulaire « Ajouter » si on arrive avec ?add=1
+  // (depuis les boutons « Ajouter un prof » d'autres pages).
+  const [adding, setAdding] = useState(searchParams.get("add") === "1");
+
+  // Referme le formulaire et nettoie le paramètre ?add de l'URL.
+  const closeForm = () => {
+    setAdding(false);
+    setEditing(null);
+    if (searchParams.get("add")) router.replace("/school/staff");
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -119,8 +129,8 @@ export function StaffManager({
           subjectOptions={subjectOptions}
           classOptions={classOptions}
           optionOptions={optionOptions}
-          onClose={() => { setAdding(false); setEditing(null); }}
-          onSaved={() => { setAdding(false); setEditing(null); router.refresh(); }}
+          onClose={closeForm}
+          onSaved={() => { closeForm(); router.refresh(); }}
         />
       )}
     </>

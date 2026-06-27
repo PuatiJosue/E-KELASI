@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { PageHeader } from "@/components/KPI";
 import { listStaff, listPendingCodeStaffIds } from "@/lib/staff-db";
 import { listAssignments, listFormOptions } from "@/lib/courses-db";
@@ -32,14 +33,16 @@ export default async function SchoolStaff() {
           en: `${staff.length} member(s) · ${active} active`,
         }}
       />
-      <StaffManager
-        staff={staff}
-        coursesByStaff={coursesByStaff}
-        pendingCodeStaffIds={pendingCodeStaffIds}
-        subjectOptions={formOptions.subjects.map((s) => s.name)}
-        classOptions={formOptions.classes}
-        optionOptions={formOptions.options}
-      />
+      <Suspense>
+        <StaffManager
+          staff={staff}
+          coursesByStaff={coursesByStaff}
+          pendingCodeStaffIds={pendingCodeStaffIds}
+          subjectOptions={formOptions.subjects.map((s) => s.name)}
+          classOptions={formOptions.classes}
+          optionOptions={formOptions.options}
+        />
+      </Suspense>
     </div>
   );
 }

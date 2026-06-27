@@ -215,7 +215,7 @@ function ProfsTab({ teachers }: { teachers: SchoolTeacherRow[] }) {
   return (
     <>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <Link href="/school/staff" className="ek-btn ek-btn-primary" style={{ height: 32, fontSize: 12 }}>
+        <Link href="/school/staff?add=1" className="ek-btn ek-btn-primary" style={{ height: 32, fontSize: 12 }}>
           <Icon name="plus" size={14} stroke={2.5} />
           <T fr="Ajouter un prof" en="Add teacher" />
         </Link>
