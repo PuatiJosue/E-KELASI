@@ -23,8 +23,13 @@ export default function Announcements() {
   const [items, setItems] = useState<Announcement[] | null>(null);
 
   useEffect(() => {
-    listAnnouncements().then(setItems).catch(() => setItems([]));
-  }, []);
+    if (!selectedChild?.schoolId) {
+      setItems([]);
+      return;
+    }
+    setItems(null);
+    listAnnouncements(selectedChild.schoolId).then(setItems).catch(() => setItems([]));
+  }, [selectedChild?.schoolId]);
 
   const schoolName = selectedChild?.school;
   const schoolLogo = selectedChild?.schoolLogoUrl;

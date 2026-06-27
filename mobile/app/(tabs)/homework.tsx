@@ -26,7 +26,7 @@ export default function HomeworkScreen() {
       return;
     }
     setItems(null);
-    listHomework(selectedChild.grade).then(setItems).catch(() => setItems([]));
+    listHomework(selectedChild.grade, selectedChild.schoolId).then(setItems).catch(() => setItems([]));
   }, [selectedChild?.id]);
 
   if (childrenLoading || !items) {

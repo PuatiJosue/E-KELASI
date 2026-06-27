@@ -40,10 +40,10 @@ export default function Home() {
     try {
       await Promise.all([
         listThreads().then(setThreads).catch(() => {}),
-        listAnnouncements().then(setAnnouncements).catch(() => {}),
+        listAnnouncements(selectedChild?.schoolId).then(setAnnouncements).catch(() => {}),
         refresh(),
         selectedChild
-          ? Promise.all([listGrades(5, selectedChild.id), listHomework(selectedChild.grade)]).then(([g, h]) => {
+          ? Promise.all([listGrades(5, selectedChild.id), listHomework(selectedChild.grade, selectedChild.schoolId)]).then(([g, h]) => {
               setGrades(g);
               setHomework(h);
             })
@@ -52,13 +52,22 @@ export default function Home() {
     } finally {
       setRefreshing(false);
     }
-  }, [selectedChild?.id, selectedChild?.grade, refresh]);
+  }, [selectedChild?.schoolId, selectedChild?.id, selectedChild?.grade, refresh]);
 
-  // Messagerie + annonces : une seule fois.
+  // Messagerie : une seule fois (les threads ne dépendent pas de l'enfant).
   useEffect(() => {
     listThreads().then(setThreads).catch(() => {});
-    listAnnouncements().then(setAnnouncements).catch(() => {});
   }, []);
+
+  // Annonces : celles de l'école de l'enfant sélectionné (rechargées au changement
+  // d'enfant) — jamais celles d'une autre école.
+  useEffect(() => {
+    if (!selectedChild?.schoolId) {
+      setAnnouncements([]);
+      return;
+    }
+    listAnnouncements(selectedChild.schoolId).then(setAnnouncements).catch(() => setAnnouncements([]));
+  }, [selectedChild?.schoolId]);
 
   // Aucun enfant actif → vérifie s'il y a une demande en attente.
   useEffect(() => {
@@ -76,7 +85,7 @@ export default function Home() {
       return;
     }
     setDataReady(false);
-    Promise.all([listGrades(5, selectedChild.id), listHomework(selectedChild.grade)]).then(([g, h]) => {
+    Promise.all([listGrades(5, selectedChild.id), listHomework(selectedChild.grade, selectedChild.schoolId)]).then(([g, h]) => {
       setGrades(g);
       setHomework(h);
       setDataReady(true);

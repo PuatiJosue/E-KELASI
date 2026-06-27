@@ -11,6 +11,7 @@ export type Child = {
   name: string;
   grade: string;
   school: string;
+  schoolId: string | null;
   avg: number;
   rank?: number | null;
   total?: number | null;
@@ -43,6 +44,7 @@ const DEMO_CHILD: Child = {
   name: MOCK.child.name,
   grade: MOCK.child.grade,
   school: MOCK.child.school,
+  schoolId: "demo",
   avg: MOCK.child.avg,
   rank: MOCK.child.rank,
   total: MOCK.child.total,
@@ -134,7 +136,7 @@ export async function listChildren(): Promise<Child[]> {
   try {
     const { data: links } = await supabase
       .from("parent_links")
-      .select("students!inner(id, full_name, class_name, grade_level, avatar_url, birth_date, sex, status, option, schools(name, phone, logo_url))")
+      .select("students!inner(id, full_name, class_name, grade_level, avatar_url, birth_date, sex, status, option, school_id, schools(name, phone, logo_url))")
       .eq("students.status", "active");
     if (!links) return [];
     const children: Child[] = [];
@@ -146,6 +148,7 @@ export async function listChildren(): Promise<Child[]> {
         name: s.full_name,
         grade: s.class_name ?? s.grade_level,
         school: s.schools?.name ?? "",
+        schoolId: s.school_id ?? null,
         avg: await avgForStudent(s.id),
         avatarUrl: s.avatar_url ?? null,
         schoolPhone: s.schools?.phone ?? null,
@@ -197,12 +200,16 @@ export type Announcement = {
   attachmentName: string | null;
 };
 
-export async function listAnnouncements(): Promise<Announcement[]> {
+// Annonces de l'école de l'enfant sélectionné. On filtre TOUJOURS par école
+// pour ne jamais mélanger les annonces de plusieurs écoles (parent multi-écoles).
+export async function listAnnouncements(schoolId?: string | null): Promise<Announcement[]> {
   if (!isLiveMode || !supabase) return [];
+  if (!schoolId) return [];
   try {
     const { data } = await supabase
       .from("announcements")
       .select("id, title, body, event_date, created_at, attachment_url, attachment_name")
+      .eq("school_id", schoolId)
       .order("created_at", { ascending: false })
       .limit(50);
     return (data ?? []).map((a: any) => ({
@@ -336,17 +343,20 @@ export async function listGrades(limit = 20, childId?: string): Promise<Grade[]>
 }
 
 // ── Homework ─────────────────────────────────────────────────────────
-export async function listHomework(className?: string): Promise<Homework[]> {
+export async function listHomework(className?: string, schoolId?: string | null): Promise<Homework[]> {
   if (!isLiveMode || !supabase) return MOCK.homework;
   try {
     const cls = className ?? (await getChild())?.grade;
     if (!cls) return [];
-    const { data } = await supabase
+    // Le devoir n'a pas de school_id : on le rattache à l'école via sa matière
+    // (subjects.school_id) pour ne pas mélanger les classes homonymes d'écoles différentes.
+    let q = supabase
       .from("homework")
-      .select("title, due_at, status, subjects(name), profiles(full_name)")
+      .select("title, due_at, status, subjects!inner(name, school_id), profiles(full_name)")
       .eq("class_name", cls)
-      .is("archived_at", null)
-      .order("due_at", { ascending: true });
+      .is("archived_at", null);
+    if (schoolId) q = q.eq("subjects.school_id", schoolId);
+    const { data } = await q.order("due_at", { ascending: true });
     if (!data) return [];
     return data.map((h: any) => ({
       subject: h.subjects?.name ?? "",
