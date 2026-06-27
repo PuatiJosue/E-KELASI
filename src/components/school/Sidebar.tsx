@@ -12,18 +12,18 @@ import type { MySchool } from "@/lib/school-db";
 type NavItem = { id: string; href: string; icon: string; fr: string; en: string };
 
 const NAV: NavItem[] = [
-  { id: "overview", href: "/school/overview", icon: "pieChart", fr: "Vue d'ensemble", en: "Overview" },
-  { id: "requests", href: "/school/requests", icon: "bell",     fr: "Demandes",      en: "Requests" },
+  { id: "overview", href: "/school/overview", icon: "home",     fr: "Vue d'ensemble", en: "Overview" },
+  { id: "requests", href: "/school/requests", icon: "flag",     fr: "Demandes",      en: "Requests" },
   { id: "announcements", href: "/school/announcements", icon: "bell", fr: "Annonces", en: "Announcements" },
   { id: "inscriptions", href: "/school/inscriptions", icon: "school", fr: "Inscription", en: "Admission" },
-  { id: "reenrollments", href: "/school/reenrollments", icon: "school", fr: "Réinscription", en: "Re-enrollment" },
+  { id: "reenrollments", href: "/school/reenrollments", icon: "refresh", fr: "Réinscription", en: "Re-enrollment" },
   { id: "staff",    href: "/school/staff",    icon: "user",     fr: "Personnel",     en: "Staff" },
-  { id: "attendance", href: "/school/attendance", icon: "calendar", fr: "Présences personnel", en: "Staff attendance" },
+  { id: "attendance", href: "/school/attendance", icon: "clock", fr: "Présence du personnel", en: "Staff attendance" },
   { id: "student-attendance", href: "/school/student-attendance", icon: "calendar", fr: "Présences élèves", en: "Student attendance" },
-  { id: "students", href: "/school/students", icon: "user",     fr: "Classe",        en: "Class" },
-  { id: "classes",  href: "/school/classes",  icon: "pieChart", fr: "Rapport global des classes", en: "Class report" },
+  { id: "students", href: "/school/students", icon: "book",     fr: "Annuaire des classes", en: "Class directory" },
+  { id: "classes",  href: "/school/classes",  icon: "pieChart", fr: "Rapport global de l'école", en: "School report" },
   { id: "parents",  href: "/school/parents",  icon: "users",    fr: "Parents",       en: "Parents" },
-  { id: "finances", href: "/school/finances", icon: "creditcard", fr: "Finances",     en: "Finances" },
+  { id: "finances", href: "/school/finances", icon: "dollar",   fr: "Finance",       en: "Finances" },
   { id: "reports",  href: "/school/reports",  icon: "file",     fr: "Bulletins",     en: "Reports" },
 ];
 

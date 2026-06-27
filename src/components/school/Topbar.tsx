@@ -12,8 +12,8 @@ import type { MySchool } from "@/lib/school-db";
 const LABELS: Record<string, { fr: string; en: string }> = {
   overview: { fr: "Vue d'ensemble",     en: "Overview" },
   teachers: { fr: "Professeurs",        en: "Teachers" },
-  students: { fr: "Classe",             en: "Class" },
-  classes:  { fr: "Rapport global des classes", en: "Class report" },
+  students: { fr: "Annuaire des classes", en: "Class directory" },
+  classes:  { fr: "Rapport global de l'école", en: "School report" },
   reports:  { fr: "Bulletins",          en: "Report cards" },
   branding: { fr: "Branding école",     en: "School branding" },
   settings: { fr: "Paramètres",         en: "Settings" },

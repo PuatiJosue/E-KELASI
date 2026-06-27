@@ -19,7 +19,7 @@ export default async function SchoolFinances() {
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
-        title={{ fr: "Finances", en: "Finances" }}
+        title={{ fr: "Finance", en: "Finances" }}
         sub={{
           fr: `${paidStudents} élève(s) ont payé${totalLabel ? ` · ${totalLabel} encaissés` : ""}`,
           en: `${paidStudents} student(s) paid${totalLabel ? ` · ${totalLabel} collected` : ""}`,

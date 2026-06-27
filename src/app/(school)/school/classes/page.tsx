@@ -15,7 +15,7 @@ export default async function SchoolClasses() {
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
-        title={{ fr: "Rapport global des classes", en: "Class report" }}
+        title={{ fr: "Rapport global de l'école", en: "School report" }}
         sub={{
           fr: "Taux de réussite par option et niveau, du primaire aux humanités.",
           en: "Success rate by option and level, from primary to secondary.",

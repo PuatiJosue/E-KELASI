@@ -26,6 +26,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export default function Signup() {
         email: email.trim(),
         password: codeToPassword(password),
         options: {
-          data: { full_name: fullName, phone: phone || null },
+          data: { full_name: fullName, phone: phone || null, address: address || null },
         },
       });
       if (signErr) {
@@ -80,6 +81,7 @@ export default function Signup() {
         role: "parent",
         locale: "fr",
         phone: phone || null,
+        address: address || null,
       });
       if (profileErr) {
         console.warn("profile upsert failed:", profileErr.message);
@@ -159,6 +161,15 @@ export default function Signup() {
               keyboardType="phone-pad"
               autoComplete="tel"
               icon="bell"
+            />
+            <Field
+              label={tr({ fr: "Adresse", en: "Address" })}
+              value={address}
+              onChangeText={setAddress}
+              placeholder={tr({ fr: "Commune, quartier, avenue, n°…", en: "Municipality, neighborhood, street, no.…" })}
+              autoCapitalize="words"
+              autoComplete="street-address"
+              icon="home"
             />
             <Field
               label={tr({ fr: "Code de connexion (8 caractères min., lettres et chiffres)", en: "Login code (8+ chars, letters and digits)" })}

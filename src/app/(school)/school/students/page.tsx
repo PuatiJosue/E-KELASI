@@ -9,7 +9,7 @@ export default async function SchoolStudents() {
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
-        title={{ fr: "Classe", en: "Class" }}
+        title={{ fr: "Annuaire des classes", en: "Class directory" }}
         sub={{
           fr: `${students.length} élèves dans ${classes} classes`,
           en: `${students.length} students in ${classes} classes`,

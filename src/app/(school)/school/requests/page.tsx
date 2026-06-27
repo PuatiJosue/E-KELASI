@@ -83,6 +83,7 @@ export default async function SchoolRequests() {
                   <div style={{ minWidth: 0 }}>
                     <div style={{ color: "var(--ink-2)", fontWeight: 600 }}>{p.parentName}</div>
                     <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{p.parentPhone || p.parentEmail}</div>
+                    {p.address ? <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>📍 {p.address}</div> : null}
                   </div>
                   <div style={{ color: "var(--ink-2)" }}>
                     {p.className ?? "—"}

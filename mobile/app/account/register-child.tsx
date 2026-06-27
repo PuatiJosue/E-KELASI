@@ -35,6 +35,7 @@ export default function RegisterChild() {
   const [year, setYear] = useState("");
   const [className, setClassName] = useState("");
   const [option, setOption] = useState("");
+  const [address, setAddress] = useState("");
 
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -87,7 +88,7 @@ export default function RegisterChild() {
         body: JSON.stringify({
           schoolId: school!.id, firstName: firstName.trim(), middleName: middleName.trim(),
           lastName: lastName.trim(), sex, birthDate: buildBirthDate(), className,
-          option: needsOption ? option : null,
+          option: needsOption ? option : null, address: address.trim(),
         }),
       });
       const data = await r.json();
@@ -227,6 +228,17 @@ export default function RegisterChild() {
             </Text>
           </View>
         )}
+
+        {/* Adresse de résidence */}
+        <View>
+          <Label>{tr({ fr: "Adresse de résidence", en: "Home address" })}</Label>
+          <Input
+            value={address}
+            onChangeText={setAddress}
+            placeholder={tr({ fr: "Commune, quartier, avenue, n°…", en: "Municipality, neighborhood, street, no.…" })}
+            autoCapitalize="words"
+          />
+        </View>
 
         {msg && (
           <View style={{ padding: 12, borderRadius: 10, backgroundColor: msg.ok ? "rgba(45,134,89,0.10)" : "rgba(192,58,43,0.10)" }}>

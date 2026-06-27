@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     const body = (await req.json().catch(() => ({}))) as {
       schoolId?: string; firstName?: string; middleName?: string; lastName?: string;
-      sex?: string; birthDate?: string; className?: string; option?: string;
+      sex?: string; birthDate?: string; className?: string; option?: string; address?: string;
     };
     const schoolId = String(body.schoolId ?? "").trim();
     const firstName = String(body.firstName ?? "").trim();
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     const birthDate = String(body.birthDate ?? "").trim() || null;
     const className = String(body.className ?? "").trim() || null;
     const option = String(body.option ?? "").trim() || null;
+    const address = String(body.address ?? "").trim() || null;
 
     if (!schoolId || !firstName || !lastName) {
       return NextResponse.json({ error: "invalid_input" }, { status: 400 });
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
         class_name: className,
         grade_level: className ?? "—",
         option,
+        address,
         status: "pending",
         created_by: user.id,
       })

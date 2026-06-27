@@ -22,7 +22,7 @@ export default async function SchoolAttendance({
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
-        title={{ fr: "Présences du personnel", en: "Staff attendance" }}
+        title={{ fr: "Présence du personnel", en: "Staff attendance" }}
         sub={{
           fr: "Pointez les présences du jour ; le rapport calcule la régularité (primes).",
           en: "Mark today's attendance; the report computes regularity (bonuses).",
