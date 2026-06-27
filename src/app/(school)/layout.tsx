@@ -50,7 +50,7 @@ export default async function SchoolLayout({ children }: { children: React.React
     <LangProvider value={lang}>
       <Shell
         sidebar={<SchoolSidebar school={school} userName={userName} counts={requestCounts} />}
-        topbar={<SchoolTopbar school={school} />}
+        topbar={<SchoolTopbar school={school} pending={requestCounts} />}
         sidebarWidth={240}
         style={brandStyle}
       >
