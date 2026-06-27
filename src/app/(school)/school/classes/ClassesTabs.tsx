@@ -72,7 +72,7 @@ export function ClassesTabs({
         })}
       </div>
 
-      {tab === "overview" && <OverviewTab matrix={matrix} rows={rows} />}
+      {tab === "overview" && <OverviewTab matrix={matrix} />}
       {tab === "profs" && <ProfsTab teachers={teachers} />}
       {tab === "cours" && <CoursesManager assignments={assignments} options={options} />}
     </>
@@ -88,7 +88,7 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   );
 }
 
-function OverviewTab({ matrix, rows }: { matrix: ClassReportMatrix; rows: ClassDirectoryRow[] }) {
+function OverviewTab({ matrix }: { matrix: ClassReportMatrix }) {
   const { levels, options, best, worst } = matrix;
   const base = levels.filter((l) => l.group === "base");
   const secondaire = levels.filter((l) => l.group === "secondaire");
@@ -168,37 +168,6 @@ function OverviewTab({ matrix, rows }: { matrix: ClassReportMatrix; rows: ClassD
         <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 14, display: "flex", alignItems: "center", gap: 6 }}>
           <Icon name="shield" size={12} />
           <T fr="Les taux sont calculés sur la base des évaluations et examens enregistrés." en="Rates are computed from recorded assessments and exams." />
-        </div>
-      </div>
-
-      {/* Annuaire des classes (détail) */}
-      <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--divider)", fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>
-          <T fr="Annuaire des classes" en="Class directory" />
-        </div>
-        <div className="ek-tablewrap">
-          <div style={{ minWidth: 640 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.8fr 0.8fr 2fr", padding: "10px 18px", fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.05em", background: "var(--surface-2)" }}>
-              <div><T fr="Classe" en="Class" /></div>
-              <div style={{ textAlign: "center" }}><T fr="Élèves" en="Students" /></div>
-              <div style={{ textAlign: "center" }}><T fr="Profs" en="Teachers" /></div>
-              <div><T fr="Enseignants" en="Teachers" /></div>
-            </div>
-            {rows.length === 0 ? (
-              <div style={{ padding: 36, textAlign: "center", color: "var(--ink-3)", fontSize: 13 }}>
-                <T fr="Aucune classe pour le moment." en="No class yet." />
-              </div>
-            ) : (
-              rows.map((r, i) => (
-                <div key={r.label} style={{ display: "grid", gridTemplateColumns: "1.4fr 0.8fr 0.8fr 2fr", padding: "12px 18px", alignItems: "center", fontSize: 12.5, borderTop: i > 0 ? "1px solid var(--divider)" : "none" }}>
-                  <div style={{ fontWeight: 600, color: "var(--ink)" }}>{r.label}</div>
-                  <div style={{ textAlign: "center", color: "var(--ink-2)", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}><Icon name="user" size={13} /> {r.studentCount}</div>
-                  <div style={{ textAlign: "center", color: "var(--ink-2)", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}><Icon name="users" size={13} /> {r.teacherCount}</div>
-                  <div style={{ color: "var(--ink-3)", fontSize: 11.5 }}>{r.teacherNames.length > 0 ? r.teacherNames.join(", ") : "—"}</div>
-                </div>
-              ))
-            )}
-          </div>
         </div>
       </div>
     </>

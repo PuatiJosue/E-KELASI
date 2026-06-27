@@ -7,7 +7,7 @@ import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
 import { LogoutButton } from "@/components/LogoutButton";
 import { T } from "@/lib/i18n";
-import type { MySchool } from "@/lib/school-db";
+import type { MySchool, SchoolRequestCounts } from "@/lib/school-db";
 
 type NavItem = { id: string; href: string; icon: string; fr: string; en: string };
 
@@ -33,7 +33,32 @@ const SEC: NavItem[] = [
   { id: "settings", href: "/school/settings", icon: "settings", fr: "Paramètres",     en: "Settings" },
 ];
 
-function NavGroup({ label, items }: { label: { fr: string; en: string }; items: NavItem[] }) {
+function Badge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      style={{
+        marginLeft: "auto",
+        minWidth: 18,
+        height: 18,
+        padding: "0 5px",
+        borderRadius: 9,
+        background: "var(--danger)",
+        color: "#fff",
+        fontSize: 10.5,
+        fontWeight: 700,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: 1,
+      }}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+function NavGroup({ label, items, counts }: { label: { fr: string; en: string }; items: NavItem[]; counts?: Record<string, number> }) {
   const pathname = usePathname();
   return (
     <div>
@@ -70,6 +95,7 @@ function NavGroup({ label, items }: { label: { fr: string; en: string }; items: 
             >
               <Icon name={it.icon} size={16} stroke={on ? 2 : 1.7} />
               <span><T fr={it.fr} en={it.en} /></span>
+              <Badge count={counts?.[it.id] ?? 0} />
             </Link>
           );
         })}
@@ -78,8 +104,13 @@ function NavGroup({ label, items }: { label: { fr: string; en: string }; items: 
   );
 }
 
-export function SchoolSidebar({ school, userName }: { school: MySchool | null; userName?: string }) {
+export function SchoolSidebar({ school, userName, counts }: { school: MySchool | null; userName?: string; counts?: SchoolRequestCounts }) {
   const displayName = userName || "Direction";
+  const navCounts: Record<string, number> = {
+    requests: counts?.requests ?? 0,
+    inscriptions: counts?.inscriptions ?? 0,
+    reenrollments: counts?.reenrollments ?? 0,
+  };
   return (
     <div
       style={{
@@ -152,7 +183,7 @@ export function SchoolSidebar({ school, userName }: { school: MySchool | null; u
         </div>
       )}
 
-      <NavGroup label={{ fr: "École", en: "School" }} items={NAV} />
+      <NavGroup label={{ fr: "École", en: "School" }} items={NAV} counts={navCounts} />
       <NavGroup label={{ fr: "Compte", en: "Account" }} items={SEC} />
 
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>

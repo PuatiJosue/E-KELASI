@@ -3,7 +3,7 @@ import { getLang } from "@/lib/lang";
 import { Shell } from "@/components/Shell";
 import { SchoolSidebar } from "@/components/school/Sidebar";
 import { SchoolTopbar } from "@/components/school/Topbar";
-import { getMySchool } from "@/lib/school-db";
+import { getMySchool, getSchoolRequestCounts } from "@/lib/school-db";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
 import { SuspendedNotice } from "@/components/SuspendedNotice";
@@ -20,7 +20,7 @@ async function getUserName(): Promise<string | undefined> {
 }
 
 export default async function SchoolLayout({ children }: { children: React.ReactNode }) {
-  const [school, userName] = await Promise.all([getMySchool(), getUserName()]);
+  const [school, userName, requestCounts] = await Promise.all([getMySchool(), getUserName(), getSchoolRequestCounts()]);
   const lang = getLang();
 
   // École suspendue (abonnement E-KLASS impayé) → accès direction bloqué.
@@ -49,7 +49,7 @@ export default async function SchoolLayout({ children }: { children: React.React
   return (
     <LangProvider value={lang}>
       <Shell
-        sidebar={<SchoolSidebar school={school} userName={userName} />}
+        sidebar={<SchoolSidebar school={school} userName={userName} counts={requestCounts} />}
         topbar={<SchoolTopbar school={school} />}
         sidebarWidth={240}
         style={brandStyle}
