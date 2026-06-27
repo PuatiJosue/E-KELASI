@@ -161,34 +161,77 @@ export async function listTeacherSubjects(): Promise<TeacherSubject[]> {
   }
 }
 
+// Classes attribuées au prof connecté, regroupées par clé composite
+// (class_name + option). Source unique de vérité : un prof ne « possède » que
+// les classes présentes dans course_assignments (via sa fiche staff_members).
+// Renvoie aussi l'id de l'école pour éviter de la re-résoudre.
+async function teacherAssignedClasses(): Promise<{
+  schoolId: string;
+  grouped: Map<string, { className: string; option: string | null; subjects: Set<string> }>;
+} | null> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const school = await getTeacherSchool();
+  if (!school) return null;
+
+  const svc = service();
+  // Fiche personnel du prof connecté (rattachée à son compte via linked_user_id).
+  const { data: staff } = await svc
+    .from("staff_members")
+    .select("id")
+    .eq("school_id", school.id)
+    .eq("linked_user_id", user.id)
+    .maybeSingle();
+
+  const grouped = new Map<string, { className: string; option: string | null; subjects: Set<string> }>();
+  if (!staff) return { schoolId: school.id, grouped };
+
+  const { data: assigns } = await svc
+    .from("course_assignments")
+    .select("class_name, option, subjects(name)")
+    .eq("school_id", school.id)
+    .eq("staff_id", staff.id);
+
+  // Une classe = couple (class_name, option) ; on collecte les matières enseignées.
+  for (const a of (assigns ?? []) as any[]) {
+    const className = a.class_name ?? "—";
+    const option = normOption(a.option);
+    const key = classKey(className, option);
+    const cur = grouped.get(key) ?? { className, option, subjects: new Set<string>() };
+    const subj = a.subjects?.name;
+    if (subj) cur.subjects.add(subj);
+    grouped.set(key, cur);
+  }
+  return { schoolId: school.id, grouped };
+}
+
 export async function listTeacherClasses(): Promise<ClassRow[]> {
   if (!isLiveMode()) return [{ className: "5ème B", option: null, key: "5ème B", label: "5ème B", studentCount: 28, subjects: ["Mathématiques"] }];
   try {
-    const supabase = createClient();
-    const school = await getTeacherSchool();
-    if (!school) return [];
-    const { data: students } = await supabase
+    const assigned = await teacherAssignedClasses();
+    if (!assigned || assigned.grouped.size === 0) return [];
+
+    const svc = service();
+    // Effectif par classe (élèves de l'école regroupés par classe + option).
+    const { data: students } = await svc
       .from("students")
       .select("class_name, option")
-      .eq("school_id", school.id);
-    // Une classe = couple (class_name, option) : on regroupe par clé composite.
-    const grouped = new Map<string, { className: string; option: string | null; count: number }>();
+      .eq("school_id", assigned.schoolId);
+    const counts = new Map<string, number>();
     for (const s of (students ?? []) as any[]) {
-      const className = s.class_name ?? "—";
-      const option = normOption(s.option);
-      const key = classKey(className, option);
-      const cur = grouped.get(key) ?? { className, option, count: 0 };
-      cur.count += 1;
-      grouped.set(key, cur);
+      const key = classKey(s.class_name ?? "—", normOption(s.option));
+      counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    return [...grouped.entries()]
+
+    return [...assigned.grouped.entries()]
       .map(([key, g]) => ({
         className: g.className,
         option: g.option,
         key,
         label: classLabel(g.className, g.option),
-        studentCount: g.count,
-        subjects: [],
+        studentCount: counts.get(key) ?? 0,
+        subjects: [...g.subjects],
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
   } catch {
@@ -200,18 +243,24 @@ export async function listStudentsInClass(className: string, option?: string | n
   if (!isLiveMode()) return [];
   try {
     const supabase = createClient();
-    const school = await getTeacherSchool();
-    if (!school) return [];
+    const assigned = await teacherAssignedClasses();
+    if (!assigned) return [];
+
+    // Sécurité : le prof ne peut consulter que les classes qui lui sont attribuées
+    // (empêche l'accès direct par URL à une classe d'un autre prof).
+    const wantOption = normOption(option);
+    const wantKey = classKey(className, wantOption);
+    if (!assigned.grouped.has(wantKey)) return [];
+
     const { data: studentsRaw } = await supabase
       .from("students")
       .select("id, full_name, class_name, option, avatar_url")
-      .eq("school_id", school.id)
+      .eq("school_id", assigned.schoolId)
       .eq("class_name", className)
       .order("full_name");
     if (!studentsRaw) return [];
 
     // Filtre par option côté JS : robuste si un niveau mêle élèves avec/sans option.
-    const wantOption = normOption(option);
     const students = studentsRaw.filter((s: any) => normOption(s.option) === wantOption);
     if (students.length === 0) return [];
 
