@@ -103,6 +103,114 @@ export function MRRChart({
   );
 }
 
+export function PerfChart({
+  points,
+  h = 220,
+}: {
+  points: Array<{ label: string; avg: number | null; attendancePct: number | null }>;
+  h?: number;
+}) {
+  const w = 560;
+  const pad = { l: 30, r: 14, t: 14, b: 26 };
+  const cw = w - pad.l - pad.r;
+  const ch = h - pad.t - pad.b;
+  const n = points.length;
+  const X = (i: number) => pad.l + (n <= 1 ? cw / 2 : (i / (n - 1)) * cw);
+  const Y = (v: number) => pad.t + (1 - v / 100) * ch; // v ∈ [0,100]
+
+  const series = (vals: Array<number | null>) =>
+    vals
+      .map((v, i) => (v == null ? null : ([X(i), Y(v)] as [number, number])))
+      .filter((p): p is [number, number] => p != null);
+
+  const avgPts = series(points.map((p) => (p.avg == null ? null : (p.avg / 20) * 100)));
+  const attPts = series(points.map((p) => (p.attendancePct == null ? null : p.attendancePct)));
+  const line = (pts: [number, number][]) => pts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(" ");
+  const yTicks = [0, 25, 50, 75, 100];
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block", width: "100%", maxWidth: w, height: "auto" }}>
+      <defs>
+        <linearGradient id="perf-att" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#14B8A6" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#14B8A6" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {yTicks.map((t, i) => {
+        const y = Y(t);
+        return (
+          <g key={i}>
+            <line x1={pad.l} y1={y} x2={w - pad.r} y2={y} stroke="var(--border)" strokeDasharray={i === 0 ? "0" : "3 4"} />
+            <text x={pad.l - 6} y={y + 3} textAnchor="end" fontSize="10" fill="var(--ink-3)">{t}</text>
+          </g>
+        );
+      })}
+      {points.map((p, i) => (
+        <text key={i} x={X(i)} y={h - 8} textAnchor="middle" fontSize="10" fill="var(--ink-3)">{p.label}</text>
+      ))}
+      {attPts.length >= 2 && (
+        <path d={`${line(attPts)} L${attPts[attPts.length - 1][0]},${pad.t + ch} L${attPts[0][0]},${pad.t + ch} Z`} fill="url(#perf-att)" />
+      )}
+      {attPts.length >= 2 && <path d={line(attPts)} fill="none" stroke="#14B8A6" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />}
+      {avgPts.length >= 2 && <path d={line(avgPts)} fill="none" stroke="#4F66E8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />}
+      {attPts.map((p, i) => <circle key={`a${i}`} cx={p[0]} cy={p[1]} r="3" fill="#14B8A6" />)}
+      {avgPts.map((p, i) => <circle key={`m${i}`} cx={p[0]} cy={p[1]} r="3" fill="#4F66E8" />)}
+    </svg>
+  );
+}
+
+export function Bars({
+  data,
+  max = 20,
+  h = 200,
+}: {
+  data: Array<{ label: string; value: number }>;
+  max?: number;
+  h?: number;
+}) {
+  const ticks = [0, max * 0.25, max * 0.5, max * 0.75, max];
+  return (
+    <div style={{ width: "100%" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: h, position: "relative", paddingLeft: 26 }}>
+        {/* lignes de repère + graduations Y */}
+        {ticks.map((t, i) => {
+          const bottom = (t / max) * (h - 24) + 20;
+          return (
+            <div key={i} style={{ position: "absolute", left: 0, right: 0, bottom, borderTop: "1px dashed var(--border)" }}>
+              <span style={{ position: "absolute", left: -2, top: -8, fontSize: 10, color: "var(--ink-3)" }}>{Math.round(t)}</span>
+            </div>
+          );
+        })}
+        {data.map((d, i) => {
+          const pct = Math.max(0, Math.min(1, d.value / max));
+          return (
+            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%", zIndex: 1, gap: 6 }}>
+              <div
+                title={`${d.label} · ${d.value.toFixed(1)}/${max}`}
+                style={{
+                  width: "100%",
+                  maxWidth: 46,
+                  height: `${pct * (h - 24)}px`,
+                  minHeight: 4,
+                  borderRadius: "8px 8px 4px 4px",
+                  background: "linear-gradient(180deg, #8B5CF6 0%, #5468F0 100%)",
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 10, paddingLeft: 26, marginTop: 8 }}>
+        {data.map((d, i) => (
+          <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 11, color: "var(--ink-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {d.label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Donut({
   segments,
   size = 120,

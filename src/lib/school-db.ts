@@ -425,6 +425,106 @@ export async function listSchoolParents(): Promise<SchoolParentRow[]> {
   }
 }
 
+export type GradeBand = { key: string; fr: string; en: string; color: string; count: number };
+
+/** Répartition des élèves par tranche de moyenne (pour le donut « Distribution des notes »). */
+export async function getGradeDistribution(): Promise<{ bands: GradeBand[]; total: number }> {
+  const bands: GradeBand[] = [
+    { key: "exc", fr: "Excellent (16-20)", en: "Excellent (16-20)", color: "#4F66E8", count: 0 },
+    { key: "bien", fr: "Bien (14-16)", en: "Good (14-16)", color: "#8B5CF6", count: 0 },
+    { key: "ab", fr: "Assez bien (12-14)", en: "Fair (12-14)", color: "#14B8A6", count: 0 },
+    { key: "pass", fr: "Passable (10-12)", en: "Pass (10-12)", color: "#D97706", count: 0 },
+    { key: "insuf", fr: "Insuffisant (<10)", en: "Below pass (<10)", color: "#E11D48", count: 0 },
+  ];
+  const students = await listSchoolStudents();
+  let total = 0;
+  for (const s of students) {
+    if (s.avg === null) continue;
+    total += 1;
+    if (s.avg >= 16) bands[0].count += 1;
+    else if (s.avg >= 14) bands[1].count += 1;
+    else if (s.avg >= 12) bands[2].count += 1;
+    else if (s.avg >= 10) bands[3].count += 1;
+    else bands[4].count += 1;
+  }
+  return { bands, total };
+}
+
+export type PerfPoint = { label: string; avg: number | null; attendancePct: number | null };
+
+/** Moyenne générale /20 et taux de présence (%) mois par mois sur 6 mois. */
+export async function getSchoolPerformance6m(): Promise<PerfPoint[]> {
+  if (!isLiveMode()) return [];
+  try {
+    const school = await getMySchool();
+    if (!school) return [];
+    const svc: any = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const startDay = start.toISOString().slice(0, 10);
+
+    const { data: studs } = await svc.from("students").select("id").eq("school_id", school.id);
+    const ids = (studs ?? []).map((s: any) => s.id);
+
+    let grades: any[] = [];
+    if (ids.length > 0) {
+      const { data } = await svc
+        .from("grades")
+        .select("score, max_score, graded_at")
+        .in("student_id", ids)
+        .gte("graded_at", startDay);
+      grades = data ?? [];
+    }
+
+    const { data: att } = await svc
+      .from("student_attendance")
+      .select("status, date")
+      .eq("school_id", school.id)
+      .gte("date", startDay);
+
+    type Bucket = { key: string; label: string; gSum: number; gN: number; aPres: number; aTot: number };
+    const months: Bucket[] = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+      months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString("fr-FR", { month: "short" }), gSum: 0, gN: 0, aPres: 0, aTot: 0 });
+    }
+    const indexOf = (dateStr: string) => {
+      const d = new Date(dateStr);
+      return months.findIndex((m) => m.key === `${d.getFullYear()}-${d.getMonth()}`);
+    };
+
+    for (const g of grades) {
+      const i = indexOf(g.graded_at);
+      if (i < 0) continue;
+      const max = Number(g.max_score) || 20;
+      const sc = Number(g.score);
+      if (!isNaN(sc) && max > 0) {
+        months[i].gSum += (sc / max) * 20;
+        months[i].gN += 1;
+      }
+    }
+    for (const a of att ?? []) {
+      const i = indexOf(a.date);
+      if (i < 0) continue;
+      months[i].aTot += 1;
+      if (a.status === "present" || a.status === "late" || a.status === "justified") months[i].aPres += 1;
+    }
+
+    return months.map((m) => ({
+      label: m.label,
+      avg: m.gN > 0 ? +(m.gSum / m.gN).toFixed(1) : null,
+      attendancePct: m.aTot > 0 ? Math.round((m.aPres / m.aTot) * 100) : null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function listClassesWithAvg(): Promise<ClassWithAvg[]> {
   const students = await listSchoolStudents();
   const grouped: Record<string, { className: string; option: string | null; count: number; sum: number; n: number }> = {};

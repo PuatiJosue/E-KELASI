@@ -18,34 +18,11 @@ export function LanguageToggle({ current }: { current: Lang }) {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 2,
-        padding: 2,
-        borderRadius: 8,
-        background: "var(--surface-2)",
-        opacity: pending ? 0.6 : 1,
-      }}
-    >
+    <div className="ek-seg" style={{ opacity: pending ? 0.6 : 1 }}>
       {(["fr", "en"] as const).map((l) => {
         const on = current === l;
         return (
-          <button
-            key={l}
-            onClick={() => set(l)}
-            style={{
-              padding: "4px 10px",
-              borderRadius: 6,
-              background: on ? "var(--surface)" : "transparent",
-              color: on ? "var(--ink)" : "var(--ink-3)",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.04em",
-              cursor: "pointer",
-              boxShadow: on ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
-            }}
-          >
+          <button key={l} className={on ? "on" : ""} onClick={() => set(l)}>
             {l.toUpperCase()}
           </button>
         );

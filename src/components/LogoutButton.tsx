@@ -23,10 +23,10 @@ export function LogoutButton({ label, block }: { label?: string; block?: boolean
           width: block ? "100%" : "auto",
           height: 36,
           padding: block ? 0 : "0 14px",
-          borderRadius: 9,
-          background: "rgba(192,58,43,0.08)",
+          borderRadius: 10,
+          background: "rgba(225,29,72,0.08)",
           color: "var(--danger)",
-          border: "1px solid rgba(192,58,43,0.20)",
+          border: "1px solid rgba(225,29,72,0.20)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -38,7 +38,7 @@ export function LogoutButton({ label, block }: { label?: string; block?: boolean
           opacity: pending ? 0.5 : 1,
         }}
       >
-        <Icon name="lock" size={14} />
+        <Icon name="logout" size={15} />
         {pending ? "…" : label}
       </button>
     );

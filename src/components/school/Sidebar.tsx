@@ -84,9 +84,9 @@ function NavGroup({ label, items, counts }: { label: { fr: string; en: string };
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                padding: "8px 12px",
-                borderRadius: 8,
+                gap: 11,
+                padding: "9px 12px",
+                borderRadius: 10,
                 background: on ? "var(--brand-soft)" : "transparent",
                 color: on ? "var(--brand-600)" : "var(--ink-2)",
                 fontSize: 13,
@@ -146,8 +146,8 @@ export function SchoolSidebar({ school, userName, counts }: { school: MySchool |
         <div
           style={{
             margin: "4px 4px 0",
-            padding: "12px",
-            borderRadius: 10,
+            padding: "11px 12px",
+            borderRadius: 13,
             background: "var(--surface-2)",
             border: "1px solid var(--border)",
             display: "flex",
@@ -157,16 +157,16 @@ export function SchoolSidebar({ school, userName, counts }: { school: MySchool |
         >
           <div
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: school.brandColor ?? "var(--brand)",
+              width: 32,
+              height: 32,
+              borderRadius: 9,
+              background: school.brandColor ?? "var(--grad-brand)",
               color: "white",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontWeight: 700,
-              fontSize: 11,
+              fontSize: 12,
               fontFamily: "var(--font-display)",
             }}
           >
@@ -177,7 +177,7 @@ export function SchoolSidebar({ school, userName, counts }: { school: MySchool |
               {school.name}
             </div>
             <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>
-              {school.city} · {school.plan === "pro" ? "Pro" : "Standard"}
+              {school.city} · Plan {school.plan === "pro" ? "Pro" : "Standard"}
             </div>
           </div>
         </div>
@@ -186,8 +186,37 @@ export function SchoolSidebar({ school, userName, counts }: { school: MySchool |
       <NavGroup label={{ fr: "École", en: "School" }} items={NAV} counts={navCounts} />
       <NavGroup label={{ fr: "Compte", en: "Account" }} items={SEC} />
 
-      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ padding: "8px", display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* Carte promo — montée en gamme vers le plan Campus. */}
+        <div className="ek-promo" style={{ margin: "0 2px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, position: "relative" }}>
+            <Icon name="sparkle" size={16} />
+            <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--font-display)" }}>
+              <T fr="Passez au plan Campus" en="Upgrade to Campus" />
+            </div>
+          </div>
+          <div style={{ fontSize: 11, marginTop: 4, opacity: 0.9, position: "relative", lineHeight: 1.4 }}>
+            <T fr="IA d'analyse + bulletins automatisés." en="AI analytics + automated report cards." />
+          </div>
+          <Link
+            href="/school/billing"
+            style={{
+              position: "relative",
+              display: "inline-flex",
+              marginTop: 11,
+              padding: "6px 12px",
+              borderRadius: 9,
+              background: "rgba(255,255,255,0.95)",
+              color: "var(--violet-600)",
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            <T fr="Découvrir" en="Discover" />
+          </Link>
+        </div>
+
+        <div style={{ padding: "4px 8px", display: "flex", alignItems: "center", gap: 8 }}>
           <Avatar name={displayName} size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</div>

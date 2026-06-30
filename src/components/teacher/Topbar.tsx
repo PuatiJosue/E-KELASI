@@ -30,7 +30,7 @@ export function TeacherTopbar() {
   return (
     <div
       style={{
-        height: 56,
+        height: 60,
         padding: "0 24px",
         display: "flex",
         alignItems: "center",
@@ -41,21 +41,31 @@ export function TeacherTopbar() {
       }}
     >
       <MobileMenuButton />
-      <div className="ek-hide-mobile" style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 600 }}>
-        <T fr="Enseignement" en="Teaching" /> <span style={{ color: "var(--ink-4)" }}>/</span>
+      <div className="ek-hide-mobile" style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <span style={{ fontSize: 13, color: "var(--ink-2)", fontWeight: 700 }}><T fr="Enseignement" en="Teaching" /></span>
+        <Icon name="chevR" size={13} color="var(--ink-4)" />
+        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-3)" }}>
+          <T fr={label.fr} en={label.en} />
+        </span>
       </div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.01em" }}>
-        <T fr={label.fr} en={label.en} />
+
+      <div style={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
+        <label className="ek-search ek-hide-mobile" style={{ width: "100%", maxWidth: 420 }}>
+          <Icon name="search" size={16} color="var(--ink-3)" />
+          <input placeholder="Rechercher une classe, un élève…" aria-label="Rechercher" />
+        </label>
       </div>
-      <div style={{ flex: 1 }} />
+
+      <LanguageToggle current={lang} />
+
       <button
         type="button"
         onClick={() => router.push("/teacher/messages")}
         title="Messagerie"
         style={{
-          width: 34,
-          height: 34,
-          borderRadius: 9,
+          width: 36,
+          height: 36,
+          borderRadius: 10,
           border: "1px solid var(--border)",
           background: "var(--surface)",
           color: "var(--ink-2)",
@@ -75,7 +85,7 @@ export function TeacherTopbar() {
             width: 7,
             height: 7,
             borderRadius: "50%",
-            background: "var(--brand)",
+            background: "var(--danger)",
             border: "2px solid var(--surface)",
           }}
         />

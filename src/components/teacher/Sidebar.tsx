@@ -54,9 +54,9 @@ function NavGroup({ label, items }: { label: { fr: string; en: string }; items: 
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                padding: "8px 12px",
-                borderRadius: 8,
+                gap: 11,
+                padding: "9px 12px",
+                borderRadius: 10,
                 background: on ? "var(--brand-soft)" : "transparent",
                 color: on ? "var(--brand-600)" : "var(--ink-2)",
                 fontSize: 13,

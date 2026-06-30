@@ -5,40 +5,60 @@
 @tailwind utilities;
 
 :root {
-  /* Couleurs officielles E-KELASI : bleu marine (principal) + or (accent). */
-  --brand: #1E2F6D;
-  --brand-600: #172452;
-  --brand-700: #101A3C;
-  --brand-100: #D6DCEF;
-  --brand-50: #EEF1F9;
-  --brand-soft: rgba(30, 47, 109, 0.10);
+  /* Palette E-KLASS : bleu/indigo (principal) + violet (accent), fond clair. */
+  --brand: #4F66E8;
+  --brand-600: #3F53D8;
+  --brand-700: #2E3FB8;
+  --brand-100: #DDE3FB;
+  --brand-50: #EEF1FE;
+  --brand-soft: rgba(79, 102, 232, 0.10);
 
-  /* Or de la marque (logo). */
+  /* Violet d'accent (carte promo, dégradés). */
+  --violet: #8B5CF6;
+  --violet-600: #7C3AED;
+  --violet-100: #EBE2FD;
+  --violet-soft: rgba(139, 92, 246, 0.12);
+
+  /* Dégradé de marque (logo, boutons primaires, carte promo). */
+  --grad-brand: linear-gradient(135deg, #5468F0 0%, #8B5CF6 100%);
+  --grad-brand-soft: linear-gradient(135deg, #EEF1FE 0%, #F3EEFE 100%);
+
+  /* Or de la marque (compat — encore référencé par endroits). */
   --gold: #F5B301;
   --gold-600: #D99A00;
   --gold-100: #FCEBB8;
   --gold-soft: rgba(245, 179, 1, 0.14);
 
-  --accent: #1D6650;
-  --accent-100: #D6EAE0;
-  --accent-50: #ECF6F1;
+  --accent: #16A34A;
+  --accent-100: #D8F0E1;
+  --accent-50: #ECF8F1;
 
-  --success: #2D8659;
-  --warning: #C28728;
-  --danger: #C03A2B;
-  --info: #3A6DBC;
+  --teal: #14B8A6;
 
-  --bg: #FAF6EE;
+  --success: #16A34A;
+  --warning: #D97706;
+  --danger: #E11D48;
+  --info: #4F66E8;
+
+  /* Pastilles KPI (fond / encre) — bleu, violet, vert, ambre, rose. */
+  --tint-blue-bg: #E5EAFD;     --tint-blue-ink: #4F66E8;
+  --tint-violet-bg: #EDE4FD;   --tint-violet-ink: #8B5CF6;
+  --tint-green-bg: #DCF4E5;    --tint-green-ink: #16A34A;
+  --tint-amber-bg: #FCEEDA;    --tint-amber-ink: #D97706;
+  --tint-rose-bg: #FCE2E8;     --tint-rose-ink: #E11D48;
+  --tint-teal-bg: #D6F3EF;     --tint-teal-ink: #0E9488;
+
+  --bg: #F6F7FB;
   --surface: #FFFFFF;
-  --surface-2: #F4EFE3;
-  --surface-3: #ECE5D2;
-  --ink: #1A1410;
-  --ink-2: #4A3F35;
-  --ink-3: #8A7C6E;
-  --ink-4: #B5A99A;
-  --border: #ECE3D2;
-  --border-strong: #D9CCB4;
-  --divider: rgba(74, 63, 53, 0.08);
+  --surface-2: #F1F3F9;
+  --surface-3: #E7EAF3;
+  --ink: #181C2A;
+  --ink-2: #4B5167;
+  --ink-3: #858BA0;
+  --ink-4: #AEB3C6;
+  --border: #E9EBF3;
+  --border-strong: #D7DAE8;
+  --divider: rgba(24, 28, 42, 0.07);
 
   --on-brand: #FFFFFF;
 
@@ -53,37 +73,64 @@
 
   --card-bg: var(--surface);
   --card-border: 1px solid var(--border);
-  --card-shadow: 0 1px 2px rgba(20, 16, 10, 0.04), 0 6px 18px rgba(20, 16, 10, 0.04);
+  --card-shadow: 0 1px 2px rgba(24, 28, 42, 0.04), 0 6px 20px rgba(24, 28, 42, 0.05);
+
+  /* Dégradé d'ambiance en haut de page (hero). */
+  --bg-hero: radial-gradient(1200px 380px at 18% -8%, rgba(99, 102, 241, 0.10), transparent 60%), radial-gradient(900px 360px at 88% -10%, rgba(139, 92, 246, 0.09), transparent 55%);
 }
 
 [data-theme="dark"] {
-  --bg: #14110D;
-  --surface: #1E1A14;
-  --surface-2: #28221B;
-  --surface-3: #322A20;
-  --ink: #F5EFE3;
-  --ink-2: #C7B9A8;
-  --ink-3: #897C6C;
-  --ink-4: #5C5043;
-  --border: #2F2A20;
-  --border-strong: #3F382C;
-  --divider: rgba(245, 239, 227, 0.07);
+  --bg: #0E1018;
+  --surface: #181B26;
+  --surface-2: #20242F;
+  --surface-3: #2A2F3C;
+  --ink: #ECEEF6;
+  --ink-2: #AEB4C7;
+  --ink-3: #79809A;
+  --ink-4: #565D75;
+  --border: #2A2E3B;
+  --border-strong: #383D4D;
+  --divider: rgba(236, 238, 246, 0.08);
 
-  --brand: #7B91DE;
-  --brand-600: #6076C9;
-  --brand-700: #455CAE;
-  --brand-100: #1E2A4A;
-  --brand-50: #161E33;
-  --brand-soft: rgba(123, 145, 222, 0.14);
+  --brand: #8093F2;
+  --brand-600: #6C81EE;
+  --brand-700: #5468F0;
+  --brand-100: #232A4A;
+  --brand-50: #1A1F36;
+  --brand-soft: rgba(128, 147, 242, 0.16);
+
+  --violet: #A78BFA;
+  --violet-600: #8B5CF6;
+  --violet-100: #2A2247;
+  --violet-soft: rgba(167, 139, 250, 0.16);
+
+  --grad-brand: linear-gradient(135deg, #5468F0 0%, #8B5CF6 100%);
+  --grad-brand-soft: linear-gradient(135deg, #1A1F36 0%, #221C3D 100%);
 
   --gold: #F5C040;
   --gold-600: #E0A91E;
   --gold-100: #3A2E10;
   --gold-soft: rgba(245, 192, 64, 0.16);
 
-  --accent: #4FA286;
-  --accent-100: #1F3A30;
-  --accent-50: #15241D;
+  --accent: #34D27F;
+  --accent-100: #173527;
+  --accent-50: #122019;
+
+  --teal: #2DD4BF;
+  --success: #34D27F;
+  --warning: #F0A33A;
+  --danger: #F4577B;
+  --info: #8093F2;
+
+  --tint-blue-bg: #222A4A;     --tint-blue-ink: #93A4F5;
+  --tint-violet-bg: #2A2247;   --tint-violet-ink: #B49BFB;
+  --tint-green-bg: #163127;    --tint-green-ink: #43D98A;
+  --tint-amber-bg: #33260F;    --tint-amber-ink: #F0A33A;
+  --tint-rose-bg: #341622;     --tint-rose-ink: #F4789A;
+  --tint-teal-bg: #12302D;     --tint-teal-ink: #2DD4BF;
+
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --bg-hero: radial-gradient(1200px 380px at 18% -8%, rgba(99, 102, 241, 0.16), transparent 60%), radial-gradient(900px 360px at 88% -10%, rgba(139, 92, 246, 0.14), transparent 55%);
 }
 
 /* ── Police (data-font) — choisie dans Paramètres › Apparence ───────── */
@@ -130,7 +177,7 @@ body {
 }
 
 ::selection {
-  background: rgba(224, 112, 30, 0.25);
+  background: rgba(79, 102, 232, 0.22);
 }
 
 h1, h2, h3, h4 {
@@ -156,10 +203,11 @@ h1, h2, h3, h4 {
   .ek-btn:active { transform: scale(0.98); }
 
   .ek-btn-primary {
-    background: var(--brand);
-    color: var(--on-brand);
+    background: var(--grad-brand);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.28);
   }
-  .ek-btn-primary:hover { background: var(--brand-600); }
+  .ek-btn-primary:hover { filter: brightness(1.05); }
 
   .ek-btn-ghost { color: var(--ink-2); }
   .ek-btn-ghost:hover { background: var(--surface-2); }
@@ -180,9 +228,83 @@ h1, h2, h3, h4 {
   }
   .ek-chip.brand { background: var(--brand-soft); color: var(--brand-600); }
   .ek-chip.success { background: var(--accent-100); color: var(--accent); }
-  .ek-chip.warn { background: rgba(194, 135, 40, 0.13); color: var(--warning); }
-  .ek-chip.danger { background: rgba(192, 58, 43, 0.10); color: var(--danger); }
-  .ek-chip.info { background: rgba(58, 109, 188, 0.10); color: var(--info); }
+  .ek-chip.warn { background: rgba(217, 119, 6, 0.13); color: var(--warning); }
+  .ek-chip.danger { background: rgba(225, 29, 72, 0.11); color: var(--danger); }
+  .ek-chip.info { background: var(--brand-soft); color: var(--brand-600); }
+
+  /* Pastille d'icône colorée (cartes KPI, listes). */
+  .ek-tint {
+    @apply inline-flex items-center justify-center;
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+  .ek-tint.blue   { background: var(--tint-blue-bg);   color: var(--tint-blue-ink); }
+  .ek-tint.violet { background: var(--tint-violet-bg); color: var(--tint-violet-ink); }
+  .ek-tint.green  { background: var(--tint-green-bg);  color: var(--tint-green-ink); }
+  .ek-tint.amber  { background: var(--tint-amber-bg);  color: var(--tint-amber-ink); }
+  .ek-tint.rose   { background: var(--tint-rose-bg);   color: var(--tint-rose-ink); }
+  .ek-tint.teal   { background: var(--tint-teal-bg);   color: var(--tint-teal-ink); }
+
+  /* Bande d'ambiance dégradée en haut de la zone de contenu (hero). */
+  .ek-hero { background-image: var(--bg-hero); background-repeat: no-repeat; }
+
+  /* Champ de recherche de la topbar. */
+  .ek-search {
+    @apply flex items-center gap-2;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 11px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink-3);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .ek-search:focus-within {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-soft);
+  }
+  .ek-search input {
+    border: none; outline: none; background: transparent;
+    color: var(--ink); font-size: 13px; width: 100%;
+    font-family: var(--font-body);
+  }
+  .ek-search input::placeholder { color: var(--ink-3); }
+
+  /* Bascule segmentée (FR / EN). */
+  .ek-seg {
+    @apply inline-flex items-center;
+    padding: 3px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    gap: 2px;
+  }
+  .ek-seg button {
+    @apply inline-flex items-center justify-center font-semibold;
+    height: 26px; min-width: 32px; padding: 0 9px;
+    border-radius: 7px;
+    font-size: 12px;
+    color: var(--ink-3);
+    background: transparent; border: none; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .ek-seg button.on { background: var(--grad-brand); color: #fff; box-shadow: 0 2px 6px rgba(99,102,241,0.30); }
+
+  /* Carte promo (sidebar). */
+  .ek-promo {
+    border-radius: 16px;
+    padding: 16px;
+    background: var(--grad-brand);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .ek-promo::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(120px 80px at 85% 0%, rgba(255,255,255,0.22), transparent 70%);
+    pointer-events: none;
+  }
 }
 
 .ek-scroll::-webkit-scrollbar { width: 6px; height: 6px; }

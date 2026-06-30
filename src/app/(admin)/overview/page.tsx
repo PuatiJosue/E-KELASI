@@ -5,9 +5,9 @@ import { getOverview, getCommsFlowThisMonth, type PlanSlice } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 
 const PLAN_META: Record<PlanSlice["plan"], { label: string; color: string }> = {
-  essentiel: { label: "Essentiel", color: "var(--brand)" },
-  famille: { label: "Famille", color: "var(--accent)" },
-  premium: { label: "Premium", color: "var(--info)" },
+  essentiel: { label: "Essentiel", color: "#4F66E8" },
+  famille: { label: "Famille", color: "#8B5CF6" },
+  premium: { label: "Premium", color: "#14B8A6" },
 };
 
 function EmptyState({ fr, en }: { fr: string; en: string }) {
@@ -54,23 +54,25 @@ export default async function OverviewPage() {
   const planTotal = planDistribution.reduce((a, p) => a + p.count, 0);
 
   return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
+    <div className="ek-hero" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
       <PageHeader
+        eyebrow={{ fr: today, en: today }}
         title={{
           fr: firstName ? `Bonjour ${firstName}.` : "Bonjour.",
           en: firstName ? `Hi ${firstName}.` : "Hello.",
         }}
+        highlight={firstName || undefined}
         sub={{
-          fr: `${today} · ${kpis.schools} école(s) · ${kpis.parents} parent(s) abonné(s)`,
-          en: `${today} · ${kpis.schools} school(s) · ${kpis.parents} paying parent(s)`,
+          fr: `${kpis.schools} école(s) · ${kpis.parents} parent(s) abonné(s) sur la plateforme.`,
+          en: `${kpis.schools} school(s) · ${kpis.parents} paying parent(s) on the platform.`,
         }}
       />
 
       <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-        <KPI label={<T fr="MRR" en="MRR" />} value={kpis.mrr} />
-        <KPI label={<T fr="Parents abonnés" en="Paying parents" />} value={kpis.parents} />
-        <KPI label={<T fr="Churn rate" en="Churn rate" />} value={kpis.churn} accent="var(--accent)" />
-        <KPI label={<T fr="Écoles partenaires" en="Partner schools" />} value={kpis.schools} />
+        <KPI icon="dollar" tint="green" label={<T fr="MRR" en="MRR" />} value={kpis.mrr} />
+        <KPI icon="users" tint="blue" label={<T fr="Parents abonnés" en="Paying parents" />} value={kpis.parents} />
+        <KPI icon="activity" tint="rose" label={<T fr="Churn rate" en="Churn rate" />} value={kpis.churn} />
+        <KPI icon="school" tint="violet" label={<T fr="Écoles partenaires" en="Partner schools" />} value={kpis.schools} />
       </div>
 
       {/* Flux de données — communications école → familles ce mois */}
@@ -92,9 +94,9 @@ export default async function OverviewPage() {
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 16 }}>
-          <FlowStat color="var(--info)" value={comms.messages} label={<T fr="Messages" en="Messages" />} />
-          <FlowStat color="var(--brand)" value={comms.bulletins} label={<T fr="Bulletins & annonces" en="Reports & announcements" />} />
-          <FlowStat color="var(--accent)" value={comms.notes} label={<T fr="Notes" en="Grades" />} />
+          <FlowStat color="#4F66E8" value={comms.messages} label={<T fr="Messages" en="Messages" />} />
+          <FlowStat color="#8B5CF6" value={comms.bulletins} label={<T fr="Bulletins & annonces" en="Reports & announcements" />} />
+          <FlowStat color="#16A34A" value={comms.notes} label={<T fr="Notes" en="Grades" />} />
         </div>
       </div>
 

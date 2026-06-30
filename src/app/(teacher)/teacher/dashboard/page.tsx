@@ -21,26 +21,29 @@ export default async function TeacherDashboard() {
   ]);
 
   const todoCount = homework.filter((h) => h.status === "todo" || h.status === "inprogress").length;
+  const firstName = profile?.name?.split(" ").slice(-1)[0] ?? "";
 
   return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
+    <div className="ek-hero" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
       <PageHeader
+        eyebrow={school ? { fr: `${school.name} · ${school.city}`, en: `${school.name} · ${school.city}` } : undefined}
         title={{
-          fr: `Bonjour ${profile?.name?.split(" ").slice(-1)[0] ?? ""}.`,
-          en: `Hi ${profile?.name?.split(" ").slice(-1)[0] ?? ""}.`,
+          fr: `Bonjour ${firstName}.`,
+          en: `Hi ${firstName}.`,
         }}
+        highlight={firstName || undefined}
         sub={{
-          fr: school ? `${school.name} · ${school.city}` : "",
-          en: school ? `${school.name} · ${school.city}` : "",
+          fr: "Voici un aperçu de votre activité aujourd'hui.",
+          en: "Here is a snapshot of your activity today.",
         }}
         right={
           <>
-            <Link href="/teacher/grades" className="ek-btn ek-btn-outline" style={{ height: 32, fontSize: 12 }}>
-              <Icon name="plus" size={14} stroke={2.5} />
+            <Link href="/teacher/grades" className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 13 }}>
+              <Icon name="plus" size={15} stroke={2.5} />
               <T fr="Saisir une note" en="Enter a grade" />
             </Link>
-            <Link href="/teacher/homework/new" className="ek-btn ek-btn-primary" style={{ height: 32, fontSize: 12 }}>
-              <Icon name="plus" size={14} stroke={2.5} />
+            <Link href="/teacher/homework/new" className="ek-btn ek-btn-primary" style={{ height: 38, fontSize: 13 }}>
+              <Icon name="plus" size={15} stroke={2.5} />
               <T fr="Nouveau devoir" en="New homework" />
             </Link>
           </>
@@ -48,10 +51,10 @@ export default async function TeacherDashboard() {
       />
 
       <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-        <KPI label={<T fr="Mes classes" en="My classes" />} value={String(classes.length)} sub={<T fr="cette année" en="this year" />} />
-        <KPI label={<T fr="Total élèves" en="Total students" />} value={String(school?.totalStudents ?? 0)} sub={school?.name ?? ""} />
-        <KPI label={<T fr="Notes saisies" en="Grades entered" />} value={String(recentGrades.length)} sub={<T fr="dernières en date" en="latest" />} />
-        <KPI label={<T fr="Devoirs en cours" en="Homework active" />} value={String(todoCount)} accent="var(--brand-600)" sub={<T fr="à rendre" en="pending" />} />
+        <KPI icon="users" tint="blue" label={<T fr="Mes classes" en="My classes" />} value={String(classes.length)} sub={<T fr="Cette année" en="This year" />} />
+        <KPI icon="graduation" tint="violet" label={<T fr="Total élèves" en="Total students" />} value={String(school?.totalStudents ?? 0)} sub={school?.name ?? ""} />
+        <KPI icon="clipboard" tint="amber" label={<T fr="Notes saisies" en="Grades entered" />} value={String(recentGrades.length)} sub={<T fr="Dernières en date" en="Latest" />} />
+        <KPI icon="bookOpen" tint="rose" label={<T fr="Devoirs en cours" en="Homework active" />} value={String(todoCount)} sub={<T fr="À rendre" en="Pending" />} />
       </div>
 
       <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 14 }}>

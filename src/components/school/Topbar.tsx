@@ -64,7 +64,7 @@ export function SchoolTopbar({ school, pending }: { school: MySchool | null; pen
   return (
     <div
       style={{
-        height: 56,
+        height: 60,
         padding: "0 24px",
         display: "flex",
         alignItems: "center",
@@ -75,13 +75,29 @@ export function SchoolTopbar({ school, pending }: { school: MySchool | null; pen
       }}
     >
       <MobileMenuButton />
-      <div className="ek-hide-mobile" style={{ fontSize: 11, color: "var(--ink-3)", fontWeight: 600 }}>
-        {school?.name ?? "École"} <span style={{ color: "var(--ink-4)" }}>/</span>
+      <div className="ek-hide-mobile" style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <span style={{ fontSize: 13, color: "var(--ink-2)", fontWeight: 700 }}>{school?.name ?? "École"}</span>
+        <Icon name="chevR" size={13} color="var(--ink-4)" />
+        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink-3)" }}>
+          <T fr={label.fr} en={label.en} />
+        </span>
       </div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.01em" }}>
-        <T fr={label.fr} en={label.en} />
+
+      {/* Recherche (présentation) — le conteneur sert aussi d'espaceur. */}
+      <div style={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
+        <label className="ek-search ek-hide-mobile" style={{ width: "100%", maxWidth: 460 }}>
+          <Icon name="search" size={16} color="var(--ink-3)" />
+          <input placeholder="Rechercher un élève, une classe, une note…" aria-label="Rechercher" />
+          <kbd
+            style={{
+              fontSize: 11, color: "var(--ink-3)", fontFamily: "var(--font-mono)",
+              border: "1px solid var(--border)", borderRadius: 6, padding: "1px 6px", background: "var(--surface-2)",
+            }}
+          >
+            ⌘K
+          </kbd>
+        </label>
       </div>
-      <div style={{ flex: 1 }} />
 
       {/* Rafraîchir maintenant + bascule auto-actualisation */}
       <button

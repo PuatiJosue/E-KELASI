@@ -54,9 +54,9 @@ function NavGroup({ label, items }: { label: { fr: string; en: string }; items: 
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                padding: "8px 12px",
-                borderRadius: 8,
+                gap: 11,
+                padding: "9px 12px",
+                borderRadius: 10,
                 background: on ? "var(--brand-soft)" : "transparent",
                 color: on ? "var(--brand-600)" : "var(--ink-2)",
                 fontSize: 13,
@@ -128,16 +128,17 @@ export function AdminSidebar({
       >
         <div
           style={{
-            width: 26,
-            height: 26,
-            borderRadius: 7,
-            background: "var(--ink)",
-            color: "var(--surface)",
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            background: "var(--grad-brand)",
+            color: "#fff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontWeight: 700,
             fontSize: 11,
+            fontFamily: "var(--font-display)",
           }}
         >
           EK
