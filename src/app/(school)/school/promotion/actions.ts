@@ -114,6 +114,84 @@ export async function applyPromotion(input: {
   return { ok: true, promoted, repeated, graduated };
 }
 
+/** Résumé du dernier passage appliqué (pour proposer une annulation). */
+export async function getLastPromotionInfo(): Promise<{ at: string; students: number; dateLabel: string } | null> {
+  if (!isLiveMode()) return null;
+  const c = await caller();
+  if (!c) return null;
+  const svc = service();
+  const { data: last } = await svc
+    .from("students")
+    .select("promoted_at")
+    .eq("school_id", c.schoolId)
+    .not("promoted_at", "is", null)
+    .order("promoted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const at = (last as any)?.promoted_at as string | undefined;
+  if (!at) return null;
+  const { count } = await svc
+    .from("students")
+    .select("id", { count: "exact", head: true })
+    .eq("school_id", c.schoolId)
+    .eq("promoted_at", at);
+  return {
+    at,
+    students: count ?? 0,
+    dateLabel: new Date(at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }),
+  };
+}
+
+/** Annule le dernier passage : restaure les classes/statuts et supprime ses certificats. */
+export async function undoLastPromotion(): Promise<{ ok: true; reverted: number } | { ok: false; message: string }> {
+  if (!isLiveMode()) return { ok: true, reverted: 0 };
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+
+  const { data: last } = await svc
+    .from("students")
+    .select("promoted_at")
+    .eq("school_id", c.schoolId)
+    .not("promoted_at", "is", null)
+    .order("promoted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const at = (last as any)?.promoted_at as string | undefined;
+  if (!at) return { ok: false, message: "Aucun passage récent à annuler." };
+
+  const { data: batch } = await svc
+    .from("students")
+    .select("id, previous_class, previous_option")
+    .eq("school_id", c.schoolId)
+    .eq("promoted_at", at);
+
+  let reverted = 0;
+  for (const s of (batch ?? []) as any[]) {
+    const restore: Record<string, any> = {
+      status: "active",
+      previous_class: null,
+      previous_option: null,
+      promoted_at: null,
+    };
+    if (s.previous_class) {
+      restore.class_name = s.previous_class;
+      restore.grade_level = s.previous_class;
+      restore.option = s.previous_option || null;
+    }
+    await svc.from("students").update(restore).eq("id", s.id).eq("school_id", c.schoolId);
+    reverted += 1;
+  }
+
+  // Supprime les certificats de réinscription générés par ce lot.
+  await svc.from("reenrollments").delete().eq("school_id", c.schoolId).eq("decided_at", at).eq("status", "validated");
+
+  revalidatePath("/school/promotion");
+  revalidatePath("/school/students");
+  revalidatePath("/school/reenrollments");
+  return { ok: true, reverted };
+}
+
 function cert(
   c: { userId: string; schoolId: string },
   schoolYear: string,

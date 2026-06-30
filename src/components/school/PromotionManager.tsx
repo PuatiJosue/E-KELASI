@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { classLabel, classKey, normOption } from "@/lib/classes";
-import { nextClassFor, PROMOTION_LEVELS, PROMOTION_OPTIONS } from "@/lib/promotion";
-import { applyPromotion, type PromotionAction, type PromotionDecision } from "@/app/(school)/school/promotion/actions";
+import { nextClassFor, proposeDecision, PROMOTION_LEVELS, PROMOTION_OPTIONS } from "@/lib/promotion";
+import { applyPromotion, undoLastPromotion, type PromotionAction, type PromotionDecision } from "@/app/(school)/school/promotion/actions";
 
 type StudentLite = { id: string; name: string; className: string; option: string | null };
 type Decision = { action: PromotionAction; targetClass: string; option: string | null };
@@ -24,13 +24,27 @@ export function PromotionManager({
   students,
   defaultYear,
   schoolName,
+  lastBatch,
 }: {
   students: StudentLite[];
   defaultYear: string;
   schoolName: string;
+  lastBatch?: { at: string; students: number; dateLabel: string } | null;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+
+  const undo = () => {
+    if (!lastBatch) return;
+    const ok = window.confirm(`Annuler le dernier passage (${lastBatch.students} élève(s) du ${lastBatch.dateLabel}) ?\n\nLes classes seront restaurées et les certificats générés seront supprimés.`);
+    if (!ok) return;
+    start(async () => {
+      const res = await undoLastPromotion();
+      if (!res.ok) { alert(res.message); return; }
+      setDone(null);
+      router.refresh();
+    });
+  };
   const [year, setYear] = useState(defaultYear);
   const [done, setDone] = useState<{ promoted: number; repeated: number; graduated: number } | null>(null);
 
@@ -38,14 +52,12 @@ export function PromotionManager({
   const [decisions, setDecisions] = useState<Record<string, Decision>>(() => {
     const init: Record<string, Decision> = {};
     for (const s of students) {
-      const p = nextClassFor(s.className);
-      if (p.kind === "promote") {
-        init[s.id] = { action: "promote", targetClass: p.nextClass, option: p.enteringHumanities ? "" : normOption(s.option) };
-      } else if (p.kind === "graduate") {
-        init[s.id] = { action: "graduate", targetClass: "", option: normOption(s.option) };
-      } else {
-        init[s.id] = { action: "skip", targetClass: "", option: normOption(s.option) };
-      }
+      const p = proposeDecision(s.className);
+      init[s.id] = {
+        action: p.action,
+        targetClass: p.targetClass,
+        option: p.needsOption ? "" : normOption(s.option),
+      };
     }
     return init;
   });
@@ -234,10 +246,18 @@ export function PromotionManager({
         <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
           {schoolName} · <T fr="année" en="year" /> {year}
         </span>
-        <button onClick={submit} disabled={pending} className="ek-btn ek-btn-primary" style={{ height: 40, fontSize: 13.5, marginLeft: "auto", opacity: pending ? 0.6 : 1 }}>
-          <Icon name="graduation" size={16} />
-          {pending ? "…" : <T fr="Appliquer le passage" en="Apply promotion" />}
-        </button>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          {lastBatch && lastBatch.students > 0 && (
+            <button onClick={undo} disabled={pending} className="ek-btn ek-btn-outline" style={{ height: 40, fontSize: 13, color: "var(--danger)", opacity: pending ? 0.6 : 1 }}>
+              <Icon name="refresh" size={15} />
+              <T fr={`Annuler le dernier passage (${lastBatch.students})`} en={`Undo last promotion (${lastBatch.students})`} />
+            </button>
+          )}
+          <button onClick={submit} disabled={pending} className="ek-btn ek-btn-primary" style={{ height: 40, fontSize: 13.5, opacity: pending ? 0.6 : 1 }}>
+            <Icon name="graduation" size={16} />
+            {pending ? "…" : <T fr="Appliquer le passage" en="Apply promotion" />}
+          </button>
+        </div>
       </div>
     </>
   );

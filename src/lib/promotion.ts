@@ -72,3 +72,20 @@ export function nextClassFor(className: string): PromotionProposal {
   const next = PROMOTION_LEVELS[idx + 1];
   return { kind: "promote", nextClass: next.label, enteringHumanities: key === "b8" };
 }
+
+export type PromotionActionKind = "promote" | "redouble" | "graduate" | "skip";
+export type ProposedDecision = { action: PromotionActionKind; targetClass: string; needsOption: boolean };
+
+/**
+ * Décision par défaut proposée à l'écran pour un élève :
+ *  - classe reconnue & non terminale → « Passe » vers la classe supérieure ;
+ *  - 4e humanités → « Diplômé » ;
+ *  - classe non reconnue → « Exclure » (à traiter à la main).
+ * `needsOption` = entrée en humanités sans option encore définie.
+ */
+export function proposeDecision(className: string): ProposedDecision {
+  const p = nextClassFor(className);
+  if (p.kind === "promote") return { action: "promote", targetClass: p.nextClass, needsOption: p.enteringHumanities };
+  if (p.kind === "graduate") return { action: "graduate", targetClass: "", needsOption: false };
+  return { action: "skip", targetClass: "", needsOption: false };
+}

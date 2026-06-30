@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nextClassFor, levelKeyOf, cycleOf, PROMOTION_LEVELS } from "./promotion";
+import { nextClassFor, proposeDecision, levelKeyOf, cycleOf, PROMOTION_LEVELS } from "./promotion";
 
 describe("levelKeyOf", () => {
   it("reconnaît les niveaux du primaire", () => {
@@ -56,6 +56,21 @@ describe("nextClassFor", () => {
         expect(PROMOTION_LEVELS.some((l) => l.label === p.nextClass)).toBe(true);
       }
     }
+  });
+});
+
+describe("proposeDecision", () => {
+  it("propose le passage vers la classe supérieure", () => {
+    expect(proposeDecision("2e année des humanités")).toEqual({ action: "promote", targetClass: "3e année des humanités", needsOption: false });
+  });
+  it("signale le besoin d'option à l'entrée en humanités", () => {
+    expect(proposeDecision("8e année du primaire")).toEqual({ action: "promote", targetClass: "1re année des humanités", needsOption: true });
+  });
+  it("propose « diplômé » en fin de cycle", () => {
+    expect(proposeDecision("4e année des humanités")).toEqual({ action: "graduate", targetClass: "", needsOption: false });
+  });
+  it("propose « exclure » pour une classe non reconnue", () => {
+    expect(proposeDecision("Club théâtre")).toEqual({ action: "skip", targetClass: "", needsOption: false });
   });
 });
 

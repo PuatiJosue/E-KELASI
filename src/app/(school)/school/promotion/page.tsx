@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/KPI";
 import { getMySchool, listSchoolStudents } from "@/lib/school-db";
 import { PromotionManager } from "@/components/school/PromotionManager";
+import { getLastPromotionInfo } from "@/app/(school)/school/promotion/actions";
 import { schoolYearLabel } from "@/lib/trimester";
 
 /** « 2025-2026 » / « 2025 – 2026 » → « 2026-2027 ». */
@@ -14,7 +15,11 @@ function nextYearLabel(cur: string): string {
 }
 
 export default async function PromotionPage() {
-  const [school, students] = await Promise.all([getMySchool(), listSchoolStudents()]);
+  const [school, students, lastBatch] = await Promise.all([
+    getMySchool(),
+    listSchoolStudents(),
+    getLastPromotionInfo(),
+  ]);
   const targetYear = nextYearLabel(school?.currentYear || schoolYearLabel());
 
   return (
@@ -31,6 +36,7 @@ export default async function PromotionPage() {
         students={students.map((s) => ({ id: s.id, name: s.fullName, className: s.className, option: s.option }))}
         defaultYear={targetYear}
         schoolName={school?.name ?? ""}
+        lastBatch={lastBatch}
       />
     </div>
   );
