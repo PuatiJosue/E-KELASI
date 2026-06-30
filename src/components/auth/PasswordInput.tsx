@@ -12,9 +12,9 @@ export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>,
   const [show, setShow] = useState(false);
   const { placeholder = "••••••••", name = "password", required = true, ...rest } = props;
   return (
-    <div style={{ position: "relative" }}>
-      <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--ink-3)", display: "flex" }}>
-        <Icon name="lock" size={17} />
+    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+      <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "#b0acc4", display: "flex", pointerEvents: "none" }}>
+        <Icon name="lock" size={18} />
       </span>
       <input
         {...rest}
@@ -22,24 +22,16 @@ export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>,
         required={required}
         type={show ? "text" : "password"}
         placeholder={placeholder}
-        style={{
-          width: "100%",
-          padding: "13px 42px",
-          borderRadius: 12,
-          border: "1px solid var(--border-strong)",
-          background: "var(--surface)",
-          fontSize: 14,
-          color: "var(--ink)",
-          outline: "none",
-        }}
+        className="ek-auth-input"
+        style={{ paddingLeft: 46, paddingRight: 48 }}
       />
       <button
         type="button"
         onClick={() => setShow((s) => !s)}
         aria-label={show ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-        style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", display: "flex", padding: 2 }}
+        style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", width: 34, height: 34, borderRadius: 9, border: "none", background: "transparent", color: "#aaa6c0", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
       >
-        <Icon name={show ? "eyeOff" : "eye"} size={17} />
+        <Icon name={show ? "eyeOff" : "eye"} size={18} />
       </button>
     </div>
   );

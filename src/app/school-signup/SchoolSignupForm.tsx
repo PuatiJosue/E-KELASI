@@ -55,7 +55,7 @@ export function SchoolSignupForm() {
         <PasswordInput name="confirm" minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
       </label>
 
-      <button type="submit" disabled={pending} className="ek-btn ek-btn-primary" style={{ marginTop: 4, height: 46, fontSize: 14.5, opacity: pending ? 0.6 : 1 }}>
+      <button type="submit" disabled={pending} className="ek-btn ek-btn-primary" style={{ marginTop: 6, height: 54, fontSize: 16, opacity: pending ? 0.6 : 1 }}>
         {pending ? "Création…" : "Créer le compte de l'école"}
       </button>
 

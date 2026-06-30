@@ -27,7 +27,7 @@ export default function ForgotPasswordPage({
       ) : (
         <form action={requestPasswordResetAction} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <AuthField label="Email" icon="user" name="email" type="email" required placeholder="vous@e-kelasi.com" autoComplete="email" />
-          <button type="submit" className="ek-btn ek-btn-primary" style={{ marginTop: 4, height: 46, fontSize: 14.5 }}>
+          <button type="submit" className="ek-btn ek-btn-primary" style={{ marginTop: 6, height: 54, fontSize: 16 }}>
             Envoyer le lien
           </button>
         </form>

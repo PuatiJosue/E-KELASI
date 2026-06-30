@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
-import { AuthShell, AuthField, AuthError } from "@/components/auth/AuthShell";
+import { AuthShell, AuthField, AuthError, AuthLabel } from "@/components/auth/AuthShell";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { loginAction } from "./actions";
 
@@ -21,14 +21,14 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
     >
       {error && <AuthError>{error}</AuthError>}
 
-      <form action={loginAction} style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: error ? 16 : 0 }}>
+      <form action={loginAction} style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: error ? 16 : 0 }}>
         <AuthField label="Email" icon="user" name="email" type="email" required placeholder="vous@e-kelasi.com" autoComplete="email" />
-        <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>Mot de passe</span>
+        <label style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          <AuthLabel>Mot de passe</AuthLabel>
           <PasswordInput autoComplete="current-password" />
         </label>
-        <button type="submit" className="ek-btn ek-btn-primary" style={{ marginTop: 4, height: 46, fontSize: 14.5 }}>
-          <Icon name="login" size={17} stroke={2.2} />
+        <button type="submit" className="ek-btn ek-btn-primary" style={{ marginTop: 6, height: 54, fontSize: 16 }}>
+          <Icon name="login" size={18} stroke={2.2} />
           Se connecter
         </button>
       </form>

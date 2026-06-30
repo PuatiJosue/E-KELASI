@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { AuthShell, AuthError } from "@/components/auth/AuthShell";
+import { AuthShell, AuthError, AuthLabel } from "@/components/auth/AuthShell";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { updatePasswordAction } from "./actions";
 
@@ -31,16 +31,16 @@ export default async function UpdatePasswordPage({
         </Link>
       }
     >
-      <form action={updatePasswordAction} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>Nouveau mot de passe</span>
+      <form action={updatePasswordAction} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          <AuthLabel>Nouveau mot de passe</AuthLabel>
           <PasswordInput name="password" minLength={8} autoComplete="new-password" />
         </label>
-        <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>Confirmation</span>
+        <label style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          <AuthLabel>Confirmation</AuthLabel>
           <PasswordInput name="confirm" minLength={8} autoComplete="new-password" />
         </label>
-        <button type="submit" className="ek-btn ek-btn-primary" style={{ marginTop: 4, height: 46, fontSize: 14.5 }}>
+        <button type="submit" className="ek-btn ek-btn-primary" style={{ marginTop: 6, height: 54, fontSize: 16 }}>
           Mettre à jour
         </button>
       </form>
