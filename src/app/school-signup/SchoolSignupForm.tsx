@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AuthField, AuthCodeField, AuthLabel, AuthError } from "@/components/auth/AuthShell";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { redeemSchoolCodeAction } from "@/app/(admin)/schools/actions";
 
 export function SchoolSignupForm() {
@@ -31,94 +33,33 @@ export function SchoolSignupForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>Code d&apos;accès</span>
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          required
-          placeholder="XK3F-7P9M"
-          autoCapitalize="characters"
-          style={{
-            padding: "12px 14px",
-            borderRadius: 10,
-            border: "1px solid var(--border-strong)",
-            background: "var(--surface)",
-            fontSize: 16,
-            color: "var(--ink)",
-            fontFamily: "var(--font-mono)",
-            letterSpacing: 2,
-            textAlign: "center",
-            textTransform: "uppercase",
-          }}
-        />
+    <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <AuthCodeField
+        label="Code d'accès"
+        value={code}
+        onChange={(e) => setCode(e.target.value.toUpperCase())}
+        required
+        placeholder="XK3F-7P9M"
+        autoCapitalize="characters"
+      />
+
+      <AuthField label="Email" icon="user" name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="direction@ecole.cd" autoComplete="email" />
+
+      <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        <AuthLabel>Mot de passe</AuthLabel>
+        <PasswordInput name="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
       </label>
 
-      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>Email</span>
-        <input
-          name="email"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="direction@ecole.cd"
-          style={inputStyle}
-        />
+      <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        <AuthLabel>Confirmation</AuthLabel>
+        <PasswordInput name="confirm" minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
       </label>
 
-      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>Mot de passe</span>
-        <input
-          name="password"
-          type="password"
-          required
-          minLength={8}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          style={inputStyle}
-        />
-      </label>
-
-      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>Confirmation</span>
-        <input
-          name="confirm"
-          type="password"
-          required
-          minLength={8}
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          placeholder="••••••••"
-          style={inputStyle}
-        />
-      </label>
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="ek-btn ek-btn-primary"
-        style={{ marginTop: 6, opacity: pending ? 0.6 : 1 }}
-      >
+      <button type="submit" disabled={pending} className="ek-btn ek-btn-primary" style={{ marginTop: 4, height: 46, fontSize: 14.5, opacity: pending ? 0.6 : 1 }}>
         {pending ? "Création…" : "Créer le compte de l'école"}
       </button>
 
-      {error && (
-        <div style={{ marginTop: 8, padding: 10, borderRadius: 8, background: "rgba(192,58,43,0.10)", color: "var(--danger)", fontSize: 12.5, fontWeight: 600, textAlign: "center" }}>
-          {error}
-        </div>
-      )}
+      {error && <AuthError>{error}</AuthError>}
     </form>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid var(--border-strong)",
-  background: "var(--surface)",
-  color: "var(--ink)",
-  fontSize: 14,
-};

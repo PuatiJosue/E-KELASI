@@ -1,31 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type InputHTMLAttributes } from "react";
 import { Icon } from "@/components/Icon";
 
-export function PasswordInput({
-  name = "password",
-  placeholder = "••••••••",
-  minLength,
-  autoComplete,
-}: {
-  name?: string;
-  placeholder?: string;
-  minLength?: number;
-  autoComplete?: string;
-}) {
+/**
+ * Champ mot de passe avec icône cadenas + bascule afficher/masquer (œil).
+ * Accepte n'importe quel attribut d'input (name, value, onChange, minLength…),
+ * ce qui permet de l'utiliser aussi bien en contrôlé qu'en non-contrôlé.
+ */
+export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "style">) {
   const [show, setShow] = useState(false);
+  const { placeholder = "••••••••", name = "password", required = true, ...rest } = props;
   return (
     <div style={{ position: "relative" }}>
       <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--ink-3)", display: "flex" }}>
         <Icon name="lock" size={17} />
       </span>
       <input
+        {...rest}
         name={name}
+        required={required}
         type={show ? "text" : "password"}
-        required
-        minLength={minLength}
-        autoComplete={autoComplete}
         placeholder={placeholder}
         style={{
           width: "100%",

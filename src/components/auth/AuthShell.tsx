@@ -43,6 +43,37 @@ export function AuthField({ label, icon, ...input }: { label: string; icon: stri
   );
 }
 
+/** Champ « code d'accès » : monospace, centré, en capitales. */
+export function AuthCodeField({ label, ...input }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+      <span style={authFieldLabel}>{label}</span>
+      <input
+        {...input}
+        style={{
+          width: "100%",
+          padding: "13px 14px",
+          borderRadius: 12,
+          border: "1px solid var(--border-strong)",
+          background: "var(--surface)",
+          fontSize: 16,
+          color: "var(--ink)",
+          fontFamily: "var(--font-mono)",
+          letterSpacing: 2,
+          textAlign: "center",
+          textTransform: "uppercase",
+          outline: "none",
+        }}
+      />
+    </label>
+  );
+}
+
+/** Libellé au-dessus d'un champ personnalisé (ex. PasswordInput). */
+export function AuthLabel({ children }: { children: ReactNode }) {
+  return <span style={authFieldLabel}>{children}</span>;
+}
+
 /** Bannière d'erreur cohérente. */
 export function AuthError({ children }: { children: ReactNode }) {
   return (
