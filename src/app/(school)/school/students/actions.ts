@@ -6,10 +6,10 @@ import { isLiveMode } from "@/lib/db";
 
 type Result = { ok: true } | { ok: false; message: string };
 
-export async function addStudentAction(args: { fullName: string; className: string; gradeLevel: string }): Promise<Result> {
+export async function addStudentAction(args: { fullName: string; className: string; gradeLevel: string; option?: string }): Promise<Result> {
   if (!isLiveMode()) return { ok: true };
-  if (!args.fullName || !args.className || !args.gradeLevel) {
-    return { ok: false, message: "Tous les champs sont requis." };
+  if (!args.fullName?.trim() || !args.className?.trim() || !args.gradeLevel?.trim()) {
+    return { ok: false, message: "Le nom, la classe et le niveau sont requis." };
   }
 
   const supabase = createClient();
@@ -26,13 +26,16 @@ export async function addStudentAction(args: { fullName: string; className: stri
 
   const { error } = await supabase.from("students").insert({
     school_id: staff.school_id,
-    full_name: args.fullName,
-    class_name: args.className,
-    grade_level: args.gradeLevel,
+    full_name: args.fullName.trim(),
+    class_name: args.className.trim(),
+    grade_level: args.gradeLevel.trim(),
+    option: args.option?.trim() || null,
+    status: "active",
   });
   if (error) return { ok: false, message: error.message };
 
   revalidatePath("/school/students");
   revalidatePath("/school/overview");
+  revalidatePath("/school/student-attendance");
   return { ok: true };
 }

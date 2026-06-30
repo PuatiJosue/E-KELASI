@@ -954,6 +954,7 @@ export type Database = {
           id: string
           last_name: string | null
           middle_name: string | null
+          option: string | null
           school_id: string
           sex: string | null
           status: string
@@ -970,6 +971,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           middle_name?: string | null
+          option?: string | null
           school_id: string
           sex?: string | null
           status?: string
@@ -986,6 +988,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           middle_name?: string | null
+          option?: string | null
           school_id?: string
           sex?: string | null
           status?: string
