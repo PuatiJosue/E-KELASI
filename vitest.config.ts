@@ -10,5 +10,7 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
     environment: "node",
+    // Évite un flake d'import « no tests » au démarrage à froid (Windows).
+    pool: "forks",
   },
 });

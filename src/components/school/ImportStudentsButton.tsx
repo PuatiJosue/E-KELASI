@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
-import { parseStudentRows, validStudentRows } from "@/lib/student-import";
+import { parseStudentRows, flagBatchDuplicates, STUDENT_CSV_TEMPLATE } from "@/lib/student-import";
 import { importStudentsAction } from "@/app/(school)/school/students/actions";
 
 export function ImportStudentsButton() {
@@ -17,8 +17,11 @@ export function ImportStudentsButton() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const parsed = useMemo(() => parseStudentRows(text), [text]);
-  const valid = useMemo(() => validStudentRows(parsed), [parsed]);
-  const invalid = parsed.length - valid.length;
+  const flagged = useMemo(() => flagBatchDuplicates(parsed), [parsed]);
+  const isValid = (r: { fullName: string; className: string }) => !!r.fullName.trim() && !!r.className.trim();
+  const toImport = useMemo(() => flagged.filter((r) => isValid(r) && !r.duplicate), [flagged]);
+  const invalid = flagged.filter((r) => !isValid(r)).length;
+  const batchDups = flagged.filter((r) => isValid(r) && r.duplicate).length;
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -28,13 +31,24 @@ export function ImportStudentsButton() {
     reader.readAsText(f);
   };
 
+  const downloadTemplate = () => {
+    const blob = new Blob(["﻿" + STUDENT_CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "modele-eleves.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const submit = () => {
     setError(null);
-    if (valid.length === 0) { setError("Aucune ligne valide à importer."); return; }
+    if (toImport.length === 0) { setError("Aucune ligne valide à importer."); return; }
     start(async () => {
-      const res = await importStudentsAction({ rows: valid });
+      const res = await importStudentsAction({ rows: toImport.map(({ duplicate, ...r }) => r) });
       if (!res.ok) { setError(res.message); return; }
-      setDoneMsg(`${res.inserted} élève(s) importé(s).`);
+      const extra = res.duplicates > 0 ? ` · ${res.duplicates} doublon(s) ignoré(s)` : "";
+      setDoneMsg(`${res.inserted} élève(s) importé(s)${extra}.`);
       setText("");
       router.refresh();
     });
@@ -67,6 +81,9 @@ export function ImportStudentsButton() {
                 <Icon name="file" size={14} /> <T fr="Choisir un fichier .csv" en="Choose a .csv file" />
               </button>
               <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" onChange={onFile} style={{ display: "none" }} />
+              <button onClick={downloadTemplate} className="ek-btn ek-btn-outline" style={{ height: 34, fontSize: 12.5 }}>
+                <Icon name="download" size={14} /> <T fr="Télécharger le modèle" en="Download template" />
+              </button>
               {text && (
                 <button onClick={() => setText("")} className="ek-btn ek-btn-ghost" style={{ height: 34, fontSize: 12.5 }}>
                   <T fr="Vider" en="Clear" />
@@ -85,32 +102,44 @@ export function ImportStudentsButton() {
             {parsed.length > 0 && (
               <div style={{ marginTop: 12 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>
-                  <T fr={`Aperçu — ${valid.length} valide(s)`} en={`Preview — ${valid.length} valid`} />
-                  {invalid > 0 && <span style={{ color: "var(--warning)", fontWeight: 600 }}> · {invalid} <T fr="ignorée(s)" en="skipped" /></span>}
+                  <T fr={`Aperçu — ${toImport.length} à importer`} en={`Preview — ${toImport.length} to import`} />
+                  {batchDups > 0 && <span style={{ color: "var(--warning)", fontWeight: 600 }}> · {batchDups} <T fr="doublon(s)" en="duplicate(s)" /></span>}
+                  {invalid > 0 && <span style={{ color: "var(--danger)", fontWeight: 600 }}> · {invalid} <T fr="invalide(s)" en="invalid" /></span>}
                 </div>
                 <div className="ek-tablewrap" style={{ border: "1px solid var(--border)", borderRadius: 10, maxHeight: 240, overflowY: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
                     <thead>
                       <tr style={{ background: "var(--surface-2)" }}>
-                        {["Nom", "Classe", "Option", "Niveau"].map((h) => (
-                          <th key={h} style={{ textAlign: "left", padding: "8px 10px", color: "var(--ink-3)", fontWeight: 700, position: "sticky", top: 0, background: "var(--surface-2)" }}>{h}</th>
+                        {["Nom", "Classe", "Option", "Niveau", ""].map((h, hi) => (
+                          <th key={hi} style={{ textAlign: "left", padding: "8px 10px", color: "var(--ink-3)", fontWeight: 700, position: "sticky", top: 0, background: "var(--surface-2)" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {parsed.slice(0, 100).map((r, i) => {
-                        const ok = r.fullName.trim() && r.className.trim();
+                      {flagged.slice(0, 100).map((r, i) => {
+                        const ok = isValid(r);
+                        const dimmed = !ok || r.duplicate;
                         return (
-                          <tr key={i} style={{ borderTop: "1px solid var(--divider)", opacity: ok ? 1 : 0.5 }}>
+                          <tr key={i} style={{ borderTop: "1px solid var(--divider)", opacity: dimmed ? 0.5 : 1 }}>
                             <td style={{ padding: "7px 10px", color: "var(--ink)" }}>{r.fullName || <span style={{ color: "var(--danger)" }}>—</span>}</td>
                             <td style={{ padding: "7px 10px", color: "var(--ink)" }}>{r.className || <span style={{ color: "var(--danger)" }}>manque</span>}</td>
                             <td style={{ padding: "7px 10px", color: "var(--ink-2)" }}>{r.option || "—"}</td>
                             <td style={{ padding: "7px 10px", color: "var(--ink-2)" }}>{r.gradeLevel || r.className || "—"}</td>
+                            <td style={{ padding: "7px 10px", textAlign: "right" }}>
+                              {!ok ? (
+                                <span className="ek-chip danger" style={{ fontSize: 10.5 }}><T fr="invalide" en="invalid" /></span>
+                              ) : r.duplicate ? (
+                                <span className="ek-chip warn" style={{ fontSize: 10.5 }}><T fr="doublon" en="duplicate" /></span>
+                              ) : null}
+                            </td>
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6 }}>
+                  <T fr="Les élèves déjà présents dans l'école seront aussi ignorés automatiquement." en="Students already in the school are skipped automatically too." />
                 </div>
               </div>
             )}
@@ -122,8 +151,8 @@ export function ImportStudentsButton() {
               <button type="button" onClick={close} className="ek-btn ek-btn-outline" style={{ flex: 1 }}>
                 <T fr="Fermer" en="Close" />
               </button>
-              <button type="button" onClick={submit} disabled={pending || valid.length === 0} className="ek-btn ek-btn-primary" style={{ flex: 1, opacity: pending || valid.length === 0 ? 0.6 : 1 }}>
-                {pending ? "Import…" : <T fr={`Importer ${valid.length} élève(s)`} en={`Import ${valid.length}`} />}
+              <button type="button" onClick={submit} disabled={pending || toImport.length === 0} className="ek-btn ek-btn-primary" style={{ flex: 1, opacity: pending || toImport.length === 0 ? 0.6 : 1 }}>
+                {pending ? "Import…" : <T fr={`Importer ${toImport.length} élève(s)`} en={`Import ${toImport.length}`} />}
               </button>
             </div>
           </div>

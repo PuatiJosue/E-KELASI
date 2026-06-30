@@ -23,3 +23,28 @@ export function parseStudentRows(text: string): ParsedStudent[] {
 export function validStudentRows(rows: ParsedStudent[]): ParsedStudent[] {
   return rows.filter((r) => r.fullName.trim() && r.className.trim());
 }
+
+const norm = (s: string) =>
+  (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+
+/** Clé d'identité d'un élève (nom + classe), insensible casse/accents/espaces. */
+export function studentKey(fullName: string, className: string): string {
+  return `${norm(fullName)}|${norm(className)}`;
+}
+
+/** Marque chaque ligne comme doublon si (nom+classe) est déjà apparu dans le lot. */
+export function flagBatchDuplicates(rows: ParsedStudent[]): (ParsedStudent & { duplicate: boolean })[] {
+  const seen = new Set<string>();
+  return rows.map((r) => {
+    const k = studentKey(r.fullName, r.className);
+    const duplicate = seen.has(k);
+    seen.add(k);
+    return { ...r, duplicate };
+  });
+}
+
+/** Modèle CSV à télécharger (en-tête + exemples). */
+export const STUDENT_CSV_TEMPLATE =
+  "Nom complet;Classe;Option;Niveau\n" +
+  "Mamadou Ndoye;5e année primaire;;5e\n" +
+  "Awa Sow;1re année des humanités;Sciences;1re\n";

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseStudentRows, validStudentRows } from "./student-import";
+import { parseStudentRows, validStudentRows, studentKey, flagBatchDuplicates } from "./student-import";
 
 describe("parseStudentRows", () => {
   it("gère le séparateur point-virgule", () => {
@@ -36,5 +36,22 @@ describe("validStudentRows", () => {
   it("ne garde que les lignes avec nom ET classe", () => {
     const parsed = parseStudentRows("Mamadou;5e année primaire\nSansClasse\nAwa;4e année primaire");
     expect(validStudentRows(parsed).map((r) => r.fullName)).toEqual(["Mamadou", "Awa"]);
+  });
+});
+
+describe("studentKey", () => {
+  it("est insensible à la casse, aux accents et aux espaces", () => {
+    expect(studentKey("  Awa  SOW ", "5e Année Primaire")).toBe(studentKey("awa sow", "5e annee primaire"));
+  });
+  it("distingue deux classes différentes", () => {
+    expect(studentKey("Awa Sow", "5e année primaire")).not.toBe(studentKey("Awa Sow", "6e année primaire"));
+  });
+});
+
+describe("flagBatchDuplicates", () => {
+  it("marque la 2e occurrence (nom+classe) comme doublon", () => {
+    const rows = parseStudentRows("Awa Sow;5e année primaire\nAwa SOW;5e Année Primaire\nJean;5e année primaire");
+    const flagged = flagBatchDuplicates(rows);
+    expect(flagged.map((r) => r.duplicate)).toEqual([false, true, false]);
   });
 });
