@@ -3,15 +3,16 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
+import { ClassPicker } from "@/components/school/ClassPicker";
 import { T, useLang } from "@/lib/i18n";
 import { setStudentAttendance } from "@/app/(school)/school/student-attendance/actions";
 import type { StudentLite, StudentDayAttendance } from "@/lib/attendance-db";
 
 const STATUSES: { key: string; fr: string; en: string; color: string }[] = [
-  { key: "present",   fr: "Présent",  en: "Present", color: "#1D6650" },
-  { key: "late",      fr: "Retard",   en: "Late",    color: "#C28728" },
-  { key: "absent",    fr: "Absent",   en: "Absent",  color: "#C03A2B" },
-  { key: "justified", fr: "Justifié", en: "Excused", color: "#3A6DBC" },
+  { key: "present",   fr: "Présent",  en: "Present", color: "#16A34A" },
+  { key: "late",      fr: "Retard",   en: "Late",    color: "#D97706" },
+  { key: "absent",    fr: "Absent",   en: "Absent",  color: "#E11D48" },
+  { key: "justified", fr: "Justifié", en: "Excused", color: "#4F66E8" },
 ];
 const labelOf = (k: string) => STATUSES.find((s) => s.key === k);
 
@@ -153,34 +154,14 @@ export function StudentAttendanceManager({
     <>
       {/* 1. Sélection de la classe */}
       <div className="ek-card" style={{ padding: 18 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 12 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 14 }}>
           1. <T fr="Sélectionner la classe" en="Select the class" />
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {classes.map((c) => {
-            const on = c.name === selected;
-            return (
-              <button
-                key={c.name}
-                onClick={() => setSelected(c.name)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 12, cursor: "pointer",
-                  border: `1.5px solid ${on ? "var(--brand)" : "var(--border)"}`,
-                  background: on ? "var(--brand-soft)" : "var(--surface)",
-                  textAlign: "left",
-                }}
-              >
-                <span style={{ width: 34, height: 34, borderRadius: 9, background: on ? "var(--brand)" : "var(--surface-2)", color: on ? "#fff" : "var(--ink-3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon name="users" size={16} />
-                </span>
-                <span>
-                  <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: on ? "var(--brand-600)" : "var(--ink)" }}>{c.name}</span>
-                  <span style={{ fontSize: 11, color: "var(--ink-3)" }}>{c.list.length} <T fr="élèves" en="students" /></span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <ClassPicker
+          classes={classes.map((c) => ({ name: c.name, count: c.list.length }))}
+          selected={selected}
+          onSelect={setSelected}
+        />
       </div>
 
       {/* 2. Liste des élèves */}
@@ -247,10 +228,10 @@ export function StudentAttendanceManager({
             <T fr="Total élèves" en="Total students" /> : {current.length}
           </span>
           <span style={{ marginLeft: "auto", display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <Dot color="#1D6650" label={`${labelOf("present")!.fr} : ${counts.present}`} />
-            <Dot color="#C28728" label={`${labelOf("late")!.fr} : ${counts.late}`} />
-            <Dot color="#C03A2B" label={`${labelOf("absent")!.fr} : ${counts.absent}`} />
-            <Dot color="#3A6DBC" label={`${labelOf("justified")!.fr} : ${counts.justified}`} />
+            <Dot color="#16A34A" label={`${labelOf("present")!.fr} : ${counts.present}`} />
+            <Dot color="#D97706" label={`${labelOf("late")!.fr} : ${counts.late}`} />
+            <Dot color="#E11D48" label={`${labelOf("absent")!.fr} : ${counts.absent}`} />
+            <Dot color="#4F66E8" label={`${labelOf("justified")!.fr} : ${counts.justified}`} />
           </span>
         </div>
       </div>
