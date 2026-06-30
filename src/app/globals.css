@@ -392,3 +392,12 @@ h1, h2, h3, h4 {
 
 /* Rotation (icône d'actualisation pendant le rafraîchissement). */
 @keyframes ek-spin { to { transform: rotate(360deg); } }
+
+/* Flottement doux des objets décoratifs (page de connexion). */
+@keyframes ek-float {
+  0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); }
+  50%      { transform: translateY(-14px) rotate(var(--rot, 0deg)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ek-floater { animation: none !important; }
+}
