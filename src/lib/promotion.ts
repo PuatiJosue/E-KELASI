@@ -46,6 +46,17 @@ export function levelKeyOf(raw: string): string | null {
   return null;
 }
 
+export type Cycle = "maternelle" | "primaire" | "secondaire" | "autre";
+
+/** Cycle d'enseignement déduit d'un nom de classe (pour grouper l'affichage). */
+export function cycleOf(name: string): Cycle {
+  const s = norm(name);
+  if (s.includes("maternel")) return "maternelle";
+  if (s.includes("humanit") || s.includes("secondaire")) return "secondaire";
+  if (s.includes("primaire") || s.includes("base") || /\b[78]\s*(e|eme|ieme)/.test(s)) return "primaire";
+  return "autre";
+}
+
 export type PromotionProposal =
   | { kind: "promote"; nextClass: string; enteringHumanities: boolean }
   | { kind: "graduate" } // fin de cycle (4e humanités) → diplômé / sortant

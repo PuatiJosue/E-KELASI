@@ -3,19 +3,11 @@
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
+import { cycleOf } from "@/lib/promotion";
 
 export type ClassItem = { name: string; count: number };
 
 const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-
-/** Cycle dérivé du nom de la classe (système congolais : primaire + humanités). */
-function cycleOf(name: string): string {
-  const s = norm(name);
-  if (s.includes("maternel")) return "maternelle";
-  if (s.includes("humanit") || s.includes("secondaire")) return "secondaire";
-  if (s.includes("primaire") || s.includes("base") || /\b[78]\s*(e|eme|ieme)/.test(s)) return "primaire";
-  return "autre";
-}
 
 const CYCLES: { key: string; fr: string; en: string }[] = [
   { key: "maternelle", fr: "Maternelle", en: "Kindergarten" },
