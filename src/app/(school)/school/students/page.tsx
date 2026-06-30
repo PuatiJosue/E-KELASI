@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/KPI";
 import { listSchoolStudents } from "@/lib/school-db";
 import { StudentsBrowser } from "./StudentsBrowser";
 import { AddStudentButton } from "@/components/school/AddStudentButton";
+import { ImportStudentsButton } from "@/components/school/ImportStudentsButton";
 
 export default async function SchoolStudents() {
   const students = await listSchoolStudents();
@@ -15,7 +16,12 @@ export default async function SchoolStudents() {
           fr: `${students.length} élèves dans ${classes} classes`,
           en: `${students.length} students in ${classes} classes`,
         }}
-        right={<AddStudentButton />}
+        right={
+          <>
+            <ImportStudentsButton />
+            <AddStudentButton />
+          </>
+        }
       />
 
       <div style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>
