@@ -6,9 +6,13 @@ import { Icon } from "@/components/Icon";
 export function PasswordInput({
   name = "password",
   placeholder = "••••••••",
+  minLength,
+  autoComplete,
 }: {
   name?: string;
   placeholder?: string;
+  minLength?: number;
+  autoComplete?: string;
 }) {
   const [show, setShow] = useState(false);
   return (
@@ -20,10 +24,12 @@ export function PasswordInput({
         name={name}
         type={show ? "text" : "password"}
         required
+        minLength={minLength}
+        autoComplete={autoComplete}
         placeholder={placeholder}
         style={{
           width: "100%",
-          padding: "13px 42px 13px 42px",
+          padding: "13px 42px",
           borderRadius: 12,
           border: "1px solid var(--border-strong)",
           background: "var(--surface)",

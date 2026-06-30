@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
 import { createClient } from "@/lib/supabase/server";
+import { AuthShell, AuthError } from "@/components/auth/AuthShell";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { updatePasswordAction } from "./actions";
 
 // L'utilisateur arrive ici depuis le lien de réinit envoyé par email.
@@ -21,58 +22,30 @@ export default async function UpdatePasswordPage({
   const error = searchParams?.error;
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "var(--bg)", padding: 24 }}>
-      <div className="ek-card" style={{ width: "100%", maxWidth: 420, padding: 32 }}>
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-          <Logo size={36} withWord />
-        </div>
-        <h1 style={{ textAlign: "center", fontSize: 22, fontFamily: "var(--font-display)", color: "var(--ink)", marginBottom: 4 }}>
-          Nouveau mot de passe
-        </h1>
-        <p style={{ textAlign: "center", fontSize: 13, color: "var(--ink-3)", marginBottom: 24 }}>
-          Choisis un mot de passe d&apos;au moins 8 caractères.
-        </p>
+    <AuthShell
+      title="Nouveau mot de passe"
+      subtitle="Choisis un mot de passe d'au moins 8 caractères."
+      footer={
+        <Link href="/login" style={{ color: "var(--brand-600)", fontWeight: 600 }}>
+          ← Annuler
+        </Link>
+      }
+    >
+      <form action={updatePasswordAction} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>Nouveau mot de passe</span>
+          <PasswordInput name="password" minLength={8} autoComplete="new-password" />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink-2)" }}>Confirmation</span>
+          <PasswordInput name="confirm" minLength={8} autoComplete="new-password" />
+        </label>
+        <button type="submit" className="ek-btn ek-btn-primary" style={{ marginTop: 4, height: 46, fontSize: 14.5 }}>
+          Mettre à jour
+        </button>
+      </form>
 
-        <form action={updatePasswordAction} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>Nouveau mot de passe</span>
-            <input
-              name="password"
-              type="password"
-              required
-              minLength={8}
-              placeholder="••••••••"
-              style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border-strong)", background: "var(--surface)", fontSize: 14, color: "var(--ink)" }}
-            />
-          </label>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>Confirmation</span>
-            <input
-              name="confirm"
-              type="password"
-              required
-              minLength={8}
-              placeholder="••••••••"
-              style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border-strong)", background: "var(--surface)", fontSize: 14, color: "var(--ink)" }}
-            />
-          </label>
-          <button type="submit" className="ek-btn ek-btn-primary" style={{ marginTop: 6 }}>
-            Mettre à jour
-          </button>
-        </form>
-
-        {error && (
-          <div style={{ marginTop: 12, padding: 10, borderRadius: 8, background: "rgba(192,58,43,0.10)", color: "var(--danger)", fontSize: 12.5, fontWeight: 600, textAlign: "center" }}>
-            {error}
-          </div>
-        )}
-
-        <div style={{ marginTop: 18, textAlign: "center", fontSize: 12, color: "var(--ink-3)" }}>
-          <Link href="/login" style={{ color: "var(--brand-600)", fontWeight: 600 }}>
-            ← Annuler
-          </Link>
-        </div>
-      </div>
-    </div>
+      {error && <AuthError>{error}</AuthError>}
+    </AuthShell>
   );
 }
