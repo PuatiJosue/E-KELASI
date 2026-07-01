@@ -2,12 +2,13 @@ import { View, Text, Image, type ViewStyle } from "react-native";
 import { fonts } from "@/lib/theme";
 
 const TINTS: Array<[string, string]> = [
-  ["#E0701E", "#FDF3E7"],
-  ["#1D6650", "#ECF6F1"],
-  ["#3A6DBC", "#E8F0FB"],
-  ["#9747BB", "#F3E8FA"],
-  ["#C28728", "#FBF1D9"],
-  ["#B8475B", "#FBE6EC"],
+  ["#4F66E8", "#E5EAFD"], // bleu
+  ["#8B5CF6", "#EDE4FD"], // violet
+  ["#16A34A", "#DCF4E5"], // vert
+  ["#D97706", "#FCEEDA"], // ambre
+  ["#E11D48", "#FCE2E8"], // rose
+  ["#0EA5E9", "#E0F2FE"], // ciel
+  ["#14B8A6", "#D6F3EF"], // sarcelle
 ];
 
 export function Avatar({
@@ -27,7 +28,7 @@ export function Avatar({
       <Image
         source={{ uri: url }}
         style={[
-          { width: size, height: size, borderRadius: size / 2, backgroundColor: "#ECE3D2" },
+          { width: size, height: size, borderRadius: size / 2, backgroundColor: "#E7EAF3" },
           style as any,
         ]}
       />
