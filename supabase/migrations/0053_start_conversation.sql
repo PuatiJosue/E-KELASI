@@ -11,7 +11,7 @@ language sql
 security definer
 set search_path = public
 as $$
-  select distinct p.id, p.full_name, ss.role
+  select distinct p.id, p.full_name, ss.role::text
   from parent_links pl
   join students st on st.id = pl.student_id
   join school_staff ss on ss.school_id = st.school_id
