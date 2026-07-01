@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T, useLang } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -16,14 +16,12 @@ const LABELS: Record<string, { fr: string; en: string }> = {
   journal:   { fr: "Journal de bord", en: "Class logbook" },
   homework:  { fr: "Devoirs",         en: "Homework" },
   library:   { fr: "Bibliothèque",    en: "Library" },
-  messages:  { fr: "Messagerie",      en: "Inbox" },
   profile:   { fr: "Mon profil",      en: "My profile" },
   settings:  { fr: "Paramètres",      en: "Settings" },
 };
 
 export function TeacherTopbar() {
   const lang = useLang();
-  const router = useRouter();
   const pathname = usePathname() ?? "";
   const parts = pathname.split("/").filter(Boolean); // ['teacher', 'grades', ...]
   const key = parts[1] ?? "dashboard";
@@ -58,39 +56,6 @@ export function TeacherTopbar() {
       </div>
 
       <LanguageToggle current={lang} />
-
-      <button
-        type="button"
-        onClick={() => router.push("/teacher/messages")}
-        title="Messagerie"
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          border: "1px solid var(--border)",
-          background: "var(--surface)",
-          color: "var(--ink-2)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
-          cursor: "pointer",
-        }}
-      >
-        <Icon name="bell" size={16} />
-        <span
-          style={{
-            position: "absolute",
-            top: 6,
-            right: 6,
-            width: 7,
-            height: 7,
-            borderRadius: "50%",
-            background: "var(--danger)",
-            border: "2px solid var(--surface)",
-          }}
-        />
-      </button>
     </div>
   );
 }
