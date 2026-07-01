@@ -13,14 +13,13 @@ function service() {
 
 export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
-  if (q.length < 2) return NextResponse.json({ schools: [] });
   try {
-    const { data } = await service()
+    const base = service()
       .from("schools")
-      .select("id, name, city, commune, quartier")
-      .ilike("name", `%${q}%`)
-      .order("name")
-      .limit(10);
+      .select("id, name, city, commune, quartier, director_name")
+      .order("name");
+    // q ≥ 2 → recherche par nom ; sinon → liste complète (menu déroulant).
+    const { data } = q.length >= 2 ? await base.ilike("name", `%${q}%`).limit(20) : await base.limit(100);
     return NextResponse.json({ schools: data ?? [] });
   } catch {
     return NextResponse.json({ schools: [] });
