@@ -5,9 +5,16 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import type { TimetableSlot } from "@/lib/content-db";
-import { addTimetableSlot, deleteTimetableSlot } from "./actions";
+import { addTimetableSlot, deleteTimetableSlot, publishClassTimetable } from "./actions";
 
 const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+
+function escapeHtml(s: string) {
+  return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
+// Trie les créneaux par jour puis heure de début.
+const byDayTime = (a: TimetableSlot, b: TimetableSlot) => a.day - b.day || a.startTime.localeCompare(b.startTime);
 
 const input: React.CSSProperties = {
   height: 38, padding: "0 11px", borderRadius: 9, border: "1px solid var(--border-strong)",
@@ -37,6 +44,46 @@ export function TimetableManager({ slots, classNames }: { slots: TimetableSlot[]
   };
 
   const remove = (id: string) => start(async () => { await deleteTimetableSlot(id); router.refresh(); });
+
+  const publish = (cls: string, value: boolean) => start(async () => {
+    const res = await publishClassTimetable(cls, value);
+    if (!res.ok) { alert(res.message); return; }
+    router.refresh();
+  });
+
+  // Export Excel (CSV) d'une classe.
+  const exportExcel = (cls: string, list: TimetableSlot[]) => {
+    const header = ["Jour", "Début", "Fin", "Matière", "Enseignant", "Salle"];
+    const lines = [header, ...list.slice().sort(byDayTime).map((s) => [DAYS[s.day - 1], s.startTime, s.endTime, s.subject, s.teacher ?? "", s.room ?? ""])];
+    const csv = lines.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `emploi-du-temps-${cls.replace(/\s+/g, "_")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Export PDF (impression) d'une classe.
+  const exportPdf = (cls: string, list: TimetableSlot[]) => {
+    const rows = list.slice().sort(byDayTime)
+      .map((s) => `<tr><td>${escapeHtml(DAYS[s.day - 1])}</td><td class="mono">${escapeHtml(s.startTime)}–${escapeHtml(s.endTime)}</td><td><b>${escapeHtml(s.subject)}</b></td><td>${escapeHtml(s.teacher ?? "")}</td><td>${escapeHtml(s.room ?? "")}</td></tr>`)
+      .join("");
+    const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Emploi du temps — ${escapeHtml(cls)}</title>
+<style>*{font-family:Arial,Helvetica,sans-serif;box-sizing:border-box}body{margin:32px;color:#181c2a}
+h1{font-size:18px;margin:0 0 2px}.sub{color:#666;font-size:12px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#4F66E8;color:#fff;text-align:left;padding:8px 10px;text-transform:uppercase;font-size:10px}
+td{padding:8px 10px;border-bottom:1px solid #e5e7eb}.mono{font-family:'Courier New',monospace;white-space:nowrap}</style></head>
+<body><h1>Emploi du temps — ${escapeHtml(cls)}</h1><div class="sub">${list.length} créneau(x)</div>
+<table><thead><tr><th>Jour</th><th>Horaire</th><th>Matière</th><th>Enseignant</th><th>Salle</th></tr></thead><tbody>${rows}</tbody></table>
+<script>window.onload=function(){window.print()}</script></body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Autorisez les fenêtres pop-up pour générer le PDF."); return; }
+    w.document.write(html);
+    w.document.close();
+  };
 
   // Regroupé par classe puis jour.
   const grouped = useMemo(() => {
@@ -79,10 +126,35 @@ export function TimetableManager({ slots, classNames }: { slots: TimetableSlot[]
           <T fr="Aucun créneau. Ajoutez le premier ci-dessus." en="No slot yet. Add the first one above." />
         </div>
       ) : (
-        grouped.map(([cls, list]) => (
+        grouped.map(([cls, list]) => {
+          const allPublished = list.every((s) => s.published);
+          const sorted = list.slice().sort(byDayTime);
+          return (
           <div key={cls} className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
-            <div style={{ padding: "13px 18px", borderBottom: "1px solid var(--divider)", fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{cls}</div>
-            {list.map((s, i) => (
+            <div style={{ padding: "12px 18px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{cls}</div>
+              <span className={`ek-chip ${allPublished ? "success" : "warn"}`} style={{ fontSize: 10.5 }}>
+                {allPublished ? <T fr="Publié" en="Published" /> : <T fr="Brouillon" en="Draft" />}
+              </span>
+              <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                <button onClick={() => exportExcel(cls, list)} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>
+                  <Icon name="download" size={13} /> Excel
+                </button>
+                <button onClick={() => exportPdf(cls, list)} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>
+                  <Icon name="file" size={13} /> PDF
+                </button>
+                {allPublished ? (
+                  <button onClick={() => publish(cls, false)} disabled={pending} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}>
+                    <T fr="Repasser en brouillon" en="Unpublish" />
+                  </button>
+                ) : (
+                  <button onClick={() => publish(cls, true)} disabled={pending} className="ek-btn ek-btn-primary" style={{ height: 30, fontSize: 12 }}>
+                    <Icon name="check" size={13} stroke={2.5} /> <T fr="Publier" en="Publish" />
+                  </button>
+                )}
+              </div>
+            </div>
+            {sorted.map((s, i) => (
               <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 18px", borderTop: i > 0 ? "1px solid var(--divider)" : "none" }}>
                 <div style={{ width: 78, fontSize: 12, color: "var(--ink-3)", fontWeight: 600 }}>{DAYS[s.day - 1]}</div>
                 <div style={{ width: 96, fontSize: 12, color: "var(--ink-2)", fontFamily: "var(--font-mono)" }}>{s.startTime}–{s.endTime}</div>
@@ -96,7 +168,8 @@ export function TimetableManager({ slots, classNames }: { slots: TimetableSlot[]
               </div>
             ))}
           </div>
-        ))
+          );
+        })
       )}
     </div>
   );

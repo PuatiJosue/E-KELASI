@@ -15,7 +15,7 @@ import type { MySchool, SchoolRequestCounts } from "@/lib/school-db";
 const LABELS: Record<string, { fr: string; en: string }> = {
   overview: { fr: "Vue d'ensemble",     en: "Overview" },
   promotion: { fr: "Passage de classe", en: "Class promotion" },
-  timetable: { fr: "Emploi du temps", en: "Timetable" },
+  timetable: { fr: "Horaires", en: "Timetable" },
   videos: { fr: "Vidéos des cours", en: "Course videos" },
   teachers: { fr: "Professeurs",        en: "Teachers" },
   students: { fr: "Annuaire des classes", en: "Class directory" },

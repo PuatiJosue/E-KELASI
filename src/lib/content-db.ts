@@ -23,6 +23,7 @@ export type TimetableSlot = {
   subject: string;
   teacher: string | null;
   room: string | null;
+  published: boolean;
 };
 
 export async function listTimetable(): Promise<TimetableSlot[]> {
@@ -32,7 +33,7 @@ export async function listTimetable(): Promise<TimetableSlot[]> {
     if (!school) return [];
     const { data } = await service()
       .from("timetable_slots")
-      .select("id, class_name, option, day, start_time, end_time, subject, teacher, room")
+      .select("id, class_name, option, day, start_time, end_time, subject, teacher, room, published")
       .eq("school_id", school.id)
       .order("class_name")
       .order("day")
@@ -47,6 +48,7 @@ export async function listTimetable(): Promise<TimetableSlot[]> {
       subject: s.subject,
       teacher: s.teacher ?? null,
       room: s.room ?? null,
+      published: !!s.published,
     }));
   } catch {
     return [];

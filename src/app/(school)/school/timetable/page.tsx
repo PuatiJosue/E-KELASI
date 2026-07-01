@@ -8,10 +8,10 @@ export default async function SchoolTimetable() {
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
-        title={{ fr: "Emploi du temps", en: "Timetable" }}
+        title={{ fr: "Horaires", en: "Timetable" }}
         sub={{
-          fr: "Saisissez les créneaux par classe. Les parents les voient dans l'app.",
-          en: "Enter slots per class. Parents see them in the app.",
+          fr: "Créez l'emploi du temps par classe, puis publiez-le pour le rendre visible aux parents. Export PDF/Excel disponible.",
+          en: "Create the timetable per class, then publish it to make it visible to parents. PDF/Excel export available.",
         }}
       />
       <TimetableManager slots={slots} classNames={classNames} />

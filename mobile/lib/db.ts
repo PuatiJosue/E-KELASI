@@ -415,6 +415,7 @@ export async function listTimetable(className?: string, schoolId?: string | null
       .select("id, day, start_time, end_time, subject, teacher, room")
       .eq("school_id", sid)
       .eq("class_name", cls)
+      .eq("published", true)
       .order("day", { ascending: true })
       .order("start_time", { ascending: true });
     return (data ?? []).map((s: any) => ({

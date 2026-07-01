@@ -64,6 +64,22 @@ export async function addTimetableSlot(input: {
   return { ok: true };
 }
 
+// Publie (ou repasse en brouillon) tous les créneaux d'une classe.
+export async function publishClassTimetable(className: string, publish: boolean): Promise<Result> {
+  if (!className?.trim()) return { ok: false, message: "Classe invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+  const { error } = await service()
+    .from("timetable_slots")
+    .update({ published: publish })
+    .eq("school_id", c.schoolId)
+    .eq("class_name", className.trim());
+  if (error) return { ok: false, message: "Mise à jour impossible." };
+  revalidatePath("/school/timetable");
+  return { ok: true };
+}
+
 export async function deleteTimetableSlot(id: string): Promise<Result> {
   if (!id) return { ok: false, message: "Créneau invalide." };
   if (!isLiveMode()) return { ok: true };
