@@ -38,6 +38,37 @@ export async function listPlatformAnnouncements(): Promise<PlatformAnnouncement[
   }
 }
 
+export type PlatformVideo = {
+  id: string;
+  title: string;
+  url: string;
+  subject: string | null;
+  description: string | null;
+  createdAt: string;
+};
+
+// Vidéos plateforme (console super-admin).
+export async function listPlatformVideos(): Promise<PlatformVideo[]> {
+  if (!isLiveMode()) return [];
+  try {
+    const svc = service();
+    const { data } = await svc
+      .from("platform_videos")
+      .select("id, title, url, subject, description, created_at")
+      .order("created_at", { ascending: false });
+    return (data ?? []).map((v: any) => ({
+      id: v.id,
+      title: v.title,
+      url: v.url,
+      subject: v.subject ?? null,
+      description: v.description ?? null,
+      createdAt: v.created_at,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // Annonces destinées aux écoles (bannière console direction).
 export async function getPlatformForSchools(): Promise<PlatformAnnouncement[]> {
   if (!isLiveMode()) return [];

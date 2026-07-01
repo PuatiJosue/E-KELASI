@@ -10,7 +10,7 @@ import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useChildren } from "@/lib/children";
-import { listCourseVideos, type CourseVideoItem } from "@/lib/db";
+import { listCourseVideos, listPlatformVideos, type CourseVideoItem } from "@/lib/db";
 
 export default function Videos() {
   const t = useTheme();
@@ -19,12 +19,13 @@ export default function Videos() {
   const [videos, setVideos] = useState<CourseVideoItem[] | null>(null);
 
   useEffect(() => {
-    if (!selectedChild) {
-      setVideos([]);
-      return;
-    }
     setVideos(null);
-    listCourseVideos(selectedChild.schoolId, selectedChild.grade).then(setVideos).catch(() => setVideos([]));
+    Promise.all([
+      selectedChild ? listCourseVideos(selectedChild.schoolId, selectedChild.grade) : Promise.resolve([]),
+      listPlatformVideos(),
+    ])
+      .then(([school, platform]) => setVideos([...platform, ...school]))
+      .catch(() => setVideos([]));
   }, [selectedChild?.id]);
 
   return (
@@ -49,9 +50,16 @@ export default function Videos() {
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text numberOfLines={2} style={{ fontSize: 14, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>{v.title}</Text>
-                  <Text style={{ fontSize: 12, color: t.ink3, marginTop: 2, fontFamily: fonts.body }}>
-                    {[v.subject, v.className].filter(Boolean).join(" · ") || tr({ fr: "Toutes les classes", en: "All classes" })}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3, flexWrap: "wrap" }}>
+                    {v.platform && (
+                      <View style={{ backgroundColor: t.brandSoft, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 999 }}>
+                        <Text style={{ fontSize: 10, fontWeight: "800", color: t.brand600, fontFamily: fonts.body }}>E-KLASS</Text>
+                      </View>
+                    )}
+                    <Text style={{ fontSize: 12, color: t.ink3, fontFamily: fonts.body }}>
+                      {[v.subject, v.className].filter(Boolean).join(" · ") || tr({ fr: v.platform ? "Vidéo E-KLASS" : "Toutes les classes", en: v.platform ? "E-KLASS video" : "All classes" })}
+                    </Text>
+                  </View>
                 </View>
                 <Icon name="chevR" size={20} color={t.ink4} />
               </Card>

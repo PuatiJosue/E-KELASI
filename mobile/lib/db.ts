@@ -427,7 +427,7 @@ export async function listTimetable(className?: string, schoolId?: string | null
 }
 
 // ── Vidéos des cours ─────────────────────────────────────────────────
-export type CourseVideoItem = { id: string; title: string; url: string; subject: string | null; className: string | null };
+export type CourseVideoItem = { id: string; title: string; url: string; subject: string | null; className: string | null; platform?: boolean };
 
 export async function listCourseVideos(schoolId?: string | null, className?: string): Promise<CourseVideoItem[]> {
   if (!isLiveMode || !supabase) return [];
@@ -443,7 +443,21 @@ export async function listCourseVideos(schoolId?: string | null, className?: str
       .order("created_at", { ascending: false });
     return (data ?? [])
       .filter((v: any) => !v.class_name || !cls || v.class_name === cls)
-      .map((v: any) => ({ id: v.id, title: v.title, url: v.url, subject: v.subject ?? null, className: v.class_name ?? null }));
+      .map((v: any) => ({ id: v.id, title: v.title, url: v.url, subject: v.subject ?? null, className: v.class_name ?? null, platform: false }));
+  } catch {
+    return [];
+  }
+}
+
+// Vidéos publiées par l'équipe E-KLASS (plateforme) — visibles par tous.
+export async function listPlatformVideos(): Promise<CourseVideoItem[]> {
+  if (!isLiveMode || !supabase) return [];
+  try {
+    const { data } = await supabase
+      .from("platform_videos")
+      .select("id, title, url, subject")
+      .order("created_at", { ascending: false });
+    return (data ?? []).map((v: any) => ({ id: `p-${v.id}`, title: v.title, url: v.url, subject: v.subject ?? null, className: null, platform: true }));
   } catch {
     return [];
   }
