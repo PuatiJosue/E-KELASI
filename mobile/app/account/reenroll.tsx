@@ -94,7 +94,7 @@ export default function Reenroll() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top", "bottom"]}>
-      <ScreenHeader title={tr({ fr: "Réinscription", en: "Re-enrollment" })} />
+      <ScreenHeader title={tr({ fr: "Réinscription à une nouvelle année scolaire", en: "New school-year re-enrollment" })} />
       {!child ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
           <Text style={{ fontSize: 14, color: t.ink3, textAlign: "center", fontFamily: fonts.body }}>

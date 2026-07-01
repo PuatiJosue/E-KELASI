@@ -17,6 +17,7 @@ import { useChildren } from "@/lib/children";
 import { type Grade, type Homework } from "@/lib/mock";
 import { hasPendingChild, type Child } from "@/lib/db";
 import { pickAndUploadChildPhoto } from "@/lib/studentPhoto";
+import { AddMenu } from "@/components/AddMenu";
 
 // Les 6 fonctions de l'accueil (icône + couleur + destination).
 const FEATURES: {
@@ -166,11 +167,7 @@ export default function Home() {
               <Text style={{ fontSize: 15, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
                 <T fr="Mes enfants" en="My children" />
               </Text>
-              <Pressable onPress={() => router.push("/account/register-child")} hitSlop={8}>
-                <Text style={{ fontSize: 12.5, fontWeight: "600", color: t.brand600, fontFamily: fonts.bodyBold }}>
-                  <T fr="+ Ajouter" en="+ Add" />
-                </Text>
-              </Pressable>
+              <AddMenu size={32} />
             </View>
             {children.map((c) => (
               <Pressable key={c.id} onPress={() => openChild(c)}>

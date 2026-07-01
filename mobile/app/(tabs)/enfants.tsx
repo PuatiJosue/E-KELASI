@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
+import { AddMenu } from "@/components/AddMenu";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useChildren } from "@/lib/children";
@@ -47,11 +48,7 @@ export default function EnfantsTab() {
         <Text style={{ fontSize: 22, fontFamily: fonts.display, fontWeight: "700", color: t.ink }}>
           <T fr="Mes enfants" en="My children" />
         </Text>
-        <Pressable onPress={() => router.push("/account/register-child")} hitSlop={8}>
-          <Text style={{ fontSize: 13, fontWeight: "600", color: t.brand600, fontFamily: fonts.bodyBold }}>
-            <T fr="+ Ajouter" en="+ Add" />
-          </Text>
-        </Pressable>
+        <AddMenu />
       </View>
 
       {loading ? (

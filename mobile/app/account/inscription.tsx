@@ -134,7 +134,7 @@ export default function Inscription() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top", "bottom"]}>
-      <ScreenHeader title={tr({ fr: "Inscription", en: "Admission" })} />
+      <ScreenHeader title={tr({ fr: "Inscription à une nouvelle année scolaire", en: "New school-year admission" })} />
       <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }} keyboardShouldPersistTaps="handled">
         {/* École */}
         <Section title="École" />
