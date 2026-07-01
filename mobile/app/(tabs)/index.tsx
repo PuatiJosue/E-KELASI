@@ -33,7 +33,7 @@ const FEATURES: {
   { key: "emploi", icon: "calendar", color: "#F59E0B", fr: "Emploi du temps", en: "Timetable", subFr: "Cours et matières", subEn: "Classes and subjects", route: null },
   { key: "messages", icon: "chat", color: "#8B5CF6", fr: "Messages", en: "Messages", subFr: "École et notifications", subEn: "School and notifications", route: "/(tabs)/messages" },
   { key: "paiements", icon: "creditcard", color: "#EC4899", fr: "Paiements", en: "Payments", subFr: "Frais et historique", subEn: "Fees and history", route: null },
-  { key: "actualites", icon: "bell", color: "#EF4444", fr: "Actualités", en: "News", subFr: "Actualités et événements", subEn: "News and events", route: "/announcements" },
+  { key: "espace", icon: "folder", color: "#0EA5E9", fr: "Espace numérique", en: "Digital space", subFr: "Bibliothèque et vidéos", subEn: "Library and videos", route: "/espace-numerique" },
 ];
 
 export default function Home() {

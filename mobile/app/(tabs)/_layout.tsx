@@ -78,42 +78,29 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: tr({ fr: "Accueil", en: "Home" }),
-          tabBarIcon: ({ color, focused }) => <Icon name="home" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <Icon name="home" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="grades"
+        name="enfants"
         options={{
-          title: tr({ fr: "Notes", en: "Grades" }),
-          tabBarIcon: ({ color }) => <Icon name="chart" size={22} color={color} />,
+          title: tr({ fr: "Enfants", en: "Children" }),
+          tabBarIcon: ({ color }) => <Icon name="users" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="homework"
+        name="notifications"
         options={{
-          title: tr({ fr: "Devoirs", en: "Homework" }),
-          tabBarIcon: ({ color }) => <Icon name="book" size={22} color={color} />,
+          title: tr({ fr: "Notifications", en: "Notifications" }),
+          tabBarIcon: ({ color }) => <Icon name="bell" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="library"
+        name="contact"
         options={{
-          title: tr({ fr: "Livres", en: "Library" }),
-          tabBarIcon: ({ color }) => <Icon name="bookmark" size={22} color={color} />,
+          title: tr({ fr: "Contact école", en: "School" }),
+          tabBarIcon: ({ color }) => <Icon name="phone" size={22} color={color} />,
         }}
-      />
-      <Tabs.Screen
-        name="dossier"
-        options={{
-          title: tr({ fr: "Dossier", en: "Folder" }),
-          tabBarIcon: ({ color }) => <Icon name="folder" size={22} color={color} />,
-        }}
-      />
-      {/* Messagerie : retirée de la barre d'onglets, route conservée
-          (accessible depuis le tableau de bord). */}
-      <Tabs.Screen
-        name="messages"
-        options={{ href: null }}
       />
       <Tabs.Screen
         name="profile"
@@ -122,6 +109,14 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <Icon name="user" size={22} color={color} />,
         }}
       />
+
+      {/* Écrans conservés hors de la barre (accessibles via Accueil / Enfants /
+          Espace numérique). */}
+      <Tabs.Screen name="grades" options={{ href: null }} />
+      <Tabs.Screen name="homework" options={{ href: null }} />
+      <Tabs.Screen name="library" options={{ href: null }} />
+      <Tabs.Screen name="dossier" options={{ href: null }} />
+      <Tabs.Screen name="messages" options={{ href: null }} />
     </Tabs>
   );
 }
