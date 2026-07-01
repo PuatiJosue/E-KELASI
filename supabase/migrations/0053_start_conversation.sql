@@ -11,6 +11,7 @@ language sql
 security definer
 set search_path = public
 as $$
+  -- Parent → uniquement la DIRECTION (school_admin) de l'école de ses enfants.
   select distinct p.id, p.full_name, ss.role::text
   from parent_links pl
   join students st on st.id = pl.student_id
@@ -18,15 +19,18 @@ as $$
   join profiles p on p.id = ss.user_id
   where pl.parent_id = auth.uid()
     and ss.user_id <> auth.uid()
+    and ss.role = 'school_admin'
 
   union
 
+  -- Direction → parents des élèves de son école.
   select distinct p.id, p.full_name, 'parent'::text
   from school_staff ss
   join students st on st.school_id = ss.school_id
   join parent_links pl on pl.student_id = st.id
   join profiles p on p.id = pl.parent_id
   where ss.user_id = auth.uid()
+    and ss.role = 'school_admin'
     and pl.parent_id <> auth.uid();
 $$;
 
@@ -49,21 +53,21 @@ begin
   if p_other is null or p_other = v_me then raise exception 'invalid recipient'; end if;
   if coalesce(trim(p_body), '') = '' then raise exception 'empty message'; end if;
 
-  -- École partagée : parent → personnel …
+  -- École partagée : parent → DIRECTION …
   select st.school_id into v_school
   from parent_links pl
   join students st on st.id = pl.student_id
   join school_staff ss on ss.school_id = st.school_id
-  where pl.parent_id = v_me and ss.user_id = p_other
+  where pl.parent_id = v_me and ss.user_id = p_other and ss.role = 'school_admin'
   limit 1;
 
-  -- … ou personnel → parent.
+  -- … ou DIRECTION → parent.
   if v_school is null then
     select st.school_id into v_school
     from school_staff ss
     join students st on st.school_id = ss.school_id
     join parent_links pl on pl.student_id = st.id
-    where ss.user_id = v_me and pl.parent_id = p_other
+    where ss.user_id = v_me and ss.role = 'school_admin' and pl.parent_id = p_other
     limit 1;
   end if;
 
