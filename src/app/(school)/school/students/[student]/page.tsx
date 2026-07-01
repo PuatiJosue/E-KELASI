@@ -6,6 +6,7 @@ import { getStudentDossier } from "@/lib/school-db";
 import { currentTrimester } from "@/lib/trimester";
 import { listStudentPayments } from "@/lib/finance-db";
 import { PaymentManager } from "./PaymentManager";
+import { DeleteStudentButton } from "./DeleteStudentButton";
 
 function ageFrom(birth: string | null): string {
   if (!birth) return "—";
@@ -49,10 +50,13 @@ export default async function StudentDossierPage({ params }: { params: { student
           <Icon name="chevL" size={14} />
           <T fr="Élèves" en="Students" />
         </Link>
-        <Link href={`/school/reports/${d.id}`} className="ek-btn ek-btn-primary" style={{ height: 32, fontSize: 12 }}>
-          <Icon name="file" size={13} />
-          <T fr="Bulletin" en="Report card" />
-        </Link>
+        <div style={{ display: "flex", gap: 8 }}>
+          <DeleteStudentButton studentId={d.id} studentName={d.fullName} />
+          <Link href={`/school/reports/${d.id}`} className="ek-btn ek-btn-primary" style={{ height: 32, fontSize: 12 }}>
+            <Icon name="file" size={13} />
+            <T fr="Bulletin" en="Report card" />
+          </Link>
+        </div>
       </div>
 
       {/* Identité */}

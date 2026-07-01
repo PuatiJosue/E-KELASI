@@ -15,7 +15,6 @@ export function AddStudentButton({ classNames = [] }: { classNames?: string[] })
   const [middleName, setMiddleName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [sex, setSex] = useState("");
-  const [birthDate, setBirthDate] = useState("");
   const [className, setClassName] = useState("");
   const [option, setOption] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -27,10 +26,10 @@ export function AddStudentButton({ classNames = [] }: { classNames?: string[] })
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await addStudentAction({ lastName, middleName, firstName, sex, birthDate, className, option });
+      const res = await addStudentAction({ lastName, middleName, firstName, sex, className, option });
       if (res.ok) {
         setOpen(false);
-        setLastName(""); setMiddleName(""); setFirstName(""); setSex(""); setBirthDate(""); setClassName(""); setOption("");
+        setLastName(""); setMiddleName(""); setFirstName(""); setSex(""); setClassName(""); setOption("");
         router.refresh();
       } else {
         setError(res.message);
@@ -89,9 +88,6 @@ export function AddStudentButton({ classNames = [] }: { classNames?: string[] })
                   </select>
                 </Field>
               </div>
-              <Field label={<T fr="Date de naissance (facultatif)" en="Birth date (optional)" />}>
-                <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} style={inputStyle} />
-              </Field>
               <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <Field label={<T fr="Classe" en="Class" />}>
                   <input value={className} onChange={(e) => setClassName(e.target.value)} required placeholder="1re A, 5e Humanités…" list="ek-add-classes" style={inputStyle} />

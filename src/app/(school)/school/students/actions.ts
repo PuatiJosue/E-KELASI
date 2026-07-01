@@ -126,3 +126,31 @@ export async function addStudentAction(args: {
   revalidatePath("/school/student-attendance");
   return { ok: true };
 }
+
+// Supprime définitivement un élève. Grâce aux ON DELETE CASCADE, ses notes,
+// présences, liens parents, etc. sont supprimés → il disparaît aussi de l'app
+// des parents qui le suivaient.
+export async function deleteStudentAction(studentId: string): Promise<Result> {
+  if (!studentId) return { ok: false, message: "Élève invalide." };
+  if (!isLiveMode()) return { ok: true };
+
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Non authentifié" };
+
+  const { data: staff } = await supabase
+    .from("school_staff")
+    .select("school_id")
+    .eq("user_id", user.id)
+    .eq("role", "school_admin")
+    .maybeSingle();
+  if (!staff) return { ok: false, message: "Réservé à la direction." };
+
+  const { error } = await supabase.from("students").delete().eq("id", studentId).eq("school_id", staff.school_id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/school/students");
+  revalidatePath("/school/overview");
+  revalidatePath("/school/student-attendance");
+  return { ok: true };
+}
