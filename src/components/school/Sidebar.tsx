@@ -188,35 +188,6 @@ export function SchoolSidebar({ school, userName, counts }: { school: MySchool |
       <NavGroup label={{ fr: "Compte", en: "Account" }} items={SEC} />
 
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-        {/* Carte promo — montée en gamme vers le plan Campus. */}
-        <div className="ek-promo" style={{ margin: "0 2px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, position: "relative" }}>
-            <Icon name="sparkle" size={16} />
-            <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--font-display)" }}>
-              <T fr="Passez au plan Campus" en="Upgrade to Campus" />
-            </div>
-          </div>
-          <div style={{ fontSize: 11, marginTop: 4, opacity: 0.9, position: "relative", lineHeight: 1.4 }}>
-            <T fr="IA d'analyse + bulletins automatisés." en="AI analytics + automated report cards." />
-          </div>
-          <Link
-            href="/school/billing"
-            style={{
-              position: "relative",
-              display: "inline-flex",
-              marginTop: 11,
-              padding: "6px 12px",
-              borderRadius: 9,
-              background: "rgba(255,255,255,0.95)",
-              color: "var(--violet-600)",
-              fontSize: 12,
-              fontWeight: 700,
-            }}
-          >
-            <T fr="Découvrir" en="Discover" />
-          </Link>
-        </div>
-
         <div style={{ padding: "4px 8px", display: "flex", alignItems: "center", gap: 8 }}>
           <Avatar name={displayName} size={30} />
           <div style={{ flex: 1, minWidth: 0 }}>
