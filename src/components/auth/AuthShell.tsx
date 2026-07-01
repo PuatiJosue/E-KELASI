@@ -2,22 +2,6 @@ import type { CSSProperties, InputHTMLAttributes, ReactNode } from "react";
 import { Logo } from "@/components/Logo";
 import { Icon } from "@/components/Icon";
 
-// Objets décoratifs flottants (illustration « Bureau 3D ») — partagés par
-// toutes les pages d'authentification pour un rendu cohérent.
-const FLOATERS: { e: string; top: string; left: string; size: number; rot: number; delay: number }[] = [
-  { e: "🎓", top: "13%", left: "9%", size: 104, rot: -13, delay: 0 },
-  { e: "📘", top: "10%", left: "84%", size: 92, rot: 10, delay: 0.9 },
-  { e: "🎒", top: "46%", left: "5%", size: 90, rot: -9, delay: 1.6 },
-  { e: "📐", top: "44%", left: "88%", size: 88, rot: 15, delay: 0.5 },
-  { e: "📚", top: "74%", left: "12%", size: 96, rot: -7, delay: 1.2 },
-  { e: "✏️", top: "72%", left: "82%", size: 88, rot: 8, delay: 2 },
-  { e: "🍎", top: "12%", left: "32%", size: 64, rot: 6, delay: 1.4 },
-  { e: "🎨", top: "80%", left: "62%", size: 66, rot: -10, delay: 0.7 },
-  { e: "✈️", top: "60%", left: "33%", size: 54, rot: -16, delay: 0.3 },
-];
-
-const fontClamp = (px: number) => `clamp(${Math.round(px * 0.4)}px, ${(px / 12).toFixed(1)}vw, ${px}px)`;
-
 const AUTH_BG =
   "radial-gradient(34% 40% at 10% 8%, rgba(139,108,240,0.50), transparent 70%)," +
   "radial-gradient(30% 36% at 92% 10%, rgba(168,138,250,0.46), transparent 70%)," +
@@ -141,29 +125,6 @@ export function AuthShell({
       }}
     >
       <Decor />
-
-      {FLOATERS.map((f, i) => (
-        <span
-          key={i}
-          aria-hidden
-          className="ek-floater ek-hide-mobile"
-          style={{
-            position: "absolute",
-            top: f.top,
-            left: f.left,
-            fontSize: fontClamp(f.size),
-            ["--rot" as any]: `${f.rot}deg`,
-            transform: `rotate(${f.rot}deg)`,
-            animation: `ek-float ${6 + (i % 4) * 0.5}s ease-in-out ${f.delay}s infinite`,
-            filter: "drop-shadow(0 24px 22px rgba(86,56,176,0.30))",
-            pointerEvents: "none",
-            userSelect: "none",
-            zIndex: 1,
-          }}
-        >
-          {f.e}
-        </span>
-      ))}
 
       {/* Halo + carte */}
       <div style={{ position: "relative", zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center", width: "100%", maxWidth }}>
