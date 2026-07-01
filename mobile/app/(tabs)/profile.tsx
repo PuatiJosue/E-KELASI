@@ -1,6 +1,7 @@
-import { View, Text, ScrollView, Pressable, Linking } from "react-native";
+import { View, Text, ScrollView, Pressable, Linking, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { Card } from "@/components/Card";
@@ -9,6 +10,7 @@ import { useTheme, fonts, radii } from "@/lib/theme";
 import { T, useT, useLang, useSetLang } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useChildren } from "@/lib/children";
+import { pickAndUploadParentPhoto } from "@/lib/parentPhoto";
 
 const PRIVACY_URL = "https://e-kelasi.vercel.app/privacy";
 
@@ -18,8 +20,18 @@ export default function Profile() {
   const lang = useLang();
   const setLang = useSetLang();
   const router = useRouter();
-  const { session, signOut } = useAuth();
+  const { session, signOut, refreshProfile } = useAuth();
   const { children } = useChildren();
+  const [uploading, setUploading] = useState(false);
+
+  const onPickPhoto = async () => {
+    if (uploading) return;
+    setUploading(true);
+    const res = await pickAndUploadParentPhoto();
+    setUploading(false);
+    if (res.ok) await refreshProfile();
+    else if (res.error !== "Annulé.") Alert.alert("Photo", res.error);
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -67,7 +79,13 @@ export default function Profile() {
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Header */}
         <View style={{ paddingVertical: 24, paddingHorizontal: 20, alignItems: "center" }}>
-          <Avatar name={session?.fullName ?? "Parent"} size={72} />
+          <Pressable onPress={onPickPhoto} disabled={uploading} style={{ opacity: uploading ? 0.6 : 1 }}>
+            <Avatar name={session?.fullName ?? "Parent"} url={session?.avatarUrl} size={72} />
+            <View style={{ position: "absolute", bottom: 0, right: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: t.brand, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: t.bg }}>
+              <Icon name="camera" size={13} color="#fff" />
+            </View>
+            {uploading && <ActivityIndicator size="small" color={t.brand} style={{ position: "absolute", top: 26, left: 26 }} />}
+          </Pressable>
           <Text style={{ marginTop: 12, fontSize: 18, fontWeight: "700", color: t.ink, fontFamily: fonts.display }}>
             {session?.fullName ?? "Parent"}
           </Text>

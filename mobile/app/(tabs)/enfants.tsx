@@ -1,8 +1,9 @@
 // Onglet « Enfants » — liste des enfants + accès rapide (Résultats, Devoirs, Dossier).
 
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { Card } from "@/components/Card";
@@ -11,16 +12,27 @@ import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useChildren } from "@/lib/children";
 import { type Child } from "@/lib/db";
+import { pickAndUploadChildPhoto } from "@/lib/studentPhoto";
 
 export default function EnfantsTab() {
   const t = useTheme();
   const tr = useT();
   const router = useRouter();
-  const { children, loading, selectChild } = useChildren();
+  const { children, loading, selectChild, refresh } = useChildren();
+  const [uploadingChild, setUploadingChild] = useState<string | null>(null);
 
   const go = (c: Child, route: string) => {
     selectChild(c.id);
     router.push(route as any);
+  };
+
+  const onPickChildPhoto = async (childId: string) => {
+    if (uploadingChild) return;
+    setUploadingChild(childId);
+    const res = await pickAndUploadChildPhoto(childId);
+    setUploadingChild(null);
+    if (res.ok) refresh();
+    else if (res.error !== "Annulé.") Alert.alert("Photo", res.error);
   };
 
   const ACTIONS: { icon: string; color: string; fr: string; en: string; route: string }[] = [
@@ -58,7 +70,13 @@ export default function EnfantsTab() {
           {children.map((c) => (
             <Card key={c.id} style={{ padding: 14, gap: 12 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <Avatar name={c.name} url={c.avatarUrl} size={46} />
+                <Pressable onPress={() => onPickChildPhoto(c.id)} disabled={uploadingChild === c.id} style={{ opacity: uploadingChild === c.id ? 0.6 : 1 }}>
+                  <Avatar name={c.name} url={c.avatarUrl} size={46} />
+                  <View style={{ position: "absolute", bottom: -2, right: -2, width: 21, height: 21, borderRadius: 11, backgroundColor: t.brand, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: t.surface }}>
+                    <Icon name="camera" size={11} color="#fff" />
+                  </View>
+                  {uploadingChild === c.id && <ActivityIndicator size="small" color={t.brand} style={{ position: "absolute", top: 14, left: 14 }} />}
+                </Pressable>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>{c.name}</Text>
                   <Text numberOfLines={1} style={{ fontSize: 12, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>

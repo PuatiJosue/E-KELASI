@@ -8,6 +8,7 @@ type Session = {
   userId: string;
   email: string;
   fullName: string;
+  avatarUrl?: string | null;
 } | null;
 
 type AuthCtx = {
@@ -16,6 +17,7 @@ type AuthCtx = {
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   signInDemo: () => void;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthCtx | null>(null);
@@ -29,6 +31,18 @@ const DEMO_SESSION: Session = {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session>(null);
   const [loading, setLoading] = useState(true);
+
+  // Charge la photo de profil (profiles.avatar_url) et la fusionne dans la session.
+  const hydrateAvatar = async (userId: string) => {
+    if (!isLiveMode || !supabase) return;
+    try {
+      const { data } = await supabase.from("profiles").select("avatar_url").eq("id", userId).maybeSingle();
+      const url = (data as any)?.avatar_url ?? null;
+      setSession((prev) => (prev && prev.userId === userId ? { ...prev, avatarUrl: url } : prev));
+    } catch {
+      // avatar best effort
+    }
+  };
 
   useEffect(() => {
     if (!isLiveMode || !supabase) {
@@ -45,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             data.session.user.email?.split("@")[0] ??
             "",
         });
+        hydrateAvatar(data.session.user.id);
       }
       setLoading(false);
     });
@@ -55,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: s.user.email ?? "",
           fullName: (s.user.user_metadata?.full_name as string | undefined) ?? s.user.email ?? "",
         });
+        hydrateAvatar(s.user.id);
       } else {
         setSession(null);
       }
@@ -79,8 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInDemo = () => setSession(DEMO_SESSION);
 
+  const refreshProfile = async () => {
+    if (session?.userId) await hydrateAvatar(session.userId);
+  };
+
   return (
-    <AuthContext.Provider value={{ session, loading, signIn, signOut, signInDemo }}>
+    <AuthContext.Provider value={{ session, loading, signIn, signOut, signInDemo, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

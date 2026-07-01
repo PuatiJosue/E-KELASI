@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { useChildren } from "@/lib/children";
 import { type Grade, type Homework } from "@/lib/mock";
 import { hasPendingChild, type Child } from "@/lib/db";
+import { pickAndUploadChildPhoto } from "@/lib/studentPhoto";
 
 // Les 6 fonctions de l'accueil (icône + couleur + destination).
 const FEATURES: {
@@ -46,6 +47,16 @@ export default function Home() {
 
   const [pending, setPending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [uploadingChild, setUploadingChild] = useState<string | null>(null);
+
+  const onPickChildPhoto = async (childId: string) => {
+    if (uploadingChild) return;
+    setUploadingChild(childId);
+    const res = await pickAndUploadChildPhoto(childId);
+    setUploadingChild(null);
+    if (res.ok) refresh();
+    else if (res.error !== "Annulé.") Alert.alert("Photo", res.error);
+  };
 
   const reload = useCallback(async () => {
     setRefreshing(true);
@@ -74,7 +85,7 @@ export default function Home() {
   if (children.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
-        <HeaderGreeting parentName={parentName} onBell={() => router.push("/notifications")} />
+        <HeaderGreeting parentName={parentName} avatarUrl={session?.avatarUrl} onBell={() => router.push("/notifications")} />
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 }}>
           <Icon name={pending ? "clock" : "user"} size={40} color={pending ? t.warning : t.ink3} />
           <Text style={{ fontSize: 16, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold, textAlign: "center" }}>
@@ -121,7 +132,7 @@ export default function Home() {
         contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={t.brand} />}
       >
-        <HeaderGreeting parentName={parentName} onBell={() => router.push("/notifications")} />
+        <HeaderGreeting parentName={parentName} avatarUrl={session?.avatarUrl} onBell={() => router.push("/notifications")} />
 
         <View style={{ padding: 20, paddingTop: 6, gap: 20 }}>
           {/* Grille de fonctions */}
@@ -164,7 +175,13 @@ export default function Home() {
             {children.map((c) => (
               <Pressable key={c.id} onPress={() => openChild(c)}>
                 <Card style={{ padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <Avatar name={c.name} url={c.avatarUrl} size={44} />
+                  <Pressable onPress={() => onPickChildPhoto(c.id)} disabled={uploadingChild === c.id} style={{ opacity: uploadingChild === c.id ? 0.6 : 1 }}>
+                    <Avatar name={c.name} url={c.avatarUrl} size={44} />
+                    <View style={{ position: "absolute", bottom: -2, right: -2, width: 20, height: 20, borderRadius: 10, backgroundColor: t.brand, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: t.surface }}>
+                      <Icon name="camera" size={10} color="#fff" />
+                    </View>
+                    {uploadingChild === c.id && <ActivityIndicator size="small" color={t.brand} style={{ position: "absolute", top: 14, left: 14 }} />}
+                  </Pressable>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>{c.name}</Text>
                     <Text numberOfLines={1} style={{ fontSize: 12, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>
@@ -182,7 +199,7 @@ export default function Home() {
   );
 }
 
-function HeaderGreeting({ parentName, onBell }: { parentName: string; onBell: () => void }) {
+function HeaderGreeting({ parentName, avatarUrl, onBell }: { parentName: string; avatarUrl?: string | null; onBell: () => void }) {
   const t = useTheme();
   return (
     <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
@@ -229,7 +246,7 @@ function HeaderGreeting({ parentName, onBell }: { parentName: string; onBell: ()
             <T fr="Parent" en="Parent" />
           </Text>
         </View>
-        <Avatar name={parentName} size={46} style={{ backgroundColor: "rgba(255,255,255,0.18)", borderWidth: 2, borderColor: "rgba(255,255,255,0.3)" }} />
+        <Avatar name={parentName} url={avatarUrl} size={46} style={{ backgroundColor: "rgba(255,255,255,0.18)", borderWidth: 2, borderColor: "rgba(255,255,255,0.3)" }} />
       </View>
     </View>
   );
