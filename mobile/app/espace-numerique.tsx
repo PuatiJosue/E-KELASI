@@ -1,6 +1,6 @@
 // Espace numérique — hub : Bibliothèque + Vidéos des cours.
 
-import { View, Text, ScrollView, Pressable, Alert } from "react-native";
+import { View, Text, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -34,7 +34,7 @@ export default function EspaceNumerique() {
       en: "Course videos",
       subFr: "Cours filmés et supports vidéo",
       subEn: "Recorded lessons and video content",
-      onPress: () => Alert.alert(tr({ fr: "Vidéos des cours", en: "Course videos" }), tr({ fr: "Bientôt disponible.", en: "Coming soon." })),
+      onPress: () => router.push("/videos" as any),
     },
   ];
 

@@ -30,7 +30,7 @@ const FEATURES: {
 }[] = [
   { key: "presence", icon: "users", color: "#4F66E8", fr: "Présence", en: "Attendance", subFr: "Présences de mon enfant", subEn: "My child's attendance", route: "/presence" },
   { key: "resultats", icon: "chart", color: "#16A34A", fr: "Résultats", en: "Results", subFr: "Notes et bulletins", subEn: "Grades and reports", route: "/(tabs)/grades" },
-  { key: "emploi", icon: "calendar", color: "#F59E0B", fr: "Emploi du temps", en: "Timetable", subFr: "Cours et matières", subEn: "Classes and subjects", route: null },
+  { key: "emploi", icon: "calendar", color: "#F59E0B", fr: "Emploi du temps", en: "Timetable", subFr: "Cours et matières", subEn: "Classes and subjects", route: "/emploi-du-temps" },
   { key: "messages", icon: "chat", color: "#8B5CF6", fr: "Messages", en: "Messages", subFr: "École et notifications", subEn: "School and notifications", route: "/(tabs)/messages" },
   { key: "paiements", icon: "creditcard", color: "#EC4899", fr: "Paiements", en: "Payments", subFr: "Frais et historique", subEn: "Fees and history", route: "/paiements" },
   { key: "espace", icon: "folder", color: "#0EA5E9", fr: "Espace numérique", en: "Digital space", subFr: "Bibliothèque et vidéos", subEn: "Library and videos", route: "/espace-numerique" },

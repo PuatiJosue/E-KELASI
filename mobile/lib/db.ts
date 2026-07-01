@@ -400,6 +400,55 @@ export async function listChildFees(childId?: string): Promise<FeePayment[]> {
   }
 }
 
+// ── Emploi du temps ──────────────────────────────────────────────────
+export type TimetableSlot = { id: string; day: number; startTime: string; endTime: string; subject: string; teacher: string | null; room: string | null };
+
+export async function listTimetable(className?: string, schoolId?: string | null): Promise<TimetableSlot[]> {
+  if (!isLiveMode || !supabase) return [];
+  try {
+    const child = className && schoolId ? null : await getChild();
+    const cls = className ?? child?.grade;
+    const sid = schoolId ?? child?.schoolId;
+    if (!cls || !sid) return [];
+    const { data } = await supabase
+      .from("timetable_slots")
+      .select("id, day, start_time, end_time, subject, teacher, room")
+      .eq("school_id", sid)
+      .eq("class_name", cls)
+      .order("day", { ascending: true })
+      .order("start_time", { ascending: true });
+    return (data ?? []).map((s: any) => ({
+      id: s.id, day: s.day, startTime: s.start_time, endTime: s.end_time,
+      subject: s.subject, teacher: s.teacher ?? null, room: s.room ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ── Vidéos des cours ─────────────────────────────────────────────────
+export type CourseVideoItem = { id: string; title: string; url: string; subject: string | null; className: string | null };
+
+export async function listCourseVideos(schoolId?: string | null, className?: string): Promise<CourseVideoItem[]> {
+  if (!isLiveMode || !supabase) return [];
+  try {
+    const child = await getChild();
+    const sid = schoolId ?? child?.schoolId;
+    const cls = className ?? child?.grade;
+    if (!sid) return [];
+    const { data } = await supabase
+      .from("course_videos")
+      .select("id, title, url, subject, class_name")
+      .eq("school_id", sid)
+      .order("created_at", { ascending: false });
+    return (data ?? [])
+      .filter((v: any) => !v.class_name || !cls || v.class_name === cls)
+      .map((v: any) => ({ id: v.id, title: v.title, url: v.url, subject: v.subject ?? null, className: v.class_name ?? null }));
+  } catch {
+    return [];
+  }
+}
+
 // ── Homework ─────────────────────────────────────────────────────────
 export async function listHomework(className?: string, schoolId?: string | null): Promise<Homework[]> {
   if (!isLiveMode || !supabase) return MOCK.homework;
