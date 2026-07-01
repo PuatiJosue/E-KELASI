@@ -64,6 +64,36 @@ export async function POST(req: NextRequest) {
     // Nom complet (système congolais : NOM Post-nom Prénom).
     const fullName = [lastName, middleName, firstName].filter(Boolean).join(" ");
 
+    // ── Anti-doublon : si un élève du même nom existe déjà dans cette école
+    //    (saisi manuellement par l'école, ou déjà enregistré), on RATTACHE le
+    //    parent à cette fiche existante au lieu de créer un doublon. ──────────
+    const norm = (s: string) =>
+      (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+    const { data: existing } = await svc
+      .from("students")
+      .select("id, full_name")
+      .eq("school_id", schoolId);
+    const target = norm(fullName);
+    const match = (existing ?? []).find((s: any) => norm(s.full_name) === target);
+    if (match) {
+      const { data: alreadyLinked } = await svc
+        .from("parent_links")
+        .select("student_id")
+        .eq("parent_id", user.id)
+        .eq("student_id", match.id)
+        .maybeSingle();
+      if (!alreadyLinked) {
+        await svc.from("parent_links").insert({
+          parent_id: user.id,
+          student_id: match.id,
+          relation: "parent",
+          is_primary: false,
+          access_status: "active",
+        });
+      }
+      return NextResponse.json({ ok: true, studentId: match.id, matched: true });
+    }
+
     const { data: student, error: stErr } = await svc
       .from("students")
       .insert({
