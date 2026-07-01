@@ -8,6 +8,8 @@ import { T, useLang } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { MobileMenuButton } from "@/components/Shell";
 import { LogoutButton } from "@/components/LogoutButton";
+import { SearchBox } from "@/components/SearchBox";
+import { searchSchool } from "@/app/(school)/school/search-actions";
 import type { MySchool, SchoolRequestCounts } from "@/lib/school-db";
 
 const LABELS: Record<string, { fr: string; en: string }> = {
@@ -86,20 +88,11 @@ export function SchoolTopbar({ school, pending }: { school: MySchool | null; pen
         </span>
       </div>
 
-      {/* Recherche (présentation) — le conteneur sert aussi d'espaceur. */}
+      {/* Recherche fonctionnelle (élèves + classes) — le conteneur sert d'espaceur. */}
       <div style={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
-        <label className="ek-search ek-hide-mobile" style={{ width: "100%", maxWidth: 460 }}>
-          <Icon name="search" size={16} color="var(--ink-3)" />
-          <input placeholder="Rechercher un élève, une classe, une note…" aria-label="Rechercher" />
-          <kbd
-            style={{
-              fontSize: 11, color: "var(--ink-3)", fontFamily: "var(--font-mono)",
-              border: "1px solid var(--border)", borderRadius: 6, padding: "1px 6px", background: "var(--surface-2)",
-            }}
-          >
-            ⌘K
-          </kbd>
-        </label>
+        <div className="ek-hide-mobile" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+          <SearchBox action={searchSchool} placeholder="Rechercher un élève, une classe…" />
+        </div>
       </div>
 
       {/* Rafraîchir maintenant + bascule auto-actualisation */}

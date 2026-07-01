@@ -5,6 +5,8 @@ import { Icon } from "@/components/Icon";
 import { T, useLang } from "@/lib/i18n";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { MobileMenuButton } from "@/components/Shell";
+import { SearchBox } from "@/components/SearchBox";
+import { searchTeacher } from "@/app/(teacher)/teacher/search-actions";
 
 const LABELS: Record<string, { fr: string; en: string }> = {
   dashboard: { fr: "Tableau de bord", en: "Dashboard" },
@@ -50,10 +52,9 @@ export function TeacherTopbar() {
       </div>
 
       <div style={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
-        <label className="ek-search ek-hide-mobile" style={{ width: "100%", maxWidth: 420 }}>
-          <Icon name="search" size={16} color="var(--ink-3)" />
-          <input placeholder="Rechercher une classe, un élève…" aria-label="Rechercher" />
-        </label>
+        <div className="ek-hide-mobile" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+          <SearchBox action={searchTeacher} placeholder="Rechercher une classe…" />
+        </div>
       </div>
 
       <LanguageToggle current={lang} />
