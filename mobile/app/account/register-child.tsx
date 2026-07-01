@@ -94,8 +94,16 @@ export default function RegisterChild() {
       const data = await r.json();
       setBusy(false);
       if (data?.ok) {
-        setMsg({ ok: true, text: tr({ fr: "Demande envoyée ! En attente de validation par l'école.", en: "Request sent! Awaiting school validation." }) });
-        setTimeout(() => router.back(), 1400);
+        setMsg({
+          ok: true,
+          text: data?.matched
+            ? tr({
+                fr: "✓ Votre enfant a été trouvé dans la base de l'école. Rattachement à son dossier en attente de validation.",
+                en: "✓ Your child was found in the school's database. Linking to their record is awaiting validation.",
+              })
+            : tr({ fr: "Demande envoyée ! En attente de validation par l'école.", en: "Request sent! Awaiting school validation." }),
+        });
+        setTimeout(() => router.back(), 1800);
       } else {
         const detail = typeof data?.error === "string" ? ` (${data.error})` : "";
         setMsg({ ok: false, text: tr({ fr: `Échec de l'envoi. Réessaie.${detail}`, en: `Failed to send. Try again.${detail}` }) });

@@ -7,7 +7,7 @@ import { T } from "@/lib/i18n";
 import { PROMOTION_LEVELS, PROMOTION_OPTIONS } from "@/lib/promotion";
 import { addStudentAction } from "@/app/(school)/school/students/actions";
 
-export function AddStudentButton() {
+export function AddStudentButton({ classNames = [] }: { classNames?: string[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -15,18 +15,22 @@ export function AddStudentButton() {
   const [middleName, setMiddleName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [sex, setSex] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [className, setClassName] = useState("");
   const [option, setOption] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Classes proposées : celles déjà créées dans l'école, puis les niveaux canoniques.
+  const classSuggestions = [...new Set([...classNames, ...PROMOTION_LEVELS.map((l) => l.label)])];
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await addStudentAction({ lastName, middleName, firstName, sex, className, option });
+      const res = await addStudentAction({ lastName, middleName, firstName, sex, birthDate, className, option });
       if (res.ok) {
         setOpen(false);
-        setLastName(""); setMiddleName(""); setFirstName(""); setSex(""); setClassName(""); setOption("");
+        setLastName(""); setMiddleName(""); setFirstName(""); setSex(""); setBirthDate(""); setClassName(""); setOption("");
         router.refresh();
       } else {
         setError(res.message);
@@ -85,9 +89,12 @@ export function AddStudentButton() {
                   </select>
                 </Field>
               </div>
+              <Field label={<T fr="Date de naissance (facultatif)" en="Birth date (optional)" />}>
+                <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} style={inputStyle} />
+              </Field>
               <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <Field label={<T fr="Classe" en="Class" />}>
-                  <input value={className} onChange={(e) => setClassName(e.target.value)} required placeholder="5e année primaire" list="ek-add-classes" style={inputStyle} />
+                  <input value={className} onChange={(e) => setClassName(e.target.value)} required placeholder="1re A, 5e Humanités…" list="ek-add-classes" style={inputStyle} />
                 </Field>
                 <Field label={<T fr="Option / filière" en="Option" />}>
                   <input value={option} onChange={(e) => setOption(e.target.value)} placeholder="Sciences… (facultatif)" list="ek-add-options" style={inputStyle} />
@@ -95,7 +102,7 @@ export function AddStudentButton() {
               </div>
 
               <datalist id="ek-add-classes">
-                {PROMOTION_LEVELS.map((l) => <option key={l.key} value={l.label} />)}
+                {classSuggestions.map((c) => <option key={c} value={c} />)}
               </datalist>
               <datalist id="ek-add-options">
                 {PROMOTION_OPTIONS.map((o) => <option key={o} value={o} />)}

@@ -1,11 +1,12 @@
 import { PageHeader } from "@/components/KPI";
 import { listSchoolStudents } from "@/lib/school-db";
+import { listSchoolClassNames } from "@/lib/content-db";
 import { StudentsBrowser } from "./StudentsBrowser";
 import { AddStudentButton } from "@/components/school/AddStudentButton";
 import { ImportStudentsButton } from "@/components/school/ImportStudentsButton";
 
 export default async function SchoolStudents() {
-  const students = await listSchoolStudents();
+  const [students, classNames] = await Promise.all([listSchoolStudents(), listSchoolClassNames()]);
   const classes = new Set(students.map((s) => s.className)).size;
 
   return (
@@ -19,7 +20,7 @@ export default async function SchoolStudents() {
         right={
           <>
             <ImportStudentsButton />
-            <AddStudentButton />
+            <AddStudentButton classNames={classNames} />
           </>
         }
       />

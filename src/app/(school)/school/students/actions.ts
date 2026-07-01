@@ -77,6 +77,7 @@ export async function addStudentAction(args: {
   middleName?: string;   // Post-nom
   firstName: string;     // Prénom
   sex?: string;          // 'M' | 'F'
+  birthDate?: string;    // date de naissance (facultatif)
   className: string;
   option?: string;
   gradeLevel?: string;   // facultatif → défaut = classe
@@ -90,6 +91,7 @@ export async function addStudentAction(args: {
     return { ok: false, message: "Nom, prénom et classe sont requis." };
   }
   const sex = args.sex === "M" || args.sex === "F" ? args.sex : null;
+  const birthDate = args.birthDate?.trim() || null;
   const fullName = [lastName, middleName, firstName].filter(Boolean).join(" ");
 
   const supabase = createClient();
@@ -111,6 +113,7 @@ export async function addStudentAction(args: {
     middle_name: middleName,
     last_name: lastName,
     sex,
+    birth_date: birthDate,
     class_name: className,
     grade_level: args.gradeLevel?.trim() || className,
     option: args.option?.trim() || null,

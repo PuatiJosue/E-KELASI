@@ -64,9 +64,14 @@ export async function POST(req: NextRequest) {
     // Nom complet (système congolais : NOM Post-nom Prénom).
     const fullName = [lastName, middleName, firstName].filter(Boolean).join(" ");
 
-    // Note : la détection de doublon (élève du même nom déjà saisi par l'école)
-    // est traitée à la VALIDATION côté école (menu Demandes), qui propose de
-    // « rattacher au dossier existant » plutôt que de dupliquer.
+    // Recherche dans la base de l'école : l'élève est-il déjà enregistré ?
+    // (Le rattachement au dossier existant se fait à la validation côté école.)
+    const norm = (s: string) =>
+      (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+    const { data: sameSchool } = await svc.from("students").select("full_name").eq("school_id", schoolId);
+    const target = norm(fullName);
+    const matched = (sameSchool ?? []).some((s: any) => norm(s.full_name) === target);
+
     const { data: student, error: stErr } = await svc
       .from("students")
       .insert({
@@ -100,7 +105,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "link_failed" }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true, studentId: student.id });
+    return NextResponse.json({ ok: true, studentId: student.id, matched });
   } catch (e: any) {
     console.error("[register-child]", e?.message ?? e);
     return NextResponse.json({ error: "server_error" }, { status: 500 });
