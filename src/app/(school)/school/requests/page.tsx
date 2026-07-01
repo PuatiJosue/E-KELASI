@@ -90,7 +90,7 @@ export default async function SchoolRequests() {
                     {p.option ? <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{p.option}</div> : null}
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <RequestActions studentId={p.id} />
+                    <RequestActions studentId={p.id} duplicate={p.possibleDuplicate} />
                   </div>
                 </div>
               ))}
