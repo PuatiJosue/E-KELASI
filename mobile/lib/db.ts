@@ -342,6 +342,64 @@ export async function listGrades(limit = 20, childId?: string): Promise<Grade[]>
   }
 }
 
+// ── Présences ────────────────────────────────────────────────────────
+export type AttendanceRecord = { date: string; status: string };
+
+// Présences de l'enfant (nécessite la RLS parent — migration 0051).
+export async function listChildAttendance(childId?: string, monthsBack = 6): Promise<AttendanceRecord[]> {
+  if (!isLiveMode || !supabase) return [];
+  try {
+    const id = childId ?? (await getChild())?.id;
+    if (!id) return [];
+    const from = new Date();
+    from.setMonth(from.getMonth() - monthsBack);
+    from.setDate(1);
+    const { data } = await supabase
+      .from("student_attendance")
+      .select("date, status")
+      .eq("student_id", id)
+      .gte("date", from.toISOString().slice(0, 10))
+      .order("date", { ascending: true });
+    return (data ?? []).map((r: any) => ({ date: r.date as string, status: r.status as string }));
+  } catch {
+    return [];
+  }
+}
+
+// ── Frais scolaires ──────────────────────────────────────────────────
+export type FeePayment = {
+  id: string;
+  amount: number;
+  currency: string;
+  label: string | null;
+  paidAt: string;
+  receiptUrl: string | null;
+};
+
+// Historique des paiements de frais de l'enfant (RLS parent — migration 0051).
+export async function listChildFees(childId?: string): Promise<FeePayment[]> {
+  if (!isLiveMode || !supabase) return [];
+  try {
+    const id = childId ?? (await getChild())?.id;
+    if (!id) return [];
+    const { data } = await supabase
+      .from("student_fee_payments")
+      .select("id, amount, currency, label, paid_at, receipt_url")
+      .eq("student_id", id)
+      .order("paid_at", { ascending: false });
+    return (data ?? []).map((f: any) => ({
+      id: f.id as string,
+      amount: Number(f.amount) || 0,
+      currency: (f.currency as string) || "USD",
+      label: (f.label as string) ?? null,
+      paidAt: f.paid_at as string,
+      receiptUrl: (f.receipt_url as string) ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ── Homework ─────────────────────────────────────────────────────────
 export async function listHomework(className?: string, schoolId?: string | null): Promise<Homework[]> {
   if (!isLiveMode || !supabase) return MOCK.homework;
