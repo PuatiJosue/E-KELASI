@@ -33,19 +33,20 @@ export function RequestActions({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
       {duplicate && (
-        <div style={{ fontSize: 11.5, color: "var(--warning)", fontWeight: 600, textAlign: "right", maxWidth: 260 }}>
-          ⚠️ <T fr="Élève déjà présent dans l'école. Même enfant ?" en="Student already in the school. Same child?" />
+        <div style={{ fontSize: 11.5, color: "var(--warning)", fontWeight: 600, textAlign: "right", maxWidth: 280 }}>
+          ⚠️ <T fr={`Déjà dans votre base (${duplicate.label}). « Valider » rattache au dossier existant.`} en={`Already in your database (${duplicate.label}). "Approve" attaches to the existing record.`} />
         </div>
       )}
       <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+        {/* Avec doublon → « Valider » = rattachement auto. Sinon → validation normale. */}
+        <button onClick={() => (duplicate ? attach() : run(true))} disabled={pending} className="ek-btn ek-btn-primary" style={{ height: 30, fontSize: 12 }}>
+          {pending ? "…" : <T fr="Valider" en="Approve" />}
+        </button>
         {duplicate && (
-          <button onClick={attach} disabled={pending} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }} title="Lier le parent au dossier existant et supprimer le doublon">
-            {pending ? "…" : <T fr="Rattacher au dossier existant" en="Attach to existing" />}
+          <button onClick={() => run(true)} disabled={pending} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }} title="Ce n'est pas le même enfant (homonyme) — créer une nouvelle fiche">
+            {pending ? "…" : <T fr="Nouvel élève" en="New student" />}
           </button>
         )}
-        <button onClick={() => run(true)} disabled={pending} className="ek-btn ek-btn-primary" style={{ height: 30, fontSize: 12 }}>
-          {pending ? "…" : <T fr={duplicate ? "Nouvel élève" : "Valider"} en={duplicate ? "New student" : "Approve"} />}
-        </button>
         <button
           onClick={() => run(false)}
           disabled={pending}

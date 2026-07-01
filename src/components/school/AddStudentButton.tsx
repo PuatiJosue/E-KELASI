@@ -11,9 +11,11 @@ export function AddStudentButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [fullName, setFullName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [middleName, setMiddleName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [sex, setSex] = useState("");
   const [className, setClassName] = useState("");
-  const [gradeLevel, setGradeLevel] = useState("");
   const [option, setOption] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -21,13 +23,10 @@ export function AddStudentButton() {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await addStudentAction({ fullName: fullName.trim(), className: className.trim(), gradeLevel: gradeLevel.trim(), option: option.trim() });
+      const res = await addStudentAction({ lastName, middleName, firstName, sex, className, option });
       if (res.ok) {
         setOpen(false);
-        setFullName("");
-        setClassName("");
-        setGradeLevel("");
-        setOption("");
+        setLastName(""); setMiddleName(""); setFirstName(""); setSex(""); setClassName(""); setOption("");
         router.refresh();
       } else {
         setError(res.message);
@@ -66,20 +65,34 @@ export function AddStudentButton() {
             </h2>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <Field label={<T fr="Nom complet" en="Full name" />}>
-                <input value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="Mamadou Ndoye" style={inputStyle} />
-              </Field>
+              <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label={<T fr="Nom" en="Last name" />}>
+                  <input value={lastName} onChange={(e) => setLastName(e.target.value)} required placeholder="NDOYE" style={inputStyle} />
+                </Field>
+                <Field label={<T fr="Prénom" en="First name" />}>
+                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required placeholder="Mamadou" style={inputStyle} />
+                </Field>
+              </div>
+              <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label={<T fr="Post-nom (facultatif)" en="Middle name (optional)" />}>
+                  <input value={middleName} onChange={(e) => setMiddleName(e.target.value)} placeholder="Amadou" style={inputStyle} />
+                </Field>
+                <Field label={<T fr="Sexe" en="Sex" />}>
+                  <select value={sex} onChange={(e) => setSex(e.target.value)} style={inputStyle}>
+                    <option value="">—</option>
+                    <option value="M">Masculin</option>
+                    <option value="F">Féminin</option>
+                  </select>
+                </Field>
+              </div>
               <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <Field label={<T fr="Classe" en="Class" />}>
                   <input value={className} onChange={(e) => setClassName(e.target.value)} required placeholder="5e année primaire" list="ek-add-classes" style={inputStyle} />
                 </Field>
-                <Field label={<T fr="Niveau" en="Level" />}>
-                  <input value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)} required placeholder="5e" style={inputStyle} />
+                <Field label={<T fr="Option / filière" en="Option" />}>
+                  <input value={option} onChange={(e) => setOption(e.target.value)} placeholder="Sciences… (facultatif)" list="ek-add-options" style={inputStyle} />
                 </Field>
               </div>
-              <Field label={<T fr="Option / filière (facultatif)" en="Option (optional)" />}>
-                <input value={option} onChange={(e) => setOption(e.target.value)} placeholder="Sciences, Pédagogie…" list="ek-add-options" style={inputStyle} />
-              </Field>
 
               <datalist id="ek-add-classes">
                 {PROMOTION_LEVELS.map((l) => <option key={l.key} value={l.label} />)}

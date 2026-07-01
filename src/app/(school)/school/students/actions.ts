@@ -72,11 +72,25 @@ export async function importStudentsAction(args: { rows: ImportRow[] }): Promise
   return { ok: true, inserted: rows.length, duplicates };
 }
 
-export async function addStudentAction(args: { fullName: string; className: string; gradeLevel: string; option?: string }): Promise<Result> {
+export async function addStudentAction(args: {
+  lastName: string;      // Nom
+  middleName?: string;   // Post-nom
+  firstName: string;     // Prénom
+  sex?: string;          // 'M' | 'F'
+  className: string;
+  option?: string;
+  gradeLevel?: string;   // facultatif → défaut = classe
+}): Promise<Result> {
   if (!isLiveMode()) return { ok: true };
-  if (!args.fullName?.trim() || !args.className?.trim() || !args.gradeLevel?.trim()) {
-    return { ok: false, message: "Le nom, la classe et le niveau sont requis." };
+  const lastName = args.lastName?.trim();
+  const firstName = args.firstName?.trim();
+  const middleName = args.middleName?.trim() || null;
+  const className = args.className?.trim();
+  if (!lastName || !firstName || !className) {
+    return { ok: false, message: "Nom, prénom et classe sont requis." };
   }
+  const sex = args.sex === "M" || args.sex === "F" ? args.sex : null;
+  const fullName = [lastName, middleName, firstName].filter(Boolean).join(" ");
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -92,9 +106,13 @@ export async function addStudentAction(args: { fullName: string; className: stri
 
   const { error } = await supabase.from("students").insert({
     school_id: staff.school_id,
-    full_name: args.fullName.trim(),
-    class_name: args.className.trim(),
-    grade_level: args.gradeLevel.trim(),
+    full_name: fullName,
+    first_name: firstName,
+    middle_name: middleName,
+    last_name: lastName,
+    sex,
+    class_name: className,
+    grade_level: args.gradeLevel?.trim() || className,
     option: args.option?.trim() || null,
     status: "active",
   });
