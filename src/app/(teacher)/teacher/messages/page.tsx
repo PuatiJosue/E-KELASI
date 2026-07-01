@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
-import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
+import { NewConversation } from "./NewConversation";
 
 async function listTeacherThreads() {
   if (!isLiveMode()) return [];
@@ -61,12 +62,7 @@ export default async function TeacherMessages() {
           fr: `${threads.length} conversations`,
           en: `${threads.length} conversations`,
         }}
-        right={
-          <button className="ek-btn ek-btn-primary" style={{ height: 32, fontSize: 12 }}>
-            <Icon name="plus" size={14} stroke={2.5} />
-            <T fr="Nouveau message" en="New message" />
-          </button>
-        }
+        right={<NewConversation />}
       />
 
       <div className="ek-card" style={{ padding: 0 }}>
@@ -76,14 +72,17 @@ export default async function TeacherMessages() {
           </div>
         ) : (
           threads.map((th, i) => (
-            <div
+            <Link
               key={th.id}
+              href={`/teacher/messages/${th.id}`}
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 12,
                 padding: "14px 18px",
                 borderBottom: i < threads.length - 1 ? "1px solid var(--divider)" : "none",
+                textDecoration: "none",
+                color: "inherit",
               }}
             >
               <Avatar name={th.from} size={40} />
@@ -108,7 +107,7 @@ export default async function TeacherMessages() {
                 </div>
               </div>
               {th.unread && <div style={{ width: 8, height: 8, borderRadius: 4, background: "var(--brand)" }} />}
-            </div>
+            </Link>
           ))
         )}
       </div>

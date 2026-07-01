@@ -32,7 +32,7 @@ export default function Messages() {
               <T fr="Messagerie" en="Inbox" />
             </Text>
           </View>
-          <Pressable style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: t.brand, alignItems: "center", justifyContent: "center" }}>
+          <Pressable onPress={() => router.push("/message-new")} style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: t.brand, alignItems: "center", justifyContent: "center" }}>
             <Icon name="edit" size={17} color="white" />
           </Pressable>
         </View>
@@ -51,9 +51,18 @@ export default function Messages() {
             <ActivityIndicator color={t.brand} />
           </View>
         ) : threads.length === 0 ? (
-          <Text style={{ textAlign: "center", color: t.ink3, fontSize: 13, paddingVertical: 24, fontFamily: fonts.body }}>
-            <T fr="Aucune conversation." en="No conversations." />
-          </Text>
+          <View style={{ alignItems: "center", paddingVertical: 28, paddingHorizontal: 24, gap: 14 }}>
+            <Icon name="chat" size={34} color={t.ink3} />
+            <Text style={{ textAlign: "center", color: t.ink3, fontSize: 13, fontFamily: fonts.body }}>
+              <T fr="Aucune conversation. Écrivez à un enseignant ou à la direction." en="No conversations. Message a teacher or the school." />
+            </Text>
+            <Pressable onPress={() => router.push("/message-new")} style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: t.brand, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12 }}>
+              <Icon name="edit" size={16} color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 14, fontWeight: "700", fontFamily: fonts.bodyBold }}>
+                <T fr="Nouveau message" en="New message" />
+              </Text>
+            </Pressable>
+          </View>
         ) : (
           <Card style={{ marginHorizontal: 20, padding: 4 }}>
             {threads.map((th, i) => (

@@ -620,6 +620,36 @@ export async function sendMessage(conversationId: string, body: string): Promise
   }
 }
 
+// ── Démarrer une conversation (parent ↔ personnel) ──────────────────
+export type Recipient = { userId: string; fullName: string; role: string };
+
+export async function listMessageRecipients(): Promise<Recipient[]> {
+  if (!isLiveMode || !supabase) return [];
+  try {
+    const { data, error } = await supabase.rpc("list_message_recipients");
+    if (error) return [];
+    return (data ?? []).map((r: any) => ({ userId: r.user_id, fullName: r.full_name ?? "?", role: r.role ?? "" }));
+  } catch {
+    return [];
+  }
+}
+
+// Renvoie l'id de conversation (créée ou réutilisée), ou null.
+export async function startConversation(otherUserId: string, subject: string, body: string): Promise<string | null> {
+  if (!isLiveMode || !supabase) return null;
+  try {
+    const { data, error } = await supabase.rpc("start_conversation", {
+      p_other: otherUserId,
+      p_subject: subject,
+      p_body: body,
+    });
+    if (error) return null;
+    return (data as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Library ──────────────────────────────────────────────────────────
 export type LibraryBook = {
   id: string;

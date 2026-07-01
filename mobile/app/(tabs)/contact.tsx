@@ -70,7 +70,7 @@ export default function ContactTab() {
         </Pressable>
 
         {/* Messagerie */}
-        <Pressable onPress={() => router.push("/(tabs)/messages" as any)}>
+        <Pressable onPress={() => router.push("/message-new" as any)}>
           <Card style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 14 }}>
             <View style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: "#8B5CF61F", alignItems: "center", justifyContent: "center" }}>
               <Icon name="chat" size={22} color="#8B5CF6" />
