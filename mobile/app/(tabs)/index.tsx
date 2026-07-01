@@ -1,4 +1,4 @@
-// Home / Dashboard — greeting, child hero, recent grades, homework, messages preview.
+// Accueil — en-tête, salutation, grille de fonctions, « Mes enfants ».
 
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -10,13 +10,31 @@ import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { Card, Chip } from "@/components/Card";
-import { ChildSwitcher } from "@/components/ChildSwitcher";
 import { useTheme, fonts, radii } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useChildren } from "@/lib/children";
 import { type Grade, type Homework } from "@/lib/mock";
-import { hasPendingChild, listAnnouncements, listGrades, listHomework, listThreads, type Announcement, type Child, type Thread } from "@/lib/db";
+import { hasPendingChild, type Child } from "@/lib/db";
+
+// Les 6 fonctions de l'accueil (icône + couleur + destination).
+const FEATURES: {
+  key: string;
+  icon: string;
+  color: string;
+  fr: string;
+  en: string;
+  subFr: string;
+  subEn: string;
+  route: string | null;
+}[] = [
+  { key: "presence", icon: "users", color: "#4F66E8", fr: "Présence", en: "Attendance", subFr: "Présences de mon enfant", subEn: "My child's attendance", route: null },
+  { key: "resultats", icon: "chart", color: "#16A34A", fr: "Résultats", en: "Results", subFr: "Notes et bulletins", subEn: "Grades and reports", route: "/(tabs)/grades" },
+  { key: "emploi", icon: "calendar", color: "#F59E0B", fr: "Emploi du temps", en: "Timetable", subFr: "Cours et matières", subEn: "Classes and subjects", route: null },
+  { key: "messages", icon: "chat", color: "#8B5CF6", fr: "Messages", en: "Messages", subFr: "École et notifications", subEn: "School and notifications", route: "/(tabs)/messages" },
+  { key: "paiements", icon: "creditcard", color: "#EC4899", fr: "Paiements", en: "Payments", subFr: "Frais et historique", subEn: "Fees and history", route: null },
+  { key: "actualites", icon: "bell", color: "#EF4444", fr: "Actualités", en: "News", subFr: "Actualités et événements", subEn: "News and events", route: "/announcements" },
+];
 
 export default function Home() {
   const t = useTheme();
@@ -24,78 +42,27 @@ export default function Home() {
   const router = useRouter();
   const { session } = useAuth();
   const parentName = session?.fullName ?? "Parent";
-  const { children, selectedChild, loading: childrenLoading, refresh } = useChildren();
+  const { children, loading: childrenLoading, selectChild, refresh } = useChildren();
 
   const [pending, setPending] = useState(false);
-  const [grades, setGrades] = useState<Grade[]>([]);
-  const [homework, setHomework] = useState<Homework[]>([]);
-  const [threads, setThreads] = useState<Thread[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [dataReady, setDataReady] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Actualisation manuelle (tirer vers le bas) de toutes les données de l'accueil.
   const reload = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
-        listThreads().then(setThreads).catch(() => {}),
-        listAnnouncements(selectedChild?.schoolId).then(setAnnouncements).catch(() => {}),
-        refresh(),
-        selectedChild
-          ? Promise.all([listGrades(5, selectedChild.id), listHomework(selectedChild.grade, selectedChild.schoolId)]).then(([g, h]) => {
-              setGrades(g);
-              setHomework(h);
-            })
-          : Promise.resolve(),
-      ]);
+      await refresh();
     } finally {
       setRefreshing(false);
     }
-  }, [selectedChild?.schoolId, selectedChild?.id, selectedChild?.grade, refresh]);
+  }, [refresh]);
 
-  // Messagerie : une seule fois (les threads ne dépendent pas de l'enfant).
-  useEffect(() => {
-    listThreads().then(setThreads).catch(() => {});
-  }, []);
-
-  // Annonces : celles de l'école de l'enfant sélectionné (rechargées au changement
-  // d'enfant) — jamais celles d'une autre école.
-  useEffect(() => {
-    if (!selectedChild?.schoolId) {
-      setAnnouncements([]);
-      return;
-    }
-    listAnnouncements(selectedChild.schoolId).then(setAnnouncements).catch(() => setAnnouncements([]));
-  }, [selectedChild?.schoolId]);
-
-  // Aucun enfant actif → vérifie s'il y a une demande en attente.
   useEffect(() => {
     if (!childrenLoading && children.length === 0) {
       hasPendingChild().then(setPending).catch(() => setPending(false));
     }
   }, [childrenLoading, children.length]);
 
-  // Notes + devoirs de l'enfant sélectionné (rechargés au changement d'enfant).
-  useEffect(() => {
-    if (!selectedChild) {
-      setGrades([]);
-      setHomework([]);
-      setDataReady(true);
-      return;
-    }
-    setDataReady(false);
-    Promise.all([listGrades(5, selectedChild.id), listHomework(selectedChild.grade, selectedChild.schoolId)]).then(([g, h]) => {
-      setGrades(g);
-      setHomework(h);
-      setDataReady(true);
-    });
-  }, [selectedChild?.id]);
-
-  const ready = !childrenLoading && (selectedChild ? dataReady : true);
-  const child = selectedChild;
-
-  if (!ready) {
+  if (childrenLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color={t.brand} />
@@ -103,8 +70,8 @@ export default function Home() {
     );
   }
 
-  // Aucun enfant rattaché (l'école doit lier le parent à son enfant).
-  if (!child) {
+  // Aucun enfant rattaché.
+  if (children.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
         <HeaderGreeting parentName={parentName} onBell={() => router.push("/notifications")} />
@@ -135,120 +102,80 @@ export default function Home() {
     );
   }
 
-  const upcoming = homework.find((h) => h.status === "todo") ?? homework[0];
+  const openFeature = (route: string | null, label: string) => {
+    if (!route) {
+      Alert.alert(label, tr({ fr: "Bientôt disponible.", en: "Coming soon." }));
+      return;
+    }
+    router.push(route as any);
+  };
+
+  const openChild = (c: Child) => {
+    selectChild(c.id);
+    router.push("/(tabs)/grades");
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={t.brand} />}
       >
         <HeaderGreeting parentName={parentName} onBell={() => router.push("/notifications")} />
 
-        <ChildSwitcher style={{ paddingVertical: 6 }} />
-
-        <View style={{ padding: 20, paddingTop: 12, gap: 14 }}>
-          <ChildHero child={child} onAvatarChange={() => refresh()} />
-
-          {announcements.length > 0 && (
-            <>
-              <SectionTitle
-                title={{ fr: "Annonces de l'école", en: "School announcements" }}
-                action={{ fr: "Tout voir", en: "See all", onPress: () => router.push("/announcements") }}
-              />
-              <Pressable onPress={() => router.push("/announcements")}>
-                <Card style={{ padding: 14, flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: t.brandSoft, alignItems: "center", justifyContent: "center" }}>
-                    <Icon name="bell" size={16} color={t.brand600} />
+        <View style={{ padding: 20, paddingTop: 6, gap: 20 }}>
+          {/* Grille de fonctions */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+            {FEATURES.map((f) => (
+              <Pressable
+                key={f.key}
+                onPress={() => openFeature(f.route, tr({ fr: f.fr, en: f.en }))}
+                style={{ width: "47.5%", flexGrow: 1 }}
+              >
+                <Card style={{ padding: 14, gap: 10, minHeight: 118 }}>
+                  <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: f.color + "1F", alignItems: "center", justifyContent: "center" }}>
+                    <Icon name={f.icon} size={21} color={f.color} />
                   </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
-                      {announcements[0].title}
+                  <View style={{ gap: 2 }}>
+                    <Text style={{ fontSize: 14.5, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
+                      <T fr={f.fr} en={f.en} />
                     </Text>
-                    <Text numberOfLines={2} style={{ fontSize: 12.5, color: t.ink3, marginTop: 2, fontFamily: fonts.body }}>
-                      {announcements[0].body}
+                    <Text style={{ fontSize: 11.5, color: t.ink3, fontFamily: fonts.body, lineHeight: 15 }}>
+                      <T fr={f.subFr} en={f.subEn} />
                     </Text>
                   </View>
                 </Card>
               </Pressable>
-            </>
-          )}
-
-          <SectionTitle
-            title={{ fr: "Nouvelles notes", en: "New grades" }}
-            action={{ fr: "Tout voir", en: "See all", onPress: () => router.push("/(tabs)/grades") }}
-          />
-          <View style={{ gap: 10 }}>
-            {grades.slice(0, 2).map((g, i) => (
-              <GradeRow key={i} g={g} />
             ))}
-            {grades.length === 0 && (
-              <Text style={{ textAlign: "center", color: t.ink3, fontSize: 12.5, padding: 12, fontFamily: fonts.body }}>
-                <T fr="Pas encore de notes." en="No grades yet." />
-              </Text>
-            )}
           </View>
 
-          <SectionTitle
-            title={{ fr: "À faire pour demain", en: "Due tomorrow" }}
-            action={{ fr: "Tout voir", en: "See all", onPress: () => router.push("/(tabs)/homework") }}
-          />
-          {upcoming ? (
-            <HomeworkCard hw={upcoming} />
-          ) : (
-            <Text style={{ textAlign: "center", color: t.ink3, fontSize: 12.5, padding: 12, fontFamily: fonts.body }}>
-              <T fr="Aucun devoir." en="No homework." />
-            </Text>
-          )}
-
-          <SectionTitle
-            title={{ fr: "Messagerie", en: "Inbox" }}
-            action={{ fr: "Ouvrir", en: "Open", onPress: () => router.push("/(tabs)/messages") }}
-          />
-          {threads.length > 0 ? (
-            <Card style={{ padding: 4 }}>
-              {threads.slice(0, 2).map((th, i) => (
-                <Pressable
-                  key={th.id}
-                  onPress={() => router.push(`/thread/${th.id}`)}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: 12,
-                    borderBottomWidth: i < 1 && threads.length > 1 ? 1 : 0,
-                    borderBottomColor: t.divider,
-                  }}
-                >
-                  <Avatar name={th.from} size={40} />
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: "row", alignItems: "baseline" }}>
-                      <Text style={{ fontSize: 13.5, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>{th.from}</Text>
-                      <Text style={{ fontSize: 11, color: t.ink3, marginLeft: 6, fontFamily: fonts.body }}> · {th.subject}</Text>
-                      <Text style={{ marginLeft: "auto", fontSize: 11, color: t.ink3, fontFamily: fonts.body }}>{th.time}</Text>
-                    </View>
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        fontSize: 12.5,
-                        color: th.unread ? t.ink : t.ink3,
-                        fontWeight: th.unread ? "600" : "400",
-                        marginTop: 2,
-                        fontFamily: th.unread ? fonts.bodyBold : fonts.body,
-                      }}
-                    >
-                      {th.preview}
+          {/* Mes enfants */}
+          <View style={{ gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
+                <T fr="Mes enfants" en="My children" />
+              </Text>
+              <Pressable onPress={() => router.push("/account/register-child")} hitSlop={8}>
+                <Text style={{ fontSize: 12.5, fontWeight: "600", color: t.brand600, fontFamily: fonts.bodyBold }}>
+                  <T fr="+ Ajouter" en="+ Add" />
+                </Text>
+              </Pressable>
+            </View>
+            {children.map((c) => (
+              <Pressable key={c.id} onPress={() => openChild(c)}>
+                <Card style={{ padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <Avatar name={c.name} url={c.avatarUrl} size={44} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>{c.name}</Text>
+                    <Text numberOfLines={1} style={{ fontSize: 12, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>
+                      {[c.grade, c.option, c.school].filter(Boolean).join(" · ")}
                     </Text>
                   </View>
-                  {th.unread && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.brand }} />}
-                </Pressable>
-              ))}
-            </Card>
-          ) : (
-            <Text style={{ textAlign: "center", color: t.ink3, fontSize: 12.5, padding: 12, fontFamily: fonts.body }}>
-              <T fr="Pas de message." en="No messages." />
-            </Text>
-          )}
+                  <Icon name="chevR" size={18} color={t.ink4} />
+                </Card>
+              </Pressable>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -258,146 +185,58 @@ export default function Home() {
 function HeaderGreeting({ parentName, onBell }: { parentName: string; onBell: () => void }) {
   const t = useTheme();
   return (
-    <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, flexDirection: "row", alignItems: "center", gap: 12 }}>
-      <Logo size={26} />
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 12, color: t.ink3, fontWeight: "500", fontFamily: fonts.body }}>
-          <T fr="Bonjour" en="Hello" />,
-        </Text>
-        <Text style={{ fontSize: 16, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>{parentName}</Text>
+    <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
+        <Logo size={30} withWord />
+        <View style={{ flex: 1 }} />
+        <Pressable
+          onPress={onBell}
+          style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, alignItems: "center", justifyContent: "center" }}
+        >
+          <Icon name="bell" size={20} color={t.ink2} />
+          <View style={{ position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: t.danger, borderWidth: 2, borderColor: t.surface }} />
+        </Pressable>
       </View>
-      <Pressable
-        onPress={onBell}
+
+      {/* Bandeau de salutation */}
+      <View
         style={{
-          width: 40,
-          height: 40,
-          borderRadius: 12,
-          backgroundColor: t.surface,
-          borderWidth: 1,
-          borderColor: t.border,
+          borderRadius: radii.lg,
+          backgroundColor: t.brand,
+          padding: 18,
+          overflow: "hidden",
+          flexDirection: "row",
           alignItems: "center",
-          justifyContent: "center",
+          gap: 12,
+          shadowColor: t.brand,
+          shadowOpacity: 0.25,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 6,
         }}
       >
-        <Icon name="bell" size={20} color={t.ink2} />
-        <View
-          style={{
-            position: "absolute",
-            top: 8,
-            right: 8,
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: t.brand,
-            borderWidth: 2,
-            borderColor: t.surface,
-          }}
-        />
-      </Pressable>
-    </View>
-  );
-}
-
-function ChildHero({ child, onAvatarChange }: { child: Child; onAvatarChange?: (url: string) => void }) {
-  const t = useTheme();
-  const [uploading, setUploading] = useState(false);
-
-  const onPickPhoto = async () => {
-    if (uploading) return;
-    setUploading(true);
-    const { pickAndUploadChildPhoto } = await import("@/lib/studentPhoto");
-    const res = await pickAndUploadChildPhoto(child.id);
-    setUploading(false);
-    if (res.ok) onAvatarChange?.(res.url);
-    else if (res.error !== "Annulé.") Alert.alert("Photo", res.error);
-  };
-
-  return (
-    <View
-      style={{
-        padding: 18,
-        borderRadius: radii.lg,
-        backgroundColor: t.brand,
-        position: "relative",
-        overflow: "hidden",
-        shadowColor: t.brand,
-        shadowOpacity: 0.25,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 8 },
-        elevation: 6,
-      }}
-    >
-      <Svg
-        width={160}
-        height={160}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="white"
-        strokeWidth={1}
-        style={{ position: "absolute", top: -20, right: -20, opacity: 0.18 }}
-      >
-        <Path d="M3 10l9-5 9 5-9 5-9-5zM5 12v6c0 1 3 3 7 3s7-2 7-3v-6" />
-      </Svg>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <Pressable onPress={onPickPhoto} disabled={uploading} style={{ opacity: uploading ? 0.6 : 1 }}>
-          <Avatar
-            name={child.name}
-            url={child.avatarUrl}
-            size={52}
-            style={{ backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 2, borderColor: "rgba(255,255,255,0.3)" }}
-          />
-          {uploading && (
-            <ActivityIndicator size="small" color="white" style={{ position: "absolute", top: 16, left: 16 }} />
-          )}
-        </Pressable>
+        <Svg width={150} height={150} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={1} style={{ position: "absolute", top: -24, right: -24, opacity: 0.16 }}>
+          <Path d="M3 10l9-5 9 5-9 5-9-5zM5 12v6c0 1 3 3 7 3s7-2 7-3v-6" />
+        </Svg>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 11, color: "white", opacity: 0.85, fontWeight: "600", letterSpacing: 0.6, textTransform: "uppercase", fontFamily: fonts.body }}>
-            <T fr="Mon enfant" en="My child" />
+          <Text style={{ fontSize: 13, color: "white", opacity: 0.9, fontFamily: fonts.body }}>
+            <T fr="Bonjour," en="Hello," />
           </Text>
-          <Text style={{ fontSize: 18, color: "white", fontWeight: "700", fontFamily: fonts.display }}>{child.name}</Text>
-          <Text style={{ fontSize: 12, color: "white", opacity: 0.85, marginTop: 1, fontFamily: fonts.body }}>
-            {[child.grade, child.option, child.school].filter(Boolean).join(" · ")}
+          <Text style={{ fontSize: 21, color: "white", fontWeight: "700", fontFamily: fonts.display, letterSpacing: -0.3 }} numberOfLines={1}>
+            {parentName}
+          </Text>
+          <Text style={{ fontSize: 11.5, color: "white", opacity: 0.85, marginTop: 3, fontWeight: "600", letterSpacing: 0.4, textTransform: "uppercase", fontFamily: fonts.body }}>
+            <T fr="Parent" en="Parent" />
           </Text>
         </View>
+        <Avatar name={parentName} size={46} style={{ backgroundColor: "rgba(255,255,255,0.18)", borderWidth: 2, borderColor: "rgba(255,255,255,0.3)" }} />
       </View>
-      <View style={{ marginTop: 16 }}>
-        <Text style={{ fontSize: 11, color: "white", opacity: 0.85, fontWeight: "600", fontFamily: fonts.body }}>
-          <T fr="Moyenne générale trimestrielle" en="Term overall average" />
-        </Text>
-        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 4 }}>
-          <Text style={{ fontSize: 36, color: "white", fontWeight: "700", fontFamily: fonts.display, letterSpacing: -1 }}>{child.avg}</Text>
-          <Text style={{ fontSize: 14, color: "white", opacity: 0.85, fontFamily: fonts.body }}>/20</Text>
-        </View>
-        {child.rank != null && child.total != null && (
-          <Text style={{ fontSize: 11, color: "white", opacity: 0.85, marginTop: 6, fontFamily: fonts.body }}>
-            <T fr={`Rang ${child.rank} sur ${child.total}`} en={`Rank ${child.rank} of ${child.total}`} />
-          </Text>
-        )}
-      </View>
-    </View>
-  );
-}
-
-function SectionTitle({ title, action }: { title: { fr: string; en: string }; action?: { fr: string; en: string; onPress: () => void } }) {
-  const t = useTheme();
-  return (
-    <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginTop: 4 }}>
-      <Text style={{ fontSize: 14, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
-        <T fr={title.fr} en={title.en} />
-      </Text>
-      {action && (
-        <Pressable onPress={action.onPress}>
-          <Text style={{ fontSize: 12, fontWeight: "600", color: t.brand600, fontFamily: fonts.bodyBold }}>
-            <T fr={action.fr} en={action.en} />
-          </Text>
-        </Pressable>
-      )}
     </View>
   );
 }
 
 // Couleur + code court d'une matière, dérivés de son nom (sans données fictives).
-const SUBJECT_COLORS = ["#1E2F6D", "#D99A00", "#1D6650", "#3A6DBC", "#C0392B", "#8E44AD", "#16A085", "#E67E22"];
+const SUBJECT_COLORS = ["#4F66E8", "#D97706", "#16A34A", "#0EA5E9", "#E11D48", "#8B5CF6", "#14B8A6", "#F59E0B"];
 export function subjectVisual(name: string): { short: string; color: string } {
   const n = name || "?";
   const short = n.slice(0, 3).toUpperCase();
