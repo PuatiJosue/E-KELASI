@@ -1,14 +1,14 @@
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Linking, RefreshControl, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
 import { T } from "@/lib/i18n";
 import { type Notification } from "@/lib/mock";
-import { listNotifications } from "@/lib/db";
+import { listNotifications, deleteNotification } from "@/lib/db";
 
 const ICON_BY_KIND: Record<Notification["kind"], string> = {
   grade: "award",
@@ -18,12 +18,22 @@ const ICON_BY_KIND: Record<Notification["kind"], string> = {
   reminder: "flag",
 };
 
+const MONTHS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+// En-tête de jour, ex. « 04 juillet 2025 ».
+function dayLabel(iso: string) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return `${String(d.getDate()).padStart(2, "0")} ${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 export default function NotificationsScreen() {
   const t = useTheme();
   const router = useRouter();
   const [notifs, setNotifs] = useState<Notification[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState<Notification | null>(null);
+  const [menuFor, setMenuFor] = useState<Notification | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -50,6 +60,26 @@ export default function NotificationsScreen() {
     hw: t.brand,
     school: t.ink2,
     reminder: t.warning,
+  };
+
+  // Regroupe les notifications par jour, en conservant l'ordre (récent → ancien).
+  const groups = useMemo(() => {
+    const out: { key: string; label: string; items: Notification[] }[] = [];
+    for (const n of notifs ?? []) {
+      const d = new Date(n.date);
+      const key = isNaN(d.getTime()) ? n.date : `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      let g = out.find((x) => x.key === key);
+      if (!g) { g = { key, label: dayLabel(n.date), items: [] }; out.push(g); }
+      g.items.push(n);
+    }
+    return out;
+  }, [notifs]);
+
+  // Suppression optimiste : retire de la liste puis efface en base.
+  const remove = async (n: Notification) => {
+    setMenuFor(null);
+    setNotifs((prev) => (prev ?? []).filter((x) => x.id !== n.id));
+    await deleteNotification(n.id);
   };
 
   return (
@@ -81,32 +111,47 @@ export default function NotificationsScreen() {
         </ScrollView>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20, gap: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.brand} />}
         >
-          {notifs.map((n, i) => (
-            <Pressable key={i} onPress={() => setSelected(n)}>
-              <Card style={{ padding: 14, flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-                <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colorByKind[n.kind] + "22", alignItems: "center", justifyContent: "center" }}>
-                  <Icon name={ICON_BY_KIND[n.kind]} size={16} color={colorByKind[n.kind]} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text numberOfLines={2} style={{ fontSize: 13.5, color: t.ink, fontWeight: "500", fontFamily: fonts.body }}>{n.text}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
-                    <Text style={{ fontSize: 11, color: t.ink3, fontFamily: fonts.body }}>{n.time}</Text>
-                    {n.fileUrl ? (
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                        <Icon name="download" size={11} color={t.brand600} />
-                        <Text style={{ fontSize: 11, color: t.brand600, fontFamily: fonts.bodyBold }}>
-                          <T fr="Pièce jointe" en="Attachment" />
-                        </Text>
+          {groups.map((g) => (
+            <View key={g.key} style={{ marginTop: 14 }}>
+              <Text style={{ fontSize: 12, color: t.ink3, fontWeight: "700", fontFamily: fonts.bodyBold, marginBottom: 8, marginLeft: 2 }}>
+                {g.label}
+              </Text>
+              <View style={{ gap: 8 }}>
+                {g.items.map((n) => (
+                  <Pressable key={n.id} onPress={() => setSelected(n)}>
+                    <Card style={{ padding: 14, flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+                      <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colorByKind[n.kind] + "22", alignItems: "center", justifyContent: "center" }}>
+                        <Icon name={ICON_BY_KIND[n.kind]} size={16} color={colorByKind[n.kind]} />
                       </View>
-                    ) : null}
-                  </View>
-                </View>
-                <Icon name="chevR" size={16} color={t.ink3} />
-              </Card>
-            </Pressable>
+                      <View style={{ flex: 1 }}>
+                        <Text numberOfLines={2} style={{ fontSize: 13.5, color: t.ink, fontWeight: "500", fontFamily: fonts.body }}>{n.text}</Text>
+                        {n.fileUrl ? (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginTop: 4 }}>
+                            <Icon name="download" size={11} color={t.brand600} />
+                            <Text style={{ fontSize: 11, color: t.brand600, fontFamily: fonts.bodyBold }}>
+                              <T fr="Pièce jointe" en="Attachment" />
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <View style={{ alignItems: "flex-end", gap: 8 }}>
+                        <Text style={{ fontSize: 11, color: t.ink3, fontFamily: fonts.body }}>{n.time}</Text>
+                        <Pressable
+                          onPress={() => setMenuFor(n)}
+                          hitSlop={8}
+                          style={{ padding: 2 }}
+                        >
+                          <Icon name="dots" size={18} color={t.ink3} />
+                        </Pressable>
+                      </View>
+                    </Card>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
           ))}
         </ScrollView>
       )}
@@ -121,7 +166,7 @@ export default function NotificationsScreen() {
                   <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: colorByKind[selected.kind] + "22", alignItems: "center", justifyContent: "center" }}>
                     <Icon name={ICON_BY_KIND[selected.kind]} size={18} color={colorByKind[selected.kind]} />
                   </View>
-                  <Text style={{ flex: 1, fontSize: 12, color: t.ink3, fontFamily: fonts.body }}>{selected.time}</Text>
+                  <Text style={{ flex: 1, fontSize: 12, color: t.ink3, fontFamily: fonts.body }}>{dayLabel(selected.date)} · {selected.time}</Text>
                   <Pressable onPress={() => setSelected(null)} style={{ padding: 4 }}>
                     <Icon name="close" size={20} color={t.ink2} />
                   </Pressable>
@@ -142,6 +187,32 @@ export default function NotificationsScreen() {
                 ) : null}
               </>
             )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Menu « … » d'une notification : supprimer. */}
+      <Modal visible={menuFor !== null} transparent animationType="fade" onRequestClose={() => setMenuFor(null)}>
+        <Pressable onPress={() => setMenuFor(null)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
+          <Pressable onPress={(e) => e.stopPropagation()} style={{ backgroundColor: t.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 12, paddingBottom: 34 }}>
+            <Pressable
+              onPress={() => menuFor && remove(menuFor)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, paddingHorizontal: 12 }}
+            >
+              <Icon name="trash" size={18} color={t.danger} />
+              <Text style={{ fontSize: 15, color: t.danger, fontWeight: "600", fontFamily: fonts.bodyBold }}>
+                <T fr="Supprimer" en="Delete" />
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setMenuFor(null)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, paddingHorizontal: 12 }}
+            >
+              <Icon name="close" size={18} color={t.ink2} />
+              <Text style={{ fontSize: 15, color: t.ink2, fontWeight: "600", fontFamily: fonts.bodyBold }}>
+                <T fr="Annuler" en="Cancel" />
+              </Text>
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>

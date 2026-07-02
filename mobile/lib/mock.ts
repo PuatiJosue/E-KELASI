@@ -33,11 +33,11 @@ export const MOCK = {
     { from: "Mme Ndiaye",    subject: "Sciences",      preview: "Le TP de demain nécessitera une blouse blanche.",  time: "Lun",   unread: true },
   ],
   notifs: [
-    { kind: "grade" as const,    text: "Nouvelle note en Mathématiques : 17/20", time: "Il y a 12 min" },
-    { kind: "message" as const,  text: "Mme Camara vous a envoyé un message",    time: "Il y a 1 h" },
-    { kind: "hw" as const,       text: "Nouveau devoir : Exercices p.142",       time: "Il y a 3 h" },
-    { kind: "school" as const,   text: "Bulletin du 2e trimestre disponible",    time: "Hier" },
-    { kind: "reminder" as const, text: "Rappel : signer le bulletin avant lundi", time: "Hier" },
+    { id: "n1", kind: "grade" as const,    text: "Nouvelle note en Mathématiques : 17/20", time: "07:53", date: "2025-07-04T07:53:00" },
+    { id: "n2", kind: "message" as const,  text: "Mme Camara vous a envoyé un message",    time: "07:59", date: "2025-07-01T07:59:00" },
+    { id: "n3", kind: "hw" as const,       text: "Nouveau devoir : Exercices p.142",       time: "17:38", date: "2025-06-26T17:38:00" },
+    { id: "n4", kind: "school" as const,   text: "Bulletin du 2e trimestre disponible",    time: "20:05", date: "2025-03-26T20:05:00" },
+    { id: "n5", kind: "reminder" as const, text: "Rappel : signer le bulletin avant lundi", time: "09:12", date: "2025-03-26T09:12:00" },
   ],
   weekly: [13, 14, 13.5, 15, 14.2, 15.8, 14.8],
 };
@@ -45,5 +45,13 @@ export const MOCK = {
 export type Homework = (typeof MOCK.homework)[number];
 export type Grade = (typeof MOCK.grades)[number];
 export type Message = (typeof MOCK.messages)[number];
-export type Notification = (typeof MOCK.notifs)[number] & { fileUrl?: string };
+export type NotificationKind = "grade" | "message" | "hw" | "school" | "reminder";
+export type Notification = {
+  id: string;
+  kind: NotificationKind;
+  text: string;
+  time: string;   // heure absolue "07:53"
+  date: string;   // ISO (created_at) — sert au regroupement par jour
+  fileUrl?: string;
+};
 export type Subject = (typeof MOCK.subjects)[number];

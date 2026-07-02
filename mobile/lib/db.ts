@@ -75,17 +75,6 @@ function fmtDue(due: Date): string {
   return `${["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"][due.getDay()]} ${fmtDate(due)}`;
 }
 
-function fmtAgo(d: Date): string {
-  const min = Math.round((Date.now() - d.getTime()) / 60000);
-  if (min < 1) return "À l'instant";
-  if (min < 60) return `Il y a ${min} min`;
-  const h = Math.round(min / 60);
-  if (h < 24) return `Il y a ${h} h`;
-  const days = Math.round(h / 24);
-  if (days === 1) return "Hier";
-  return `Il y a ${days}j`;
-}
-
 // ── Access status (école peut bloquer un parent impayé) ──────────────
 // "active" : au moins un lien actif → app libre.
 // "blocked" : des liens existent mais tous bloqués → app suspendue.
@@ -850,18 +839,34 @@ export async function listNotifications(): Promise<Notification[]> {
     if (!user) return [];
     const { data } = await supabase
       .from("notifications")
-      .select("kind, body, payload, created_at")
+      .select("id, kind, body, payload, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
     if (!data) return [];
-    return data.map((n: any) => ({
-      kind: n.kind as Notification["kind"],
-      text: n.body,
-      time: fmtAgo(new Date(n.created_at)),
-      fileUrl: n.payload?.file_url,
-    }));
+    return data.map((n: any) => {
+      const d = new Date(n.created_at);
+      return {
+        id: n.id as string,
+        kind: n.kind as Notification["kind"],
+        text: n.body,
+        time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+        date: n.created_at as string,
+        fileUrl: n.payload?.file_url,
+      };
+    });
   } catch {
     return [];
+  }
+}
+
+// Supprime une notification du parent (mobile). Démo : no-op réussi.
+export async function deleteNotification(id: string): Promise<boolean> {
+  if (!isLiveMode || !supabase) return true;
+  try {
+    const { error } = await supabase.from("notifications").delete().eq("id", id);
+    return !error;
+  } catch {
+    return false;
   }
 }
