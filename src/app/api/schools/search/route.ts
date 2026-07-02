@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   try {
     const base = service()
       .from("schools")
-      .select("id, name, city, commune, quartier, director_name")
+      .select("id, name, city, commune, quartier, director_name, phone, email")
       .order("name");
     // q ≥ 2 → recherche par nom ; sinon → liste complète (menu déroulant).
     const { data } = q.length >= 2 ? await base.ilike("name", `%${q}%`).limit(20) : await base.limit(100);

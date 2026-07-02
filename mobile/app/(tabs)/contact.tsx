@@ -1,7 +1,7 @@
 // Onglet « Contact école » — choix de l'école (toutes les écoles) puis
 // affichage du nom de l'école et du nom du directeur (informatif).
 
-import { View, Text, ScrollView, Pressable, Modal, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, Modal, ActivityIndicator, Linking, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -14,7 +14,7 @@ import { useChildren } from "@/lib/children";
 
 const WEB_API = process.env.EXPO_PUBLIC_WEB_API_URL ?? "";
 
-type School = { id: string; name: string; city?: string | null; director_name?: string | null };
+type School = { id: string; name: string; city?: string | null; director_name?: string | null; phone?: string | null; email?: string | null };
 
 export default function ContactTab() {
   const t = useTheme();
@@ -42,6 +42,17 @@ export default function ContactTab() {
   }, [schools, selectedChild?.school]);
 
   const selected = useMemo(() => (schools ?? []).find((s) => s.id === selectedId) ?? null, [schools, selectedId]);
+
+  const call = () => {
+    const phone = selected?.phone?.trim();
+    if (!phone) { Alert.alert(tr({ fr: "Téléphone", en: "Phone" }), tr({ fr: "Numéro non renseigné par l'école.", en: "No phone provided by the school." })); return; }
+    Linking.openURL(`tel:${phone.replace(/\s+/g, "")}`);
+  };
+  const sendEmail = () => {
+    const email = selected?.email?.trim();
+    if (!email) { Alert.alert(tr({ fr: "Email", en: "Email" }), tr({ fr: "Email non renseigné par l'école.", en: "No email provided by the school." })); return; }
+    Linking.openURL(`mailto:${email}`);
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top"]}>
@@ -90,6 +101,28 @@ export default function ContactTab() {
                 {selected.director_name?.trim() || tr({ fr: "Non renseigné", en: "Not provided" })}
               </Text>
             </View>
+            <View style={{ height: 1, backgroundColor: t.divider }} />
+            <View style={{ gap: 3 }}>
+              <Text style={{ fontSize: 11, color: t.ink3, fontWeight: "600", letterSpacing: 0.4, textTransform: "uppercase", fontFamily: fonts.body }}>
+                <T fr="Téléphone" en="Phone" />
+              </Text>
+              {selected.phone?.trim() ? (
+                <Text onPress={call} style={{ fontSize: 15, fontWeight: "600", color: t.brand600, fontFamily: fonts.body }}>{selected.phone}</Text>
+              ) : (
+                <Text style={{ fontSize: 15, fontWeight: "600", color: t.ink3, fontFamily: fonts.body }}>{tr({ fr: "Non renseigné", en: "Not provided" })}</Text>
+              )}
+            </View>
+            <View style={{ height: 1, backgroundColor: t.divider }} />
+            <View style={{ gap: 3 }}>
+              <Text style={{ fontSize: 11, color: t.ink3, fontWeight: "600", letterSpacing: 0.4, textTransform: "uppercase", fontFamily: fonts.body }}>
+                <T fr="Email" en="Email" />
+              </Text>
+              {selected.email?.trim() ? (
+                <Text onPress={sendEmail} style={{ fontSize: 15, fontWeight: "600", color: t.brand600, fontFamily: fonts.body }}>{selected.email}</Text>
+              ) : (
+                <Text style={{ fontSize: 15, fontWeight: "600", color: t.ink3, fontFamily: fonts.body }}>{tr({ fr: "Non renseigné", en: "Not provided" })}</Text>
+              )}
+            </View>
           </Card>
         )}
 
@@ -111,7 +144,45 @@ export default function ContactTab() {
           </Card>
         </Pressable>
 
-        <Pressable onPress={() => router.push("/announcements" as any)}>
+        {selected && (
+          <Pressable onPress={call}>
+            <Card style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <View style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: "#16A34A1F", alignItems: "center", justifyContent: "center" }}>
+                <Icon name="phone" size={22} color="#16A34A" />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 14.5, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
+                  <T fr="Appeler l'école" en="Call the school" />
+                </Text>
+                <Text numberOfLines={1} style={{ fontSize: 12.5, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>
+                  {selected.phone?.trim() || tr({ fr: "Numéro non renseigné", en: "No phone provided" })}
+                </Text>
+              </View>
+              <Icon name="chevR" size={20} color={t.ink4} />
+            </Card>
+          </Pressable>
+        )}
+
+        {selected && (
+          <Pressable onPress={sendEmail}>
+            <Card style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <View style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: "#D9770622", alignItems: "center", justifyContent: "center" }}>
+                <Icon name="mail" size={22} color="#D97706" />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 14.5, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
+                  <T fr="Envoyer un email" en="Send an email" />
+                </Text>
+                <Text numberOfLines={1} style={{ fontSize: 12.5, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>
+                  {selected.email?.trim() || tr({ fr: "Email non renseigné", en: "No email provided" })}
+                </Text>
+              </View>
+              <Icon name="chevR" size={20} color={t.ink4} />
+            </Card>
+          </Pressable>
+        )}
+
+        <Pressable onPress={() => router.push((selected ? `/announcements?school=${selected.id}&name=${encodeURIComponent(selected.name)}` : "/announcements") as any)}>
           <Card style={{ padding: 14, flexDirection: "row", alignItems: "center", gap: 14 }}>
             <View style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: "#4F66E81F", alignItems: "center", justifyContent: "center" }}>
               <Icon name="bell" size={22} color="#4F66E8" />

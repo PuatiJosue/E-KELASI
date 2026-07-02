@@ -1,6 +1,7 @@
 import { View, Text, Image, ScrollView, ActivityIndicator, Pressable, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
 
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { Card } from "@/components/Card";
@@ -9,7 +10,7 @@ import { Logo } from "@/components/Logo";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
 import { useChildren } from "@/lib/children";
-import { listAnnouncements, type Announcement } from "@/lib/db";
+import { listAnnouncements, listSchoolAnnouncements, type Announcement } from "@/lib/db";
 
 function fmtDate(d: string): string {
   const dt = new Date(d);
@@ -22,17 +23,27 @@ export default function Announcements() {
   const { selectedChild } = useChildren();
   const [items, setItems] = useState<Announcement[] | null>(null);
 
+  // École ciblée depuis « Contact école » (id + nom) ; sinon celle de l'enfant.
+  const params = useLocalSearchParams<{ school?: string; name?: string }>();
+  const paramSchool = typeof params.school === "string" ? params.school : undefined;
+  const paramName = typeof params.name === "string" ? params.name : undefined;
+
+  const schoolId = paramSchool ?? selectedChild?.schoolId ?? null;
+  const schoolName = paramName ?? selectedChild?.school;
+  // Logo connu seulement pour l'école de l'enfant (l'API écoles n'en renvoie pas).
+  const schoolLogo = paramSchool ? undefined : selectedChild?.schoolLogoUrl;
+
   useEffect(() => {
-    if (!selectedChild?.schoolId) {
+    if (!schoolId) {
       setItems([]);
       return;
     }
     setItems(null);
-    listAnnouncements(selectedChild.schoolId).then(setItems).catch(() => setItems([]));
-  }, [selectedChild?.schoolId]);
-
-  const schoolName = selectedChild?.school;
-  const schoolLogo = selectedChild?.schoolLogoUrl;
+    // École ciblée via Contact école → API service-role (contourne la RLS).
+    // École de l'enfant → lecture directe (RLS autorisée).
+    const fetcher = paramSchool ? listSchoolAnnouncements(schoolId) : listAnnouncements(schoolId);
+    fetcher.then(setItems).catch(() => setItems([]));
+  }, [schoolId, paramSchool]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={["top", "bottom"]}>

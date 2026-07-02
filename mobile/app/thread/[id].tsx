@@ -1,13 +1,13 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
-import { getThread, sendMessage, type ThreadMessage } from "@/lib/db";
+import { getThread, sendMessage, subscribeToConversation, type ThreadMessage } from "@/lib/db";
 
 type ThreadData = {
   title: string;
@@ -23,12 +23,35 @@ export default function Thread() {
   const [data, setData] = useState<ThreadData | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
+  const load = useCallback(async () => {
+    if (!id) return;
+    try {
+      const d = await getThread(String(id));
+      setData(d);
+    } catch {
+      setData({ title: "", subtitle: "", messages: [] });
+    }
+  }, [id]);
+
+  // Chargement + abonnement temps réel (nouveaux messages instantanés).
   useEffect(() => {
     if (!id) return;
-    getThread(String(id)).then(setData).catch(() => setData({ title: "", subtitle: "", messages: [] }));
-  }, [id]);
+    load();
+    const unsub = subscribeToConversation(String(id), load);
+    return unsub;
+  }, [id, load]);
+
+  // Recharge à chaque fois qu'on revient sur l'écran (filet de sécurité).
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
   const onSend = async () => {
     const body = draft.trim();
@@ -80,6 +103,7 @@ export default function Thread() {
             ref={scrollRef}
             contentContainerStyle={{ padding: 16, gap: 10 }}
             onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.brand} />}
           >
             <DayDivider label={{ fr: "Aujourd'hui", en: "Today" }} />
             {data.messages.map((m) => (

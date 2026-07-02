@@ -191,6 +191,27 @@ export type Announcement = {
 
 // Annonces de l'école de l'enfant sélectionné. On filtre TOUJOURS par école
 // pour ne jamais mélanger les annonces de plusieurs écoles (parent multi-écoles).
+// Annonces de n'importe quelle école (via l'API service-role), pour la
+// consultation depuis « Contact école » où la RLS bloquerait la lecture directe.
+export async function listSchoolAnnouncements(schoolId: string): Promise<Announcement[]> {
+  if (!schoolId) return [];
+  try {
+    const r = await fetch(`${process.env.EXPO_PUBLIC_WEB_API_URL ?? ""}/api/announcements?school=${encodeURIComponent(schoolId)}`);
+    const d = await r.json();
+    return (d?.announcements ?? []).map((a: any) => ({
+      id: a.id,
+      title: a.title,
+      body: a.body,
+      eventDate: a.event_date,
+      createdAt: a.created_at,
+      attachmentUrl: a.attachment_url ?? null,
+      attachmentName: a.attachment_name ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function listAnnouncements(schoolId?: string | null): Promise<Announcement[]> {
   if (!isLiveMode || !supabase) return [];
   if (!schoolId) return [];
@@ -583,6 +604,23 @@ export async function getThread(conversationId: string): Promise<{
   } catch {
     return { title: "Conversation", subtitle: "", messages: [] };
   }
+}
+
+// S'abonne aux nouveaux messages d'une conversation (temps réel).
+// Renvoie une fonction de désabonnement.
+export function subscribeToConversation(conversationId: string, onNew: () => void): () => void {
+  if (!isLiveMode || !supabase) return () => {};
+  const ch = supabase
+    .channel(`conv-${conversationId}`)
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+      () => onNew()
+    )
+    .subscribe();
+  return () => {
+    try { supabase!.removeChannel(ch); } catch { /* ignore */ }
+  };
 }
 
 // ── Send a message in a conversation ─────────────────────────────────
