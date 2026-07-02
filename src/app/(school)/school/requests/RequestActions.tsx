@@ -15,12 +15,19 @@ export function RequestActions({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const run = (approve: boolean) =>
+  const run = (approve: boolean, reason?: string) =>
     startTransition(async () => {
-      const r = await setStudentValidation(studentId, approve);
+      const r = await setStudentValidation(studentId, approve, reason);
       if (r.ok) router.refresh();
       else alert(r.message ?? "Erreur");
     });
+
+  const reject = () => {
+    // Motif facultatif ; « Annuler » abandonne le refus.
+    const reason = window.prompt("Motif du refus (facultatif) — il sera envoyé au parent :");
+    if (reason === null) return;
+    run(false, reason.trim() || undefined);
+  };
 
   const attach = () =>
     startTransition(async () => {
@@ -48,7 +55,7 @@ export function RequestActions({
           </button>
         )}
         <button
-          onClick={() => run(false)}
+          onClick={reject}
           disabled={pending}
           className="ek-btn ek-btn-outline"
           style={{ height: 30, fontSize: 12, color: "var(--danger)", borderColor: "var(--danger)" }}

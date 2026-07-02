@@ -112,10 +112,12 @@ export async function validateReenrollment(id: string, extra: { label: string; v
 
   // Notifie le parent (→ push via send-push).
   if (link?.parent_id) {
+    const { data: stu } = await svc.from("students").select("full_name").eq("id", (rr as any).student_id).maybeSingle();
+    const name = (stu as any)?.full_name ?? "";
     await svc.from("notifications").insert({
       user_id: link.parent_id,
       kind: "school",
-      body: `✅ Réinscription acceptée${(rr as any).requested_class ? ` (${(rr as any).requested_class})` : ""}`,
+      body: `✅ Réinscription acceptée${name ? ` : ${name}` : ""}${(rr as any).requested_class ? ` (${(rr as any).requested_class})` : ""}`,
     });
   }
 
@@ -152,10 +154,12 @@ export async function rejectReenrollment(id: string, comment: string): Promise<R
       .limit(1)
       .maybeSingle();
     if (link?.parent_id) {
+      const { data: stu } = await svc.from("students").select("full_name").eq("id", (rr as any).student_id).maybeSingle();
+      const name = (stu as any)?.full_name ?? "";
       await svc.from("notifications").insert({
         user_id: link.parent_id,
         kind: "school",
-        body: `❌ Réinscription refusée : ${comment.trim()}`,
+        body: `❌ Réinscription refusée${name ? ` (${name})` : ""} : ${comment.trim()}`,
       });
     }
   }

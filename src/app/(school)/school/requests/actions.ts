@@ -132,7 +132,7 @@ export async function attachToExisting(pendingStudentId: string, existingStudent
   return { ok: true };
 }
 
-export async function setStudentValidation(studentId: string, approve: boolean): Promise<{ ok: boolean; message?: string }> {
+export async function setStudentValidation(studentId: string, approve: boolean, reason?: string): Promise<{ ok: boolean; message?: string }> {
   if (!studentId) return { ok: false, message: "Élève invalide." };
   if (!isLiveMode()) return { ok: true };
   const schoolId = await callerSchoolId();
@@ -148,10 +148,13 @@ export async function setStudentValidation(studentId: string, approve: boolean):
   // Notifie le parent qui a soumis la demande (→ push via send-push).
   if ((st as any).created_by) {
     const name = (st as any).full_name ?? "l'élève";
+    const motif = reason?.trim();
     await svc.from("notifications").insert({
       user_id: (st as any).created_by,
       kind: "school",
-      body: approve ? `✅ ${name} a été accepté(e) par l'école` : `❌ La demande d'ajout de ${name} a été refusée`,
+      body: approve
+        ? `✅ Demande acceptée : ${name} a été ajouté(e) à l'école`
+        : `❌ Demande d'ajout refusée : ${name}${motif ? ` — motif : ${motif}` : ""}`,
     });
   }
 
