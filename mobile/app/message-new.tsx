@@ -2,7 +2,7 @@
 
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -11,7 +11,7 @@ import { Card } from "@/components/Card";
 import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
 import { T, useT } from "@/lib/i18n";
-import { listMessageRecipients, startConversation, type Recipient } from "@/lib/db";
+import { listMessageRecipients, listSchoolRecipients, startConversation, type Recipient } from "@/lib/db";
 
 function roleLabel(role: string, tr: ReturnType<typeof useT>): string {
   if (role === "teacher") return tr({ fr: "Enseignant", en: "Teacher" });
@@ -29,6 +29,11 @@ export default function NewMessage() {
   const t = useTheme();
   const tr = useT();
   const router = useRouter();
+  // Depuis « Contact école » : école précise à contacter (id + nom).
+  const params = useLocalSearchParams<{ school?: string; name?: string }>();
+  const schoolId = typeof params.school === "string" ? params.school : undefined;
+  const schoolName = typeof params.name === "string" ? params.name : undefined;
+
   const [recipients, setRecipients] = useState<Recipient[] | null>(null);
   const [selected, setSelected] = useState<Recipient | null>(null);
   const [subject, setSubject] = useState("");
@@ -36,8 +41,15 @@ export default function NewMessage() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    listMessageRecipients().then(setRecipients).catch(() => setRecipients([]));
-  }, []);
+    const load = schoolId ? listSchoolRecipients(schoolId) : listMessageRecipients();
+    load
+      .then((list) => {
+        setRecipients(list);
+        // Une seule direction possible pour une école ciblée → présélection.
+        if (schoolId && list.length === 1) setSelected(list[0]);
+      })
+      .catch(() => setRecipients([]));
+  }, [schoolId]);
 
   const send = async () => {
     if (!selected) { Alert.alert(tr({ fr: "Destinataire", en: "Recipient" }), tr({ fr: "Choisissez un destinataire.", en: "Pick a recipient." })); return; }
@@ -54,6 +66,21 @@ export default function NewMessage() {
       <ScreenHeader title={tr({ fr: "Nouveau message", en: "New message" })} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }} keyboardShouldPersistTaps="handled">
+          {/* École ciblée (depuis « Contact école ») */}
+          {schoolName ? (
+            <Card style={{ padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 11, backgroundColor: t.brandSoft, alignItems: "center", justifyContent: "center" }}>
+                <Icon name="school" size={20} color={t.brand600} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 11, color: t.ink3, fontWeight: "600", textTransform: "uppercase", fontFamily: fonts.body }}>
+                  <T fr="École" en="School" />
+                </Text>
+                <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>{schoolName}</Text>
+              </View>
+            </Card>
+          ) : null}
+
           {/* Destinataire */}
           <View style={{ gap: 8 }}>
             <Text style={{ fontSize: 13, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>

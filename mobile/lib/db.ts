@@ -638,6 +638,19 @@ export async function listMessageRecipients(): Promise<Recipient[]> {
   }
 }
 
+// Direction (school_admin) d'une école précise — pour écrire à n'importe quelle
+// école depuis « Contact école », même sans enfant inscrit.
+export async function listSchoolRecipients(schoolId: string): Promise<Recipient[]> {
+  if (!isLiveMode || !supabase) return [];
+  try {
+    const { data, error } = await supabase.rpc("list_school_recipients", { p_school: schoolId });
+    if (error) return [];
+    return (data ?? []).map((r: any) => ({ userId: r.user_id, fullName: r.full_name ?? "?", role: r.role ?? "" }));
+  } catch {
+    return [];
+  }
+}
+
 // Renvoie l'id de conversation (créée ou réutilisée), ou null.
 export async function startConversation(otherUserId: string, subject: string, body: string): Promise<string | null> {
   if (!isLiveMode || !supabase) return null;
