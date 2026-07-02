@@ -28,24 +28,35 @@ export async function addPlatformVideo(input: {
   url: string;
   subject?: string;
   description?: string;
+  recipientIds?: string[];
 }): Promise<Result> {
   const title = input.title?.trim();
   const url = input.url?.trim();
-  if (!title || !url) return { ok: false, message: "Titre et lien requis." };
+  if (!title || !url) return { ok: false, message: "Titre et lien (ou fichier) requis." };
   if (!/^https?:\/\//i.test(url)) return { ok: false, message: "Le lien doit commencer par http(s)://" };
   if (!isLiveMode()) return { ok: true };
 
   const uid = await caller();
   if (!uid) return { ok: false, message: "Réservé à l'équipe E-KLASS." };
+  const svc = service();
 
-  const { error } = await service().from("platform_videos").insert({
+  const { data: video, error } = await svc.from("platform_videos").insert({
     title,
     url,
     subject: input.subject?.trim() || null,
     description: input.description?.trim() || null,
     created_by: uid,
-  });
-  if (error) return { ok: false, message: "Enregistrement impossible." };
+  }).select("id").single();
+  if (error || !video) return { ok: false, message: "Enregistrement impossible." };
+
+  const recips = [...new Set((input.recipientIds ?? []).filter(Boolean))];
+  if (recips.length > 0) {
+    await svc.from("platform_video_recipients").insert(recips.map((pid) => ({ video_id: video.id, parent_id: pid })));
+    await svc.from("notifications").insert(
+      recips.map((pid) => ({ user_id: pid, kind: "school" as const, body: `🎬 Nouvelle vidéo : ${title}` }))
+    );
+  }
+
   revalidatePath("/videos");
   return { ok: true };
 }

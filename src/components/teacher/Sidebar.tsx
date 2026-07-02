@@ -19,7 +19,6 @@ const NAV: NavItem[] = [
   { id: "journal",   href: "/teacher/journal",   icon: "edit",       fr: "Journal de bord", en: "Class logbook" },
   { id: "bulletins", href: "/teacher/bulletins", icon: "file",       fr: "Bulletins",       en: "Report cards" },
   { id: "homework",  href: "/teacher/homework",  icon: "book",       fr: "Devoirs",         en: "Homework" },
-  { id: "library",   href: "/teacher/library",   icon: "bookmark",   fr: "Bibliothèque",    en: "Library" },
 ];
 
 const SEC: NavItem[] = [

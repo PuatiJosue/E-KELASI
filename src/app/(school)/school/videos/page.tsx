@@ -1,20 +1,24 @@
 import { PageHeader } from "@/components/KPI";
-import { listCourseVideos, listSchoolClassNames } from "@/lib/content-db";
+import { listCourseVideos, listSchoolClassNames, listSchoolParents } from "@/lib/content-db";
 import { VideosManager } from "./VideosManager";
 
 export default async function SchoolVideos() {
-  const [videos, classNames] = await Promise.all([listCourseVideos(), listSchoolClassNames()]);
+  const [videos, classNames, parents] = await Promise.all([
+    listCourseVideos(),
+    listSchoolClassNames(),
+    listSchoolParents(),
+  ]);
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
         title={{ fr: "Vidéos des cours", en: "Course videos" }}
         sub={{
-          fr: "Partagez des liens de vidéos. Les parents y accèdent dans l'Espace numérique de l'app.",
-          en: "Share video links. Parents access them in the app's Digital space.",
+          fr: "Partagez un lien ou un fichier vidéo. Ciblez toute la classe ou des parents précis.",
+          en: "Share a link or a video file. Target the whole class or specific parents.",
         }}
       />
-      <VideosManager videos={videos} classNames={classNames} />
+      <VideosManager videos={videos} classNames={classNames} parents={parents} />
     </div>
   );
 }

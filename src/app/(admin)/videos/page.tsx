@@ -1,9 +1,9 @@
 import { PageHeader } from "@/components/KPI";
-import { listPlatformVideos } from "@/lib/platform-db";
+import { listPlatformVideos, listAllParents } from "@/lib/platform-db";
 import { VideosManager } from "./VideosManager";
 
 export default async function AdminVideos() {
-  const videos = await listPlatformVideos();
+  const [videos, parents] = await Promise.all([listPlatformVideos(), listAllParents()]);
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
@@ -14,7 +14,7 @@ export default async function AdminVideos() {
           en: "Videos published by the team, visible to all parents in the app.",
         }}
       />
-      <VideosManager videos={videos} />
+      <VideosManager videos={videos} parents={parents} />
     </div>
   );
 }

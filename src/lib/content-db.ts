@@ -89,6 +89,44 @@ export async function listCourseVideos(): Promise<CourseVideo[]> {
   }
 }
 
+// Parents de l'école (pour cibler des destinataires précis d'une vidéo).
+export type SchoolParent = { id: string; name: string; students: string };
+export async function listSchoolParents(): Promise<SchoolParent[]> {
+  if (!isLiveMode()) return [];
+  try {
+    const school = await getMySchool();
+    if (!school) return [];
+    const svc = service();
+    const { data: students } = await svc
+      .from("students")
+      .select("id, full_name")
+      .eq("school_id", school.id)
+      .eq("status", "active");
+    const ids = (students ?? []).map((s: any) => s.id);
+    if (ids.length === 0) return [];
+    const nameByStudent = new Map((students ?? []).map((s: any) => [s.id, s.full_name]));
+    const { data: links } = await svc.from("parent_links").select("parent_id, student_id").in("student_id", ids);
+    const studentsByParent = new Map<string, string[]>();
+    for (const l of (links ?? []) as any[]) {
+      if (!studentsByParent.has(l.parent_id)) studentsByParent.set(l.parent_id, []);
+      studentsByParent.get(l.parent_id)!.push(nameByStudent.get(l.student_id) ?? "");
+    }
+    const parentIds = [...studentsByParent.keys()];
+    if (parentIds.length === 0) return [];
+    const { data: profs } = await svc.from("profiles").select("id, full_name").in("id", parentIds);
+    const nameByParent = new Map((profs ?? []).map((p: any) => [p.id, p.full_name]));
+    return parentIds
+      .map((pid) => ({
+        id: pid,
+        name: nameByParent.get(pid) || "Parent",
+        students: [...new Set(studentsByParent.get(pid) ?? [])].filter(Boolean).join(", "),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  } catch {
+    return [];
+  }
+}
+
 // Classes distinctes de l'école (pour les sélecteurs de saisie).
 export async function listSchoolClassNames(): Promise<string[]> {
   if (!isLiveMode()) return [];

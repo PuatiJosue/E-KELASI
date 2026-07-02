@@ -35,17 +35,19 @@ export async function addCourseVideo(input: {
   className?: string;
   subject?: string;
   description?: string;
+  recipientIds?: string[];
 }): Promise<Result> {
   const title = input.title?.trim();
   const url = input.url?.trim();
-  if (!title || !url) return { ok: false, message: "Titre et lien requis." };
+  if (!title || !url) return { ok: false, message: "Titre et lien (ou fichier) requis." };
   if (!/^https?:\/\//i.test(url)) return { ok: false, message: "Le lien doit commencer par http(s)://" };
   if (!isLiveMode()) return { ok: true };
 
   const c = await caller();
   if (!c) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
 
-  const { error } = await service().from("course_videos").insert({
+  const { data: video, error } = await svc.from("course_videos").insert({
     school_id: c.schoolId,
     class_name: input.className?.trim() || null,
     subject: input.subject?.trim() || null,
@@ -53,8 +55,18 @@ export async function addCourseVideo(input: {
     url,
     description: input.description?.trim() || null,
     created_by: c.userId,
-  });
-  if (error) return { ok: false, message: "Enregistrement impossible." };
+  }).select("id").single();
+  if (error || !video) return { ok: false, message: "Enregistrement impossible." };
+
+  // Destinataires précis (optionnel) → restreint la visibilité + notifie.
+  const recips = [...new Set((input.recipientIds ?? []).filter(Boolean))];
+  if (recips.length > 0) {
+    await svc.from("course_video_recipients").insert(recips.map((pid) => ({ video_id: video.id, parent_id: pid })));
+    await svc.from("notifications").insert(
+      recips.map((pid) => ({ user_id: pid, kind: "school" as const, body: `🎬 Nouvelle vidéo : ${title}` }))
+    );
+  }
+
   revalidatePath("/school/videos");
   return { ok: true };
 }

@@ -69,6 +69,22 @@ export async function listPlatformVideos(): Promise<PlatformVideo[]> {
   }
 }
 
+// Tous les parents de la plateforme (pour cibler une vidéo à des parents précis).
+export type PlatformParent = { id: string; name: string; email: string };
+export async function listAllParents(): Promise<PlatformParent[]> {
+  if (!isLiveMode()) return [];
+  try {
+    const { data } = await service()
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("role", "parent")
+      .order("full_name");
+    return (data ?? []).map((p: any) => ({ id: p.id, name: p.full_name || "Parent", email: p.email || "" }));
+  } catch {
+    return [];
+  }
+}
+
 // Annonces destinées aux écoles (bannière console direction).
 export async function getPlatformForSchools(): Promise<PlatformAnnouncement[]> {
   if (!isLiveMode()) return [];
