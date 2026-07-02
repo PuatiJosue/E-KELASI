@@ -87,6 +87,7 @@ export default async function StudentDossierPage({ params }: { params: { student
           <InfoRow label="Âge" value={ageFrom(d.birthDate)} />
           <InfoRow label="Classe" value={d.className} />
           {d.option && <InfoRow label="Option" value={d.option} />}
+          <InfoRow label="Adresse" value={d.address?.trim() || "—"} />
           <InfoRow label="Statut" value={d.status === "active" ? "Actif" : d.status === "pending" ? "En attente" : "Refusé"} />
         </div>
 
@@ -106,6 +107,9 @@ export default async function StudentDossierPage({ params }: { params: { student
                   )}
                 </div>
                 <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{p.phone || p.email || "—"}</div>
+                {p.address?.trim() && (
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 1 }}>📍 {p.address}</div>
+                )}
               </div>
             ))
           )}

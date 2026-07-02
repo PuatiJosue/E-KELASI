@@ -108,7 +108,8 @@ export type StudentDossier = {
   option: string | null;
   schoolName: string | null;
   status: string;
-  parents: { name: string; email: string; phone: string | null; access: string }[];
+  address: string | null;
+  parents: { name: string; email: string; phone: string | null; address: string | null; access: string }[];
   subjects: DossierSubject[];
   overallAvg: number;
   trimesters: DossierTrimester[];
@@ -779,7 +780,7 @@ export async function getStudentDossier(studentId: string): Promise<StudentDossi
 
     const { data: s } = await supabase
       .from("students")
-      .select("id, full_name, avatar_url, sex, birth_date, class_name, option, status, school_id, schools(name)")
+      .select("id, full_name, avatar_url, sex, birth_date, class_name, option, status, address, school_id, schools(name)")
       .eq("id", studentId)
       .eq("school_id", school.id)
       .maybeSingle();
@@ -787,12 +788,13 @@ export async function getStudentDossier(studentId: string): Promise<StudentDossi
 
     const { data: links } = await supabase
       .from("parent_links")
-      .select("access_status, profiles!parent_links_parent_id_fkey(full_name, email, phone)")
+      .select("access_status, profiles!parent_links_parent_id_fkey(full_name, email, phone, address)")
       .eq("student_id", studentId);
     const parents = (links ?? []).map((l: any) => ({
       name: l.profiles?.full_name ?? "—",
       email: l.profiles?.email ?? "",
       phone: l.profiles?.phone ?? null,
+      address: l.profiles?.address ?? null,
       access: l.access_status ?? "active",
     }));
 
@@ -830,6 +832,7 @@ export async function getStudentDossier(studentId: string): Promise<StudentDossi
       option: (s as any).option ?? null,
       schoolName: (s as any).schools?.name ?? null,
       status: (s as any).status,
+      address: (s as any).address ?? null,
       parents,
       subjects,
       overallAvg,
