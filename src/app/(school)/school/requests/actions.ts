@@ -106,12 +106,30 @@ export async function attachToExisting(pendingStudentId: string, existingStudent
   if (!schoolId) return { ok: false, message: "Réservé à la direction." };
 
   const svc = service();
-  const { data: pend } = await svc.from("students").select("id").eq("id", pendingStudentId).eq("school_id", schoolId).eq("status", "pending").maybeSingle();
-  const { data: exist } = await svc.from("students").select("id").eq("id", existingStudentId).eq("school_id", schoolId).maybeSingle();
+  const cols = "id, full_name, first_name, middle_name, last_name, sex, birth_date, class_name, grade_level, option, address, avatar_url";
+  const { data: pend } = await svc.from("students").select(cols).eq("id", pendingStudentId).eq("school_id", schoolId).eq("status", "pending").maybeSingle();
+  const { data: exist } = await svc.from("students").select(cols).eq("id", existingStudentId).eq("school_id", schoolId).maybeSingle();
   if (!pend || !exist) return { ok: false, message: "Élève introuvable." };
+
+  // ── Fusion : priorité aux données du parent (fiche en attente), plus
+  //    complètes et récentes. On n'écrase JAMAIS une donnée du parent par
+  //    l'ancienne donnée de l'école ; les champs vides du parent conservent
+  //    la valeur existante. Aucune perte d'information → une seule fiche.
+  const FIELDS = ["full_name", "first_name", "middle_name", "last_name", "sex", "birth_date", "class_name", "grade_level", "option", "address", "avatar_url"] as const;
+  const merged: Record<string, any> = {};
+  for (const f of FIELDS) {
+    const pv = (pend as any)[f];
+    if (pv !== null && pv !== undefined && String(pv).trim() !== "") merged[f] = pv;
+  }
+  // grade_level est NOT NULL : s'assurer qu'il reste cohérent avec la classe.
+  if (!merged.grade_level && merged.class_name) merged.grade_level = merged.class_name;
+  if (Object.keys(merged).length > 0) {
+    await svc.from("students").update(merged).eq("id", existingStudentId).eq("school_id", schoolId);
+  }
 
   // Déplace les liens parent de la fiche en double vers la fiche existante.
   const { data: links } = await svc.from("parent_links").select("parent_id, relation").eq("student_id", pendingStudentId);
+  const movedParents: string[] = [];
   for (const l of (links ?? []) as any[]) {
     const { data: already } = await svc.from("parent_links").select("student_id").eq("parent_id", l.parent_id).eq("student_id", existingStudentId).maybeSingle();
     if (!already) {
@@ -123,9 +141,19 @@ export async function attachToExisting(pendingStudentId: string, existingStudent
         access_status: "active",
       });
     }
+    movedParents.push(l.parent_id);
   }
   await svc.from("parent_links").delete().eq("student_id", pendingStudentId);
   await svc.from("students").delete().eq("id", pendingStudentId).eq("school_id", schoolId);
+
+  // Notifie le(s) parent(s) que la demande a été acceptée (rattachement).
+  const name = merged.full_name ?? (exist as any).full_name ?? "l'élève";
+  const uniqParents = [...new Set(movedParents.filter(Boolean))];
+  if (uniqParents.length > 0) {
+    await svc.from("notifications").insert(
+      uniqParents.map((pid) => ({ user_id: pid, kind: "school" as const, body: `✅ Demande acceptée : ${name} a été ajouté(e) à l'école` }))
+    );
+  }
 
   revalidatePath("/school/requests");
   revalidatePath("/school/students");
