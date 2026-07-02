@@ -128,7 +128,8 @@ export async function getTeacherSchool(): Promise<TeacherSchool | null> {
     const { count } = await supabase
       .from("students")
       .select("*", { count: "exact", head: true })
-      .eq("school_id", staff.school_id);
+      .eq("school_id", staff.school_id)
+      .eq("status", "active");
     return {
       id: staff.school_id,
       name: (staff as any).schools?.name ?? "",
@@ -217,7 +218,8 @@ export async function listTeacherClasses(): Promise<ClassRow[]> {
     const { data: students } = await svc
       .from("students")
       .select("class_name, option")
-      .eq("school_id", assigned.schoolId);
+      .eq("school_id", assigned.schoolId)
+      .eq("status", "active");
     const counts = new Map<string, number>();
     for (const s of (students ?? []) as any[]) {
       const key = classKey(s.class_name ?? "—", normOption(s.option));
@@ -257,6 +259,7 @@ export async function listStudentsInClass(className: string, option?: string | n
       .select("id, full_name, class_name, option, avatar_url")
       .eq("school_id", assigned.schoolId)
       .eq("class_name", className)
+      .eq("status", "active")
       .order("full_name");
     if (!studentsRaw) return [];
 
