@@ -1,0 +1,20 @@
+import { PageHeader } from "@/components/KPI";
+import { listSchoolConversations } from "@/lib/messages-db";
+import { MessagesManager } from "./MessagesManager";
+
+export default async function SchoolMessages() {
+  const conversations = await listSchoolConversations();
+
+  return (
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+      <PageHeader
+        title={{ fr: "Messagerie", en: "Inbox" }}
+        sub={{
+          fr: "Messages des parents. Cliquez sur une conversation pour lire et répondre.",
+          en: "Parent messages. Click a conversation to read and reply.",
+        }}
+      />
+      <MessagesManager conversations={conversations} />
+    </div>
+  );
+}

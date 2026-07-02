@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { isLiveMode } from "@/lib/db";
+import { getUnreadMessageCount } from "@/lib/messages-db";
 import { TRIMESTERS, trimesterOf, currentTrimester } from "@/lib/trimester";
 import { classLabel, classKey, normOption } from "@/lib/classes";
 
@@ -191,10 +192,10 @@ export async function getMySchool(): Promise<MySchool | null> {
 }
 
 // Nombre de demandes en attente par type (badges de notification côté école).
-export type SchoolRequestCounts = { requests: number; inscriptions: number; reenrollments: number; total: number };
+export type SchoolRequestCounts = { requests: number; messages: number; inscriptions: number; reenrollments: number; total: number };
 
 export async function getSchoolRequestCounts(): Promise<SchoolRequestCounts> {
-  const zero: SchoolRequestCounts = { requests: 0, inscriptions: 0, reenrollments: 0, total: 0 };
+  const zero: SchoolRequestCounts = { requests: 0, messages: 0, inscriptions: 0, reenrollments: 0, total: 0 };
   if (!isLiveMode()) return zero;
   try {
     const school = await getMySchool();
@@ -206,13 +207,14 @@ export async function getSchoolRequestCounts(): Promise<SchoolRequestCounts> {
     );
     const pending = (table: string) =>
       svc.from(table).select("id", { count: "exact", head: true }).eq("school_id", school.id).eq("status", "pending");
-    const [{ count: requests }, { count: inscriptions }, { count: reenrollments }] = await Promise.all([
+    const [{ count: requests }, { count: inscriptions }, { count: reenrollments }, messages] = await Promise.all([
       pending("students"),
       pending("inscriptions"),
       pending("reenrollments"),
+      getUnreadMessageCount(),
     ]);
     const r = requests ?? 0, i = inscriptions ?? 0, re = reenrollments ?? 0;
-    return { requests: r, inscriptions: i, reenrollments: re, total: r + i + re };
+    return { requests: r, messages, inscriptions: i, reenrollments: re, total: r + i + re };
   } catch {
     return zero;
   }

@@ -14,6 +14,7 @@ type NavItem = { id: string; href: string; icon: string; fr: string; en: string 
 const NAV: NavItem[] = [
   { id: "overview", href: "/school/overview", icon: "home",     fr: "Vue d'ensemble", en: "Overview" },
   { id: "requests", href: "/school/requests", icon: "flag",     fr: "Demandes",      en: "Requests" },
+  { id: "messages", href: "/school/messages", icon: "chat",     fr: "Messagerie",    en: "Inbox" },
   { id: "announcements", href: "/school/announcements", icon: "bell", fr: "Annonces", en: "Announcements" },
   { id: "inscriptions", href: "/school/inscriptions", icon: "school", fr: "Inscription", en: "Admission" },
   { id: "reenrollments", href: "/school/reenrollments", icon: "refresh", fr: "Réinscription", en: "Re-enrollment" },
@@ -111,6 +112,7 @@ export function SchoolSidebar({ school, userName, counts }: { school: MySchool |
   const displayName = userName || "Direction";
   const navCounts: Record<string, number> = {
     requests: counts?.requests ?? 0,
+    messages: counts?.messages ?? 0,
     inscriptions: counts?.inscriptions ?? 0,
     reenrollments: counts?.reenrollments ?? 0,
   };
