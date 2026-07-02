@@ -1,9 +1,10 @@
 import { PageHeader } from "@/components/KPI";
 import { listTimetable, listSchoolClassNames } from "@/lib/content-db";
+import { getMySchool } from "@/lib/school-db";
 import { TimetableManager } from "./TimetableManager";
 
 export default async function SchoolTimetable() {
-  const [slots, classNames] = await Promise.all([listTimetable(), listSchoolClassNames()]);
+  const [slots, classNames, school] = await Promise.all([listTimetable(), listSchoolClassNames(), getMySchool()]);
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
@@ -14,7 +15,7 @@ export default async function SchoolTimetable() {
           en: "Create the timetable per class, then publish it to make it visible to parents. PDF/Excel export available.",
         }}
       />
-      <TimetableManager slots={slots} classNames={classNames} />
+      <TimetableManager slots={slots} classNames={classNames} schoolName={school?.name ?? ""} />
     </div>
   );
 }

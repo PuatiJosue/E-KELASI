@@ -43,9 +43,16 @@ export default function EmploiDuTemps() {
       <ScreenHeader title={tr({ fr: "Emploi du temps", en: "Timetable" })} />
       <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
         {selectedChild && (
-          <Text style={{ fontSize: 13, color: t.ink3, fontFamily: fonts.body }}>
-            {selectedChild.name} · {[selectedChild.grade, selectedChild.option].filter(Boolean).join(" · ")}
-          </Text>
+          <View style={{ gap: 2 }}>
+            {!!selectedChild.school && (
+              <Text style={{ fontSize: 15, fontWeight: "700", color: t.brand600, fontFamily: fonts.displayMedium }}>
+                {selectedChild.school}
+              </Text>
+            )}
+            <Text style={{ fontSize: 13, color: t.ink3, fontFamily: fonts.body }}>
+              {selectedChild.name} · {[selectedChild.grade, selectedChild.option].filter(Boolean).join(" · ")}
+            </Text>
+          </View>
         )}
 
         {slots === null ? (

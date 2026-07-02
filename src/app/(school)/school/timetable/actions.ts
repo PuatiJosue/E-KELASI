@@ -29,37 +29,78 @@ async function caller(): Promise<{ userId: string; schoolId: string } | null> {
   return { userId: user.id, schoolId: staff.school_id };
 }
 
-export async function addTimetableSlot(input: {
-  className: string;
-  option?: string;
+export type TimetableRowInput = {
   day: number;
   startTime: string;
   endTime: string;
   subject: string;
   teacher?: string;
   room?: string;
+};
+
+// Enregistre (ou publie) l'emploi du temps complet d'une classe en une seule
+// opération : on remplace tous les créneaux stockés de la classe par la grille
+// fournie. `publish=false` → brouillon ; `publish=true` → visible aux parents.
+export async function saveClassTimetable(input: {
+  className: string;
+  option?: string;
+  rows: TimetableRowInput[];
+  publish: boolean;
 }): Promise<Result> {
-  if (!input.className?.trim() || !input.subject?.trim() || !input.startTime || !input.endTime) {
-    return { ok: false, message: "Classe, matière et horaires requis." };
+  const className = input.className?.trim();
+  if (!className) return { ok: false, message: "Classe requise." };
+  const rows = input.rows ?? [];
+  if (rows.length === 0) return { ok: false, message: "Ajoutez au moins une ligne." };
+  for (const r of rows) {
+    if (!(r.day >= 1 && r.day <= 7)) return { ok: false, message: "Jour invalide." };
+    if (!r.startTime || !r.endTime) return { ok: false, message: "Heures de début et de fin requises." };
+    if (r.endTime <= r.startTime) return { ok: false, message: "L'heure de fin doit être après l'heure de début." };
+    if (!r.subject?.trim()) return { ok: false, message: "Matière requise pour chaque ligne." };
   }
-  if (!(input.day >= 1 && input.day <= 7)) return { ok: false, message: "Jour invalide." };
   if (!isLiveMode()) return { ok: true };
 
   const c = await caller();
   if (!c) return { ok: false, message: "Réservé à la direction." };
 
-  const { error } = await service().from("timetable_slots").insert({
+  const svc = service();
+  const { error: delErr } = await svc
+    .from("timetable_slots")
+    .delete()
+    .eq("school_id", c.schoolId)
+    .eq("class_name", className);
+  if (delErr) return { ok: false, message: "Enregistrement impossible." };
+
+  const payload = rows.map((r) => ({
     school_id: c.schoolId,
-    class_name: input.className.trim(),
+    class_name: className,
     option: input.option?.trim() || null,
-    day: input.day,
-    start_time: input.startTime,
-    end_time: input.endTime,
-    subject: input.subject.trim(),
-    teacher: input.teacher?.trim() || null,
-    room: input.room?.trim() || null,
-  });
-  if (error) return { ok: false, message: "Enregistrement impossible." };
+    day: r.day,
+    start_time: r.startTime,
+    end_time: r.endTime,
+    subject: r.subject.trim(),
+    teacher: r.teacher?.trim() || null,
+    room: r.room?.trim() || null,
+    published: input.publish,
+  }));
+  const { error: insErr } = await svc.from("timetable_slots").insert(payload);
+  if (insErr) return { ok: false, message: "Enregistrement impossible." };
+  revalidatePath("/school/timetable");
+  return { ok: true };
+}
+
+// Supprime tout l'emploi du temps d'une classe.
+export async function deleteClassTimetable(className: string): Promise<Result> {
+  const cls = className?.trim();
+  if (!cls) return { ok: false, message: "Classe invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+  const { error } = await service()
+    .from("timetable_slots")
+    .delete()
+    .eq("school_id", c.schoolId)
+    .eq("class_name", cls);
+  if (error) return { ok: false, message: "Suppression impossible." };
   revalidatePath("/school/timetable");
   return { ok: true };
 }
@@ -76,17 +117,6 @@ export async function publishClassTimetable(className: string, publish: boolean)
     .eq("school_id", c.schoolId)
     .eq("class_name", className.trim());
   if (error) return { ok: false, message: "Mise à jour impossible." };
-  revalidatePath("/school/timetable");
-  return { ok: true };
-}
-
-export async function deleteTimetableSlot(id: string): Promise<Result> {
-  if (!id) return { ok: false, message: "Créneau invalide." };
-  if (!isLiveMode()) return { ok: true };
-  const c = await caller();
-  if (!c) return { ok: false, message: "Réservé à la direction." };
-  const { error } = await service().from("timetable_slots").delete().eq("id", id).eq("school_id", c.schoolId);
-  if (error) return { ok: false, message: "Suppression impossible." };
   revalidatePath("/school/timetable");
   return { ok: true };
 }

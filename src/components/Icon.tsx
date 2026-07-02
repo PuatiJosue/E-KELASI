@@ -35,6 +35,7 @@ const PATHS: Record<string, string> = {
   pieChart: "M21 12A9 9 0 1 1 12 3v9z",
   flag: "M4 21V4a1 1 0 0 1 1-1h12l-2 5 2 5H5M4 21v-7",
   send: "M22 2L11 13M22 2l-7 20-4-9-9-4z",
+  save: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8",
   edit: "M11 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z",
   trash: "M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",
   filter: "M3 4h18l-7 9v7l-4-2v-5z",
