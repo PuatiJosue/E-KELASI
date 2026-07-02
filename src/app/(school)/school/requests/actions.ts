@@ -139,11 +139,21 @@ export async function setStudentValidation(studentId: string, approve: boolean):
   if (!schoolId) return { ok: false, message: "Réservé à la direction." };
 
   const svc = service();
-  const { data: st } = await svc.from("students").select("id").eq("id", studentId).eq("school_id", schoolId).maybeSingle();
+  const { data: st } = await svc.from("students").select("id, full_name, created_by").eq("id", studentId).eq("school_id", schoolId).maybeSingle();
   if (!st) return { ok: false, message: "Élève introuvable." };
 
   const { error } = await svc.from("students").update({ status: approve ? "active" : "rejected" }).eq("id", studentId);
   if (error) return { ok: false, message: "Échec de la mise à jour." };
+
+  // Notifie le parent qui a soumis la demande (→ push via send-push).
+  if ((st as any).created_by) {
+    const name = (st as any).full_name ?? "l'élève";
+    await svc.from("notifications").insert({
+      user_id: (st as any).created_by,
+      kind: "school",
+      body: approve ? `✅ ${name} a été accepté(e) par l'école` : `❌ La demande d'ajout de ${name} a été refusée`,
+    });
+  }
 
   revalidatePath("/school/requests");
   revalidatePath("/school/students");

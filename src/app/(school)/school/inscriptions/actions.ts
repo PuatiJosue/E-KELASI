@@ -103,6 +103,15 @@ export async function validateInscription(id: string, extra: { label: string; va
     .eq("school_id", c.schoolId);
   if (error) return { ok: false, message: "Validation impossible." };
 
+  // Notifie le parent (→ push via send-push).
+  if ((ins as any).created_by) {
+    await svc.from("notifications").insert({
+      user_id: (ins as any).created_by,
+      kind: "school",
+      body: `✅ Inscription acceptée : ${fullName}${cls ? ` (${cls})` : ""}`,
+    });
+  }
+
   revalidatePath("/school/inscriptions");
   revalidatePath("/school/students");
   return { ok: true };
@@ -115,6 +124,12 @@ export async function rejectInscription(id: string, comment: string): Promise<Re
   const c = await caller();
   if (!c) return { ok: false, message: "Réservé à la direction." };
   const svc = service();
+  const { data: ins } = await svc
+    .from("inscriptions")
+    .select("created_by, student_data")
+    .eq("id", id)
+    .eq("school_id", c.schoolId)
+    .maybeSingle();
   const { error } = await svc
     .from("inscriptions")
     .update({ status: "rejected", comment: comment.trim(), validated_by: c.userId, decided_at: new Date().toISOString() })
@@ -122,6 +137,17 @@ export async function rejectInscription(id: string, comment: string): Promise<Re
     .eq("school_id", c.schoolId)
     .eq("status", "pending");
   if (error) return { ok: false, message: "Rejet impossible." };
+
+  if ((ins as any)?.created_by) {
+    const sd = ((ins as any).student_data ?? {}) as any;
+    const name = [sd.lastName, sd.firstName].filter(Boolean).join(" ");
+    await svc.from("notifications").insert({
+      user_id: (ins as any).created_by,
+      kind: "school",
+      body: `❌ Inscription refusée${name ? ` (${name})` : ""} : ${comment.trim()}`,
+    });
+  }
+
   revalidatePath("/school/inscriptions");
   return { ok: true };
 }

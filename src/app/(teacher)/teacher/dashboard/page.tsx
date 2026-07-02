@@ -22,6 +22,8 @@ export default async function TeacherDashboard() {
 
   const todoCount = homework.filter((h) => h.status === "todo" || h.status === "inprogress").length;
   const firstName = profile?.name?.split(" ").slice(-1)[0] ?? "";
+  // Total des élèves des classes du prof (pas de toute l'école).
+  const myStudents = classes.reduce((n, c) => n + (c.studentCount ?? 0), 0);
 
   return (
     <div className="ek-hero" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
@@ -52,7 +54,7 @@ export default async function TeacherDashboard() {
 
       <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
         <KPI icon="users" tint="blue" label={<T fr="Mes classes" en="My classes" />} value={String(classes.length)} sub={<T fr="Cette année" en="This year" />} />
-        <KPI icon="graduation" tint="violet" label={<T fr="Total élèves" en="Total students" />} value={String(school?.totalStudents ?? 0)} sub={school?.name ?? ""} />
+        <KPI icon="graduation" tint="violet" label={<T fr="Total élèves" en="Total students" />} value={String(myStudents)} sub={<T fr="Mes classes" en="My classes" />} />
         <KPI icon="clipboard" tint="amber" label={<T fr="Notes saisies" en="Grades entered" />} value={String(recentGrades.length)} sub={<T fr="Dernières en date" en="Latest" />} />
         <KPI icon="bookOpen" tint="rose" label={<T fr="Devoirs en cours" en="Homework active" />} value={String(todoCount)} sub={<T fr="À rendre" en="Pending" />} />
       </div>

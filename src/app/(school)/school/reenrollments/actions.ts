@@ -110,6 +110,15 @@ export async function validateReenrollment(id: string, extra: { label: string; v
     .eq("school_id", c.schoolId);
   if (error) return { ok: false, message: "Validation impossible." };
 
+  // Notifie le parent (→ push via send-push).
+  if (link?.parent_id) {
+    await svc.from("notifications").insert({
+      user_id: link.parent_id,
+      kind: "school",
+      body: `✅ Réinscription acceptée${(rr as any).requested_class ? ` (${(rr as any).requested_class})` : ""}`,
+    });
+  }
+
   revalidatePath("/school/reenrollments");
   return { ok: true };
 }
@@ -121,6 +130,12 @@ export async function rejectReenrollment(id: string, comment: string): Promise<R
   const c = await caller();
   if (!c) return { ok: false, message: "Réservé à la direction." };
   const svc = service();
+  const { data: rr } = await svc
+    .from("reenrollments")
+    .select("student_id")
+    .eq("id", id)
+    .eq("school_id", c.schoolId)
+    .maybeSingle();
   const { error } = await svc
     .from("reenrollments")
     .update({ status: "rejected", comment: comment.trim(), validated_by: c.userId, decided_at: new Date().toISOString() })
@@ -128,6 +143,23 @@ export async function rejectReenrollment(id: string, comment: string): Promise<R
     .eq("school_id", c.schoolId)
     .eq("status", "pending");
   if (error) return { ok: false, message: "Rejet impossible." };
+
+  if ((rr as any)?.student_id) {
+    const { data: link } = await svc
+      .from("parent_links")
+      .select("parent_id")
+      .eq("student_id", (rr as any).student_id)
+      .limit(1)
+      .maybeSingle();
+    if (link?.parent_id) {
+      await svc.from("notifications").insert({
+        user_id: link.parent_id,
+        kind: "school",
+        body: `❌ Réinscription refusée : ${comment.trim()}`,
+      });
+    }
+  }
+
   revalidatePath("/school/reenrollments");
   return { ok: true };
 }
