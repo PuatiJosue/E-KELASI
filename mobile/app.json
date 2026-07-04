@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "E-KLASS",
+    "name": "E-Klass",
     "slug": "e-kelasi",
     "owner": "oshua",
     "version": "1.2.0",
@@ -24,7 +24,7 @@
         "backgroundColor": "#02122C"
       },
       "package": "com.ekelasi.parent",
-      "versionCode": 15,
+      "versionCode": 17,
       "googleServicesFile": "./google-services.json"
     },
     "web": {
