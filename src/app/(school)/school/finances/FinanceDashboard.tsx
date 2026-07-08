@@ -8,10 +8,11 @@ import { SexBadge } from "@/components/SexBadge";
 import {
   createFeeCategory, updateFeeCategory, deleteFeeCategory, applyCategoryToStudents,
   upsertStudentFee, deleteStudentFee, setStudentFinanceStatus, recordStudentPayment, loadStudentFinance,
+  addAdvance, deleteAdvance, addInstallment, toggleInstallmentPaid, deleteInstallment,
 } from "./actions";
 import type {
   FinanceOverview, FeeCategory, FinanceStudentRow, StudentFinanceDetail,
-  PaymentStatus, FinanceStatus,
+  StudentAdvance, StudentInstallment, PaymentStatus, FinanceStatus,
 } from "@/lib/finance-db";
 
 const cur = (c: string) => (c === "CDF" ? "FC" : c === "USD" ? "USD" : c);
@@ -41,10 +42,12 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export function FinanceDashboard({
-  overview, categories, year, classNames,
+  overview, categories, advances, installments, year, classNames,
 }: {
   overview: FinanceOverview;
   categories: FeeCategory[];
+  advances: StudentAdvance[];
+  installments: StudentInstallment[];
   year: string;
   classNames: string[];
 }) {
@@ -106,14 +109,8 @@ export function FinanceDashboard({
       {tab === "overview" && <OverviewTab overview={overview} />}
       {tab === "insolvabilite" && <InsolvabiliteTab overview={overview} />}
       {tab === "rapports" && <RapportsTab overview={overview} />}
-      {(tab === "avances" || tab === "echeances") && (
-        <ComingSoon
-          title={tab === "avances" ? "Avances & Acomptes" : "Tranches & Échéances"}
-          desc={tab === "avances"
-            ? "Enregistrez les avances et acomptes versés par les parents, déduits automatiquement du reste à payer."
-            : "Découpez chaque rubrique en tranches avec des dates d'échéance et suivez les retards."}
-        />
-      )}
+      {tab === "avances" && <AdvancesTab advances={advances} currency={c} />}
+      {tab === "echeances" && <InstallmentsTab installments={installments} currency={c} />}
 
       {rubriqueModal && <RubriqueModal onClose={() => setRubriqueModal(false)} />}
     </div>
@@ -406,6 +403,8 @@ function DetailPanel({ studentId, currency }: { studentId: string; currency: str
   const [loading, setLoading] = useState(true);
   const [feeForm, setFeeForm] = useState(false);
   const [payForm, setPayForm] = useState(false);
+  const [advForm, setAdvForm] = useState(false);
+  const [instForm, setInstForm] = useState(false);
 
   const reload = () => {
     setLoading(true);
@@ -459,31 +458,78 @@ function DetailPanel({ studentId, currency }: { studentId: string; currency: str
       <div style={{ padding: 16 }}>
         {subtab === "frais" && (
           <div className="ek-tablewrap">
-            <div style={{ minWidth: 560 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", padding: "8px 4px", fontSize: 10.5, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "1px solid var(--divider)" }}>
-                <div>Rubrique</div><div style={{ textAlign: "right" }}>Total dû</div><div style={{ textAlign: "right" }}>Payé</div><div style={{ textAlign: "right" }}>Reste à payer</div><div />
+            <div style={{ minWidth: 680 }}>
+              <div style={{ display: "grid", gridTemplateColumns: FEE_GRID, padding: "8px 4px", fontSize: 10, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.03em", borderBottom: "1px solid var(--divider)" }}>
+                <div>Rubrique</div><div style={{ textAlign: "right" }}>Total dû</div><div style={{ textAlign: "right" }}>Avances & Acomptes</div><div style={{ textAlign: "center" }}>Échéances (Payé / Total)</div><div style={{ textAlign: "right" }}>Reste à payer</div><div />
               </div>
               {detail.fees.length === 0 ? (
                 <div style={{ padding: 16, color: "var(--ink-3)", fontSize: 12.5 }}>Aucune rubrique. Cliquez sur « + Frais » pour en ajouter.</div>
               ) : detail.fees.map((f) => (
-                <div key={f.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", padding: "9px 4px", alignItems: "center", fontSize: 12.5, borderBottom: "1px solid var(--divider)" }}>
+                <div key={f.id} style={{ display: "grid", gridTemplateColumns: FEE_GRID, padding: "9px 4px", alignItems: "center", fontSize: 12, borderBottom: "1px solid var(--divider)" }}>
                   <div style={{ color: "var(--ink)", fontWeight: 600 }}>{f.label}</div>
                   <div style={{ textAlign: "right" }}>{money(f.amountDue, f.currency)}</div>
-                  <div style={{ textAlign: "right", color: "#16A34A" }}>{money(f.paid, f.currency)}</div>
-                  <div style={{ textAlign: "right", color: f.remaining > 0 ? "#E11D48" : "var(--ink-3)" }}>{money(f.remaining, f.currency)}</div>
+                  <div style={{ textAlign: "right", color: f.advances > 0 ? "#4F66E8" : "var(--ink-3)" }}>{money(f.advances, f.currency)}</div>
+                  <div style={{ textAlign: "center", color: "var(--ink-2)" }}>
+                    {f.echTotalCount > 0 ? `${f.echPaidCount}/${f.echTotalCount} (${money(f.echPaidAmount, f.currency)} / ${money(f.echTotalAmount, f.currency)})` : "—"}
+                  </div>
+                  <div style={{ textAlign: "right", color: f.remaining > 0 ? "#E11D48" : "#16A34A", fontWeight: 600 }}>{money(f.remaining, f.currency)}</div>
                   <DeleteFee id={f.id} onDone={reload} />
                 </div>
               ))}
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", padding: "10px 4px", fontSize: 12.5, fontWeight: 800 }}>
+              <div style={{ display: "grid", gridTemplateColumns: FEE_GRID, padding: "10px 4px", fontSize: 12, fontWeight: 800 }}>
                 <div>Total</div>
                 <div style={{ textAlign: "right" }}>{money(s.totalDue, currency)}</div>
-                <div style={{ textAlign: "right", color: "#16A34A" }}>{money(s.paid, currency)}</div>
+                <div style={{ textAlign: "right", color: "#4F66E8" }}>{money(detail.advances.reduce((a, x) => a + x.amount, 0), currency)}</div>
+                <div />
                 <div style={{ textAlign: "right", color: "#E11D48" }}>{money(s.remaining, currency)}</div>
                 <div />
               </div>
             </div>
           </div>
         )}
+
+        {subtab === "avances" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button onClick={() => setAdvForm(true)} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 11.5 }}><Icon name="plus" size={12} /> Avance / acompte</button>
+            </div>
+            {detail.advances.length === 0 ? (
+              <div style={{ color: "var(--ink-3)", fontSize: 12.5 }}>Aucune avance ni acompte enregistré.</div>
+            ) : detail.advances.map((a) => (
+              <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, borderBottom: "1px solid var(--divider)", padding: "8px 0" }}>
+                <span style={{ fontWeight: 700, color: "#4F66E8" }}>{money(a.amount, a.currency)}</span>
+                <span style={{ color: "var(--ink-2)", flex: 1 }}>{a.categoryLabel ?? "Général"}{a.note ? ` · ${a.note}` : ""}</span>
+                <span style={{ color: "var(--ink-3)", fontSize: 11 }}>{new Date(a.createdAt).toLocaleDateString("fr-FR")}</span>
+                <RowDelete onDelete={async () => { await deleteAdvance(a.id); reload(); router.refresh(); }} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {subtab === "echeances" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+              <button onClick={() => setInstForm(true)} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 11.5 }}><Icon name="plus" size={12} /> Tranche / échéance</button>
+            </div>
+            {detail.installments.length === 0 ? (
+              <div style={{ color: "var(--ink-3)", fontSize: 12.5 }}>Aucune tranche définie. Découpez une rubrique en versements datés.</div>
+            ) : detail.installments.map((it) => {
+              const overdue = !it.paidAt && it.dueDate && new Date(it.dueDate) < new Date();
+              return (
+                <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, borderBottom: "1px solid var(--divider)", padding: "8px 0" }}>
+                  <input type="checkbox" checked={!!it.paidAt} onChange={(e) => { toggleInstallmentPaid(it.id, e.target.checked).then(() => { reload(); router.refresh(); }); }} />
+                  <span style={{ fontWeight: 700, color: "var(--ink)" }}>{money(it.amount, it.currency)}</span>
+                  <span style={{ color: "var(--ink-2)", flex: 1 }}>{it.label}{it.categoryLabel ? ` · ${it.categoryLabel}` : ""}</span>
+                  <span style={{ fontSize: 11, color: it.paidAt ? "#16A34A" : overdue ? "#E11D48" : "var(--ink-3)", fontWeight: 600 }}>
+                    {it.paidAt ? "Payée" : overdue ? "En retard" : "À venir"}{it.dueDate ? ` · ${new Date(it.dueDate).toLocaleDateString("fr-FR")}` : ""}
+                  </span>
+                  <RowDelete onDelete={async () => { await deleteInstallment(it.id); reload(); router.refresh(); }} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {subtab === "paiements" && (
           detail.payments.length === 0
             ? <div style={{ color: "var(--ink-3)", fontSize: 12.5 }}>Aucun paiement enregistré.</div>
@@ -496,17 +542,16 @@ function DetailPanel({ studentId, currency }: { studentId: string; currency: str
                 ))}
               </div>
         )}
-        {(subtab === "echeances" || subtab === "avances" || subtab === "historique") && (
-          <div style={{ color: "var(--ink-3)", fontSize: 12.5 }}>
-            {subtab === "historique" ? "L'historique complet des opérations s'affichera ici." :
-             subtab === "echeances" ? "Les tranches et dates d'échéance de cet élève s'afficheront ici (à venir)." :
-             "Les avances et acomptes de cet élève s'afficheront ici (à venir)."}
-          </div>
+
+        {subtab === "historique" && (
+          <HistoryList detail={detail} />
         )}
       </div>
 
       {feeForm && <FeeModal studentId={studentId} onClose={() => setFeeForm(false)} onDone={() => { setFeeForm(false); reload(); }} />}
       {payForm && <PaymentModal studentId={studentId} onClose={() => setPayForm(false)} onDone={() => { setPayForm(false); reload(); router.refresh(); }} />}
+      {advForm && <AdvanceModal studentId={studentId} onClose={() => setAdvForm(false)} onDone={() => { setAdvForm(false); reload(); router.refresh(); }} />}
+      {instForm && <InstallmentModal studentId={studentId} onClose={() => setInstForm(false)} onDone={() => { setInstForm(false); reload(); router.refresh(); }} />}
     </div>
   );
 }
@@ -520,6 +565,8 @@ function MiniStat({ label, value, color }: { label: string; value: string; color
   );
 }
 
+const FEE_GRID = "1.7fr 1fr 1.1fr 1.6fr 1fr auto";
+
 function DeleteFee({ id, onDone }: { id: string; onDone: () => void }) {
   const [pending, start] = useTransition();
   return (
@@ -527,6 +574,151 @@ function DeleteFee({ id, onDone }: { id: string; onDone: () => void }) {
       disabled={pending} title="Supprimer" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)", padding: 4 }}>
       <Icon name="trash" size={14} />
     </button>
+  );
+}
+
+function RowDelete({ onDelete }: { onDelete: () => Promise<void> }) {
+  const [pending, start] = useTransition();
+  return (
+    <button onClick={() => { if (confirm("Supprimer ?")) start(() => onDelete()); }} disabled={pending} title="Supprimer"
+      style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)", padding: 4, display: "flex" }}>
+      <Icon name="trash" size={13} />
+    </button>
+  );
+}
+
+function HistoryList({ detail }: { detail: StudentFinanceDetail }) {
+  const items = [
+    ...detail.payments.map((p) => ({ date: p.paidAt, label: `Paiement${p.label ? ` · ${p.label}` : ""}`, amount: p.amount, currency: p.currency, color: "#16A34A" })),
+    ...detail.advances.map((a) => ({ date: a.createdAt.slice(0, 10), label: `Avance / acompte${a.categoryLabel ? ` · ${a.categoryLabel}` : ""}`, amount: a.amount, currency: a.currency, color: "#4F66E8" })),
+    ...detail.installments.filter((i) => i.paidAt).map((i) => ({ date: i.paidAt!, label: `Tranche payée · ${i.label}`, amount: i.amount, currency: i.currency, color: "#16A34A" })),
+  ].sort((a, b) => (a.date < b.date ? 1 : -1));
+  if (items.length === 0) return <div style={{ color: "var(--ink-3)", fontSize: 12.5 }}>Aucune opération enregistrée.</div>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {items.map((it, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, borderBottom: "1px solid var(--divider)", paddingBottom: 6 }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: it.color }} />
+          <span style={{ flex: 1, color: "var(--ink-2)" }}>{it.label}</span>
+          <span style={{ fontWeight: 700, color: "var(--ink)" }}>{money(it.amount, it.currency)}</span>
+          <span style={{ color: "var(--ink-3)", fontSize: 11 }}>{new Date(it.date).toLocaleDateString("fr-FR")}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Onglet Avances & Acomptes (école) ────────────────────────────────
+function AdvancesTab({ advances, currency }: { advances: StudentAdvance[]; currency: string }) {
+  const total = advances.reduce((a, x) => a + x.amount, 0);
+  return (
+    <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center" }}>
+        <div style={{ fontSize: 13.5, fontWeight: 700, flex: 1 }}>Avances & Acomptes ({advances.length})</div>
+        <div style={{ fontSize: 12.5, color: "var(--ink-2)" }}>Total : <strong>{money(total, currency)}</strong></div>
+      </div>
+      <div style={{ padding: "8px 16px 4px", fontSize: 11.5, color: "var(--ink-3)" }}>
+        Pour en ajouter, ouvrez un élève dans l’onglet « Élèves » → sous-onglet « Avances & Acomptes ».
+      </div>
+      {advances.length === 0 ? (
+        <div style={{ padding: 26, textAlign: "center", color: "var(--ink-3)", fontSize: 12.5 }}>Aucune avance enregistrée.</div>
+      ) : advances.map((a, i) => (
+        <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderTop: i > 0 ? "1px solid var(--divider)" : "none", fontSize: 12.5 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: 600 }}>{a.studentName}</span> <span style={{ color: "var(--ink-3)" }}>· {a.className}</span>
+            <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{a.categoryLabel ?? "Général"}{a.note ? ` · ${a.note}` : ""}</div>
+          </div>
+          <span style={{ fontWeight: 700, color: "#4F66E8" }}>{money(a.amount, a.currency)}</span>
+          <span style={{ color: "var(--ink-3)", fontSize: 11 }}>{new Date(a.createdAt).toLocaleDateString("fr-FR")}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Onglet Tranches & Échéances (école) ──────────────────────────────
+function InstallmentsTab({ installments, currency }: { installments: StudentInstallment[]; currency: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const today = new Date();
+  const overdue = installments.filter((i) => !i.paidAt && i.dueDate && new Date(i.dueDate) < today);
+  const upcoming = installments.filter((i) => !i.paidAt && (!i.dueDate || new Date(i.dueDate) >= today));
+  const paid = installments.filter((i) => i.paidAt);
+
+  const Section = ({ title, rows, tint }: { title: string; rows: StudentInstallment[]; tint: string }) => (
+    <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--divider)", fontSize: 13, fontWeight: 700, color: tint }}>{title} ({rows.length})</div>
+      {rows.length === 0 ? <div style={{ padding: 18, textAlign: "center", color: "var(--ink-3)", fontSize: 12 }}>—</div> : rows.map((it, i) => (
+        <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderTop: i > 0 ? "1px solid var(--divider)" : "none", fontSize: 12.5 }}>
+          <input type="checkbox" checked={!!it.paidAt} onChange={(e) => start(async () => { await toggleInstallmentPaid(it.id, e.target.checked); router.refresh(); })} disabled={pending} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: 600 }}>{it.studentName}</span> <span style={{ color: "var(--ink-3)" }}>· {it.className}</span>
+            <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{it.label}{it.categoryLabel ? ` · ${it.categoryLabel}` : ""}</div>
+          </div>
+          <span style={{ fontWeight: 700 }}>{money(it.amount, it.currency)}</span>
+          <span style={{ fontSize: 11, color: "var(--ink-3)" }}>{it.dueDate ? new Date(it.dueDate).toLocaleDateString("fr-FR") : "—"}</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>Pour créer une tranche, ouvrez un élève dans « Élèves » → sous-onglet « Échéances ». Cochez pour marquer une tranche payée.</div>
+      <Section title="En retard" rows={overdue} tint="#E11D48" />
+      <Section title="À venir" rows={upcoming} tint="#B45309" />
+      <Section title="Payées" rows={paid} tint="#16A34A" />
+    </div>
+  );
+}
+
+function AdvanceModal({ studentId, onClose, onDone }: { studentId: string; onClose: () => void; onDone: () => void }) {
+  const [pending, start] = useTransition();
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("CDF");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const submit = () => {
+    const amt = parseFloat(amount.replace(",", ".")) || 0;
+    if (!(amt > 0)) { setError("Montant invalide."); return; }
+    start(async () => { const r = await addAdvance({ studentId, amount: amt, currency, note }); if (r.ok) onDone(); else setError(r.message); });
+  };
+  return (
+    <Modal title="Avance / acompte" onClose={onClose}>
+      <div style={{ display: "flex", gap: 10 }}>
+        <Labeled label="Montant" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="10000" style={modalInp} /></Labeled>
+        <Labeled label="Devise" style={{ width: 110 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
+      </div>
+      <Labeled label="Note (optionnel)"><input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Acompte inscription…" style={modalInp} /></Labeled>
+      {error && <div style={errBox}>{error}</div>}
+      <ModalActions onClose={onClose} onSubmit={submit} pending={pending} />
+    </Modal>
+  );
+}
+
+function InstallmentModal({ studentId, onClose, onDone }: { studentId: string; onClose: () => void; onDone: () => void }) {
+  const [pending, start] = useTransition();
+  const [label, setLabel] = useState("");
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("CDF");
+  const [dueDate, setDueDate] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const submit = () => {
+    const amt = parseFloat(amount.replace(",", ".")) || 0;
+    if (!(amt > 0)) { setError("Montant invalide."); return; }
+    start(async () => { const r = await addInstallment({ studentId, label: label || "Tranche", amount: amt, currency, dueDate }); if (r.ok) onDone(); else setError(r.message); });
+  };
+  return (
+    <Modal title="Tranche / échéance" onClose={onClose}>
+      <Labeled label="Libellé"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Tranche 1 — scolarité" style={modalInp} /></Labeled>
+      <div style={{ display: "flex", gap: 10 }}>
+        <Labeled label="Montant" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="25000" style={modalInp} /></Labeled>
+        <Labeled label="Devise" style={{ width: 110 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
+      </div>
+      <Labeled label="Date d'échéance"><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={modalInp} /></Labeled>
+      {error && <div style={errBox}>{error}</div>}
+      <ModalActions onClose={onClose} onSubmit={submit} pending={pending} />
+    </Modal>
   );
 }
 
@@ -788,16 +980,6 @@ function PaymentModal({ studentId, onClose, onDone }: { studentId: string; onClo
       {error && <div style={errBox}>{error}</div>}
       <ModalActions onClose={onClose} onSubmit={submit} pending={pending} submitLabel="Enregistrer" />
     </Modal>
-  );
-}
-
-function ComingSoon({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="ek-card" style={{ padding: 30, textAlign: "center" }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>{title}</div>
-      <div style={{ fontSize: 12.5, color: "var(--ink-3)", maxWidth: 480, margin: "0 auto", lineHeight: 1.5 }}>{desc}</div>
-      <div style={{ marginTop: 12, display: "inline-block", padding: "4px 12px", borderRadius: 999, background: "var(--brand-soft)", color: "var(--brand-600)", fontSize: 11.5, fontWeight: 700 }}>Bientôt disponible</div>
-    </div>
   );
 }
 

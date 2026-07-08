@@ -194,15 +194,49 @@ export type StudentFeeLine = {
   categoryId: string | null;
   label: string;
   amountDue: number;
-  paid: number;
+  advances: number;          // avances & acomptes affectés à cette rubrique
+  echPaidCount: number;      // tranches payées
+  echTotalCount: number;     // tranches totales
+  echPaidAmount: number;     // montant des tranches payées
+  echTotalAmount: number;    // montant total des tranches
+  paid: number;              // advances + echPaidAmount
   remaining: number;
   currency: string;
+};
+
+export type StudentAdvance = {
+  id: string;
+  studentId: string;
+  categoryId: string | null;
+  categoryLabel: string | null;
+  amount: number;
+  currency: string;
+  note: string | null;
+  createdAt: string;
+  studentName?: string;
+  className?: string;
+};
+
+export type StudentInstallment = {
+  id: string;
+  studentId: string;
+  categoryId: string | null;
+  categoryLabel: string | null;
+  label: string;
+  amount: number;
+  currency: string;
+  dueDate: string | null;
+  paidAt: string | null;
+  studentName?: string;
+  className?: string;
 };
 
 export type StudentFinanceDetail = {
   student: FinanceStudentRow;
   fees: StudentFeeLine[];
   payments: StudentPayment[];
+  advances: StudentAdvance[];
+  installments: StudentInstallment[];
 };
 
 const paymentStatusOf = (due: number, paid: number): PaymentStatus =>
@@ -247,7 +281,7 @@ export async function getFinanceOverview(): Promise<FinanceOverview> {
     if (!school) return emptyOverview();
     const svc = service();
 
-    const [{ data: students }, { data: fees }, { data: payments }] = await Promise.all([
+    const [{ data: students }, { data: fees }, { data: payments }, { data: advances }, { data: installments }] = await Promise.all([
       svc.from("students")
         .select("id, full_name, matricule, class_name, option, sex, avatar_url, finance_status")
         .eq("school_id", school.id)
@@ -256,6 +290,8 @@ export async function getFinanceOverview(): Promise<FinanceOverview> {
         .order("full_name"),
       svc.from("student_fees").select("student_id, amount_due, currency").eq("school_id", school.id),
       svc.from("student_fee_payments").select("student_id, amount, currency").eq("school_id", school.id),
+      svc.from("student_advances").select("student_id, amount").eq("school_id", school.id),
+      svc.from("student_installments").select("student_id, amount, paid_at").eq("school_id", school.id),
     ]);
 
     const ids = (students ?? []).map((s: any) => s.id);
@@ -281,6 +317,12 @@ export async function getFinanceOverview(): Promise<FinanceOverview> {
     const paidByStudent = new Map<string, number>();
     for (const p of (payments ?? []) as any[]) {
       paidByStudent.set(p.student_id, (paidByStudent.get(p.student_id) ?? 0) + Number(p.amount));
+    }
+    for (const a of (advances ?? []) as any[]) {
+      paidByStudent.set(a.student_id, (paidByStudent.get(a.student_id) ?? 0) + Number(a.amount));
+    }
+    for (const it of (installments ?? []) as any[]) {
+      if (it.paid_at) paidByStudent.set(it.student_id, (paidByStudent.get(it.student_id) ?? 0) + Number(it.amount));
     }
 
     const rows: FinanceStudentRow[] = (students ?? []).map((s: any) => {
@@ -324,41 +366,65 @@ export async function getStudentFinanceDetail(studentId: string): Promise<Studen
       .eq("id", studentId).eq("school_id", school.id).maybeSingle();
     if (!s) return null;
 
-    const [{ data: feeRows }, payments, { data: links }] = await Promise.all([
+    const [{ data: feeRows }, payments, { data: links }, { data: advRows }, { data: instRows }, cats] = await Promise.all([
       svc.from("student_fees").select("id, category_id, label, amount_due, currency").eq("school_id", school.id).eq("student_id", studentId).order("created_at"),
       listStudentPayments(studentId),
       svc.from("parent_links").select("is_primary, profiles!parent_links_parent_id_fkey(full_name, phone)").eq("student_id", studentId),
+      svc.from("student_advances").select("id, category_id, amount, currency, note, created_at").eq("school_id", school.id).eq("student_id", studentId).order("created_at", { ascending: false }),
+      svc.from("student_installments").select("id, category_id, label, amount, currency, due_date, paid_at").eq("school_id", school.id).eq("student_id", studentId).order("due_date"),
+      listFeeCategories(),
     ]);
 
-    let totalPaid = 0;
-    for (const p of payments) totalPaid += p.amount;
-
+    const catLabel = new Map<string, string>(cats.map((c) => [c.id, c.name]));
     const currency = ((feeRows ?? [])[0] as any)?.currency ?? "CDF";
+
+    const advances: StudentAdvance[] = (advRows ?? []).map((a: any) => ({
+      id: a.id, studentId, categoryId: a.category_id ?? null,
+      categoryLabel: a.category_id ? catLabel.get(a.category_id) ?? null : null,
+      amount: Number(a.amount), currency: a.currency ?? currency, note: a.note ?? null, createdAt: a.created_at,
+    }));
+    const installments: StudentInstallment[] = (instRows ?? []).map((it: any) => ({
+      id: it.id, studentId, categoryId: it.category_id ?? null,
+      categoryLabel: it.category_id ? catLabel.get(it.category_id) ?? null : null,
+      label: it.label ?? "Tranche", amount: Number(it.amount), currency: it.currency ?? currency,
+      dueDate: it.due_date ?? null, paidAt: it.paid_at ?? null,
+    }));
+
+    // Agrégats par rubrique (avances + tranches).
+    const advByCat = new Map<string, number>();
+    for (const a of advances) if (a.categoryId) advByCat.set(a.categoryId, (advByCat.get(a.categoryId) ?? 0) + a.amount);
+    const instByCat = new Map<string, { total: number; count: number; paid: number; paidCount: number }>();
+    for (const it of installments) {
+      if (!it.categoryId) continue;
+      const e = instByCat.get(it.categoryId) ?? { total: 0, count: 0, paid: 0, paidCount: 0 };
+      e.total += it.amount; e.count++;
+      if (it.paidAt) { e.paid += it.amount; e.paidCount++; }
+      instByCat.set(it.categoryId, e);
+    }
+
     let totalDue = 0;
     const fees: StudentFeeLine[] = (feeRows ?? []).map((f: any) => {
-      totalDue += Number(f.amount_due);
+      const cid = f.category_id ?? "";
+      const amountDue = Number(f.amount_due);
+      totalDue += amountDue;
+      const adv = advByCat.get(cid) ?? 0;
+      const inst = instByCat.get(cid) ?? { total: 0, count: 0, paid: 0, paidCount: 0 };
+      const paid = adv + inst.paid;
       return {
-        id: f.id,
-        categoryId: f.category_id ?? null,
-        label: f.label ?? "Frais",
-        amountDue: Number(f.amount_due),
-        paid: 0,
-        remaining: Number(f.amount_due),
-        currency: f.currency ?? currency,
+        id: f.id, categoryId: f.category_id ?? null, label: f.label ?? "Frais",
+        amountDue, advances: adv,
+        echPaidCount: inst.paidCount, echTotalCount: inst.count, echPaidAmount: inst.paid, echTotalAmount: inst.total,
+        paid, remaining: Math.max(0, amountDue - paid), currency: f.currency ?? currency,
       };
     });
 
-    // Répartit le total payé sur les rubriques (dans l'ordre) pour le détail.
-    let leftover = totalPaid;
-    for (const f of fees) {
-      const applied = Math.min(f.amountDue, Math.max(0, leftover));
-      f.paid = applied;
-      f.remaining = Math.max(0, f.amountDue - applied);
-      leftover -= applied;
-    }
+    // Total payé = paiements ad hoc + avances + tranches payées.
+    const adhoc = payments.reduce((a, p) => a + p.amount, 0);
+    const advTotal = advances.reduce((a, x) => a + x.amount, 0);
+    const instPaid = installments.reduce((a, x) => a + (x.paidAt ? x.amount : 0), 0);
+    const totalPaid = adhoc + advTotal + instPaid;
 
     const parent = ((links ?? []) as any[]).sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))[0];
-    const remaining = Math.max(0, totalDue - totalPaid);
     const student: FinanceStudentRow = {
       id: (s as any).id,
       matricule: (s as any).matricule ?? "—",
@@ -370,16 +436,53 @@ export async function getStudentFinanceDetail(studentId: string): Promise<Studen
       parentPhone: parent?.profiles?.phone ?? null,
       totalDue,
       paid: totalPaid,
-      remaining,
+      remaining: Math.max(0, totalDue - totalPaid),
       currency,
       paymentStatus: paymentStatusOf(totalDue, totalPaid),
       financeStatus: ((s as any).finance_status ?? "en_ordre") as FinanceStatus,
     };
 
-    return { student, fees, payments };
+    return { student, fees, payments, advances, installments };
   } catch {
     return null;
   }
+}
+
+// Listes école-wide pour les onglets Avances & Acomptes / Tranches & Échéances.
+export async function getSchoolAdvances(): Promise<StudentAdvance[]> {
+  if (!isLiveMode()) return MOCK_ADVANCES;
+  try {
+    const school = await getMySchool();
+    if (!school) return [];
+    const svc = service();
+    const { data } = await svc.from("student_advances")
+      .select("id, student_id, category_id, amount, currency, note, created_at, students(full_name, class_name, option), fee_categories(name)")
+      .eq("school_id", school.id).order("created_at", { ascending: false });
+    return (data ?? []).map((a: any) => ({
+      id: a.id, studentId: a.student_id, categoryId: a.category_id ?? null,
+      categoryLabel: a.fee_categories?.name ?? null, amount: Number(a.amount), currency: a.currency ?? "CDF",
+      note: a.note ?? null, createdAt: a.created_at,
+      studentName: a.students?.full_name ?? "—", className: classLabel(a.students?.class_name, a.students?.option),
+    }));
+  } catch { return []; }
+}
+
+export async function getSchoolInstallments(): Promise<StudentInstallment[]> {
+  if (!isLiveMode()) return MOCK_INSTALLMENTS;
+  try {
+    const school = await getMySchool();
+    if (!school) return [];
+    const svc = service();
+    const { data } = await svc.from("student_installments")
+      .select("id, student_id, category_id, label, amount, currency, due_date, paid_at, students(full_name, class_name, option), fee_categories(name)")
+      .eq("school_id", school.id).order("due_date");
+    return (data ?? []).map((it: any) => ({
+      id: it.id, studentId: it.student_id, categoryId: it.category_id ?? null,
+      categoryLabel: it.fee_categories?.name ?? null, label: it.label ?? "Tranche", amount: Number(it.amount),
+      currency: it.currency ?? "CDF", dueDate: it.due_date ?? null, paidAt: it.paid_at ?? null,
+      studentName: it.students?.full_name ?? "—", className: classLabel(it.students?.class_name, it.students?.option),
+    }));
+  } catch { return []; }
 }
 
 function buildOverview(rows: FinanceStudentRow[], currency: string): FinanceOverview {
@@ -449,11 +552,45 @@ const MOCK_OVERVIEW: FinanceOverview = buildOverview(mockRows(), "CDF");
 
 function MOCK_DETAIL(studentId: string): StudentFinanceDetail {
   const row = mockRows().find((r) => r.id === studentId) ?? mockRows()[0];
+  // Réparti le "payé" en avances puis tranches sur les rubriques (démo).
   let leftover = row.paid;
   const fees: StudentFeeLine[] = MOCK_CATEGORIES.map((c) => {
     const applied = Math.min(c.amount, Math.max(0, leftover));
     leftover -= applied;
-    return { id: c.id, categoryId: c.id, label: c.name, amountDue: c.amount, paid: applied, remaining: Math.max(0, c.amount - applied), currency: "CDF" };
+    const advances = Math.round(applied * 0.2);
+    const echPaidAmount = applied - advances;
+    const echTotalAmount = Math.max(echPaidAmount, Math.round(c.amount * 0.6));
+    const echTotalCount = echTotalAmount > 0 ? 2 : 0;
+    const echPaidCount = echPaidAmount >= echTotalAmount && echTotalCount ? echTotalCount : echPaidAmount > 0 ? 1 : 0;
+    return {
+      id: c.id, categoryId: c.id, label: c.name, amountDue: c.amount,
+      advances, echPaidCount, echTotalCount, echPaidAmount, echTotalAmount,
+      paid: applied, remaining: Math.max(0, c.amount - applied), currency: "CDF",
+    };
   });
-  return { student: row, fees, payments: [] };
+  const advances: StudentAdvance[] = fees.filter((f) => f.advances > 0).map((f) => ({
+    id: `adv-${f.id}`, studentId: row.id, categoryId: f.categoryId, categoryLabel: f.label,
+    amount: f.advances, currency: "CDF", note: null, createdAt: new Date().toISOString(),
+  }));
+  const installments: StudentInstallment[] = fees.filter((f) => f.echTotalCount > 0).flatMap((f) =>
+    Array.from({ length: f.echTotalCount }).map((_, i) => ({
+      id: `inst-${f.id}-${i}`, studentId: row.id, categoryId: f.categoryId, categoryLabel: f.label,
+      label: `Tranche ${i + 1}`, amount: Math.round(f.echTotalAmount / f.echTotalCount), currency: "CDF",
+      dueDate: `2025-0${6 + i}-15`, paidAt: i < f.echPaidCount ? "2025-06-01" : null,
+    }))
+  );
+  return { student: row, fees, payments: [], advances, installments };
 }
+
+const MOCK_ADVANCES: StudentAdvance[] = mockRows().slice(0, 4).map((r, i) => ({
+  id: `adv-${i}`, studentId: r.id, categoryId: "c1", categoryLabel: "Frais de scolarité",
+  amount: [10000, 15000, 5000, 20000][i], currency: "CDF", note: "Acompte", createdAt: "2025-06-0" + (i + 1),
+  studentName: r.fullName, className: r.className,
+}));
+
+const MOCK_INSTALLMENTS: StudentInstallment[] = mockRows().slice(0, 5).map((r, i) => ({
+  id: `inst-${i}`, studentId: r.id, categoryId: "c1", categoryLabel: "Frais de scolarité",
+  label: `Tranche ${(i % 2) + 1}`, amount: 25000, currency: "CDF",
+  dueDate: `2025-0${6 + (i % 3)}-15`, paidAt: i % 2 === 0 ? "2025-06-10" : null,
+  studentName: r.fullName, className: r.className,
+}));

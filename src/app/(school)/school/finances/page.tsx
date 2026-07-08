@@ -1,12 +1,14 @@
-import { getFinanceOverview, listFeeCategories } from "@/lib/finance-db";
+import { getFinanceOverview, listFeeCategories, getSchoolAdvances, getSchoolInstallments } from "@/lib/finance-db";
 import { getMySchool } from "@/lib/school-db";
 import { schoolYearLabel } from "@/lib/trimester";
 import { FinanceDashboard } from "./FinanceDashboard";
 
 export default async function SchoolFinances() {
-  const [overview, categories, school] = await Promise.all([
+  const [overview, categories, advances, installments, school] = await Promise.all([
     getFinanceOverview(),
     listFeeCategories(),
+    getSchoolAdvances(),
+    getSchoolInstallments(),
     getMySchool(),
   ]);
 
@@ -15,5 +17,14 @@ export default async function SchoolFinances() {
   );
   const year = (school as any)?.currentYear || schoolYearLabel();
 
-  return <FinanceDashboard overview={overview} categories={categories} year={year} classNames={classNames} />;
+  return (
+    <FinanceDashboard
+      overview={overview}
+      categories={categories}
+      advances={advances}
+      installments={installments}
+      year={year}
+      classNames={classNames}
+    />
+  );
 }

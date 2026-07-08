@@ -190,6 +190,79 @@ export async function deleteStudentFee(id: string): Promise<Result> {
   return { ok: true };
 }
 
+// ── Avances & Acomptes ───────────────────────────────────────────────
+export async function addAdvance(input: { studentId: string; categoryId?: string | null; amount: number; currency?: string; note?: string }): Promise<Result> {
+  if (!input.studentId) return { ok: false, message: "Élève invalide." };
+  if (!(input.amount > 0)) return { ok: false, message: "Montant invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await (svc.from("student_advances").insert as any)({
+    school_id: schoolId, student_id: input.studentId, category_id: input.categoryId ?? null,
+    amount: input.amount, currency: input.currency || "CDF", note: input.note?.trim() || null,
+  });
+  if (error) return { ok: false, message: "Enregistrement impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+export async function deleteAdvance(id: string): Promise<Result> {
+  if (!id) return { ok: false, message: "Avance invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await svc.from("student_advances").delete().eq("id", id).eq("school_id", schoolId);
+  if (error) return { ok: false, message: "Suppression impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+// ── Tranches & Échéances ─────────────────────────────────────────────
+export async function addInstallment(input: { studentId: string; categoryId?: string | null; label: string; amount: number; currency?: string; dueDate?: string }): Promise<Result> {
+  if (!input.studentId) return { ok: false, message: "Élève invalide." };
+  if (!(input.amount > 0)) return { ok: false, message: "Montant invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await (svc.from("student_installments").insert as any)({
+    school_id: schoolId, student_id: input.studentId, category_id: input.categoryId ?? null,
+    label: input.label?.trim() || "Tranche", amount: input.amount, currency: input.currency || "CDF",
+    due_date: input.dueDate?.trim() || null,
+  });
+  if (error) return { ok: false, message: "Enregistrement impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+export async function toggleInstallmentPaid(id: string, paid: boolean): Promise<Result> {
+  if (!id) return { ok: false, message: "Tranche invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await (svc.from("student_installments").update as any)({
+    paid_at: paid ? new Date().toISOString().slice(0, 10) : null,
+  }).eq("id", id).eq("school_id", schoolId);
+  if (error) return { ok: false, message: "Mise à jour impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+export async function deleteInstallment(id: string): Promise<Result> {
+  if (!id) return { ok: false, message: "Tranche invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await svc.from("student_installments").delete().eq("id", id).eq("school_id", schoolId);
+  if (error) return { ok: false, message: "Suppression impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
 // Statut financier (Actions rapides : insolvabilité, en retard…).
 export async function setStudentFinanceStatus(studentId: string, status: "en_ordre" | "en_retard" | "insolvable" | "en_traitement"): Promise<Result> {
   if (!studentId) return { ok: false, message: "Élève invalide." };
