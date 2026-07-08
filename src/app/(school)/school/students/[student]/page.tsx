@@ -5,8 +5,6 @@ import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import { getStudentDossier } from "@/lib/school-db";
 import { currentTrimester } from "@/lib/trimester";
-import { listStudentPayments } from "@/lib/finance-db";
-import { PaymentManager } from "./PaymentManager";
 import { DeleteStudentButton } from "./DeleteStudentButton";
 
 function ageFrom(birth: string | null): string {
@@ -30,10 +28,7 @@ function fmtDate(birth: string | null): string {
 const sexLabel = (s: string | null) => (s === "M" ? "Masculin" : s === "F" ? "Féminin" : "—");
 
 export default async function StudentDossierPage({ params }: { params: { student: string } }) {
-  const [d, payments] = await Promise.all([
-    getStudentDossier(params.student),
-    listStudentPayments(params.student),
-  ]);
+  const d = await getStudentDossier(params.student);
 
   if (!d) {
     return (
@@ -156,9 +151,6 @@ export default async function StudentDossierPage({ params }: { params: { student
           </div>
         </div>
       )}
-
-      {/* Frais scolaires / minerval */}
-      <PaymentManager studentId={d.id} payments={payments} />
 
       {/* Cotations regroupées par trimestre (dossiers) */}
       {d.trimesters.length === 0 ? (
