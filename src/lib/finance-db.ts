@@ -153,7 +153,7 @@ export async function getSchoolFeeSummary(): Promise<FeeSummaryRow[]> {
 // ─────────────────────────────────────────────────────────────────────
 
 export type PaymentStatus = "paye" | "partiel" | "non_paye";
-export type FinanceStatus = "en_ordre" | "en_retard" | "insolvable" | "en_traitement";
+export type FinanceStatus = "en_ordre" | "non_paye" | "avance" | "insolvable";
 
 export type FeeCategory = {
   id: string;
@@ -184,8 +184,8 @@ export type FinanceOverview = {
   currency: string;
   kpis: { totalDue: number; totalPaid: number; pending: number; late: number };
   students: FinanceStudentRow[];
-  distribution: { paid: number; partial: number; late: number; unpaid: number };
-  situation: { enOrdre: number; enRetard: number; insolvable: number; enTraitement: number };
+  distribution: { paid: number; partial: number; unpaid: number };
+  situation: { enOrdre: number; nonPaye: number; avance: number; insolvable: number };
   total: number;
 };
 
@@ -242,9 +242,9 @@ export type StudentFinanceDetail = {
 const paymentStatusOf = (due: number, paid: number): PaymentStatus =>
   paid <= 0 ? "non_paye" : due - paid <= 0.001 && due > 0 ? "paye" : "partiel";
 
-// Catégorie unique pour le camembert « répartition par statut de paiement ».
-function donutBucket(r: { financeStatus: FinanceStatus; totalDue: number; paid: number }): keyof FinanceOverview["distribution"] {
-  if (r.financeStatus === "en_retard") return "late";
+// Catégorie unique pour le camembert « répartition par statut de paiement »
+// (basé uniquement sur les montants dû / payé).
+function donutBucket(r: { totalDue: number; paid: number }): keyof FinanceOverview["distribution"] {
   if (r.totalDue > 0 && r.totalDue - r.paid <= 0.001) return "paid";
   if (r.paid > 0) return "partial";
   return "unpaid";
@@ -485,26 +485,123 @@ export async function getSchoolInstallments(): Promise<StudentInstallment[]> {
   } catch { return []; }
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// Caisse — journal des dépenses & recettes
+// ─────────────────────────────────────────────────────────────────────
+export type CashEntry = {
+  id: string;
+  kind: "depense" | "recette";
+  amount: number;
+  currency: string;
+  label: string;
+  entryDate: string;
+  signatory: string | null;
+  note: string | null;
+  createdAt: string;
+};
+
+export type CashSummary = { depenses: number; recettes: number; solde: number; currency: string };
+
+export async function getCashEntries(): Promise<CashEntry[]> {
+  if (!isLiveMode()) return MOCK_CASH;
+  try {
+    const school = await getMySchool();
+    if (!school) return [];
+    const svc = service();
+    const { data } = await svc
+      .from("cash_entries")
+      .select("id, kind, amount, currency, label, entry_date, signatory, note, created_at")
+      .eq("school_id", school.id)
+      .order("entry_date", { ascending: false })
+      .order("created_at", { ascending: false });
+    return (data ?? []).map((e: any) => ({
+      id: e.id, kind: e.kind, amount: Number(e.amount), currency: e.currency ?? "CDF",
+      label: e.label ?? "", entryDate: e.entry_date, signatory: e.signatory ?? null,
+      note: e.note ?? null, createdAt: e.created_at,
+    }));
+  } catch { return []; }
+}
+
+export async function getCashSummary(): Promise<CashSummary> {
+  const entries = await getCashEntries();
+  const depenses = entries.filter((e) => e.kind === "depense").reduce((a, e) => a + e.amount, 0);
+  const recettes = entries.filter((e) => e.kind === "recette").reduce((a, e) => a + e.amount, 0);
+  const currency = entries[0]?.currency ?? "CDF";
+  return { depenses, recettes, solde: recettes - depenses, currency };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Rappel de paiement — parents des élèves ayant un reste à payer
+// ─────────────────────────────────────────────────────────────────────
+export type ReminderRecipient = {
+  studentId: string;
+  studentName: string;
+  className: string;
+  remaining: number;
+  currency: string;
+  parentId: string;
+  parentName: string;
+  parentPhone: string | null;
+};
+
+export async function getReminderRecipients(): Promise<ReminderRecipient[]> {
+  if (!isLiveMode()) return [];
+  try {
+    const overview = await getFinanceOverview();
+    const school = await getMySchool();
+    if (!school) return [];
+    const debtors = overview.students.filter((s) => s.remaining > 0);
+    if (debtors.length === 0) return [];
+    const svc = service();
+    const ids = debtors.map((s) => s.id);
+    const { data: links } = await svc
+      .from("parent_links")
+      .select("student_id, parent_id, is_primary, profiles!parent_links_parent_id_fkey(full_name, phone)")
+      .in("student_id", ids);
+
+    // Parent principal (ou premier) par élève.
+    const parentByStudent = new Map<string, { id: string; name: string; phone: string | null }>();
+    for (const l of (links ?? []) as any[]) {
+      if (!parentByStudent.has(l.student_id) || l.is_primary) {
+        parentByStudent.set(l.student_id, { id: l.parent_id, name: l.profiles?.full_name ?? "Parent", phone: l.profiles?.phone ?? null });
+      }
+    }
+
+    const out: ReminderRecipient[] = [];
+    for (const s of debtors) {
+      const p = parentByStudent.get(s.id);
+      if (!p?.id) continue;
+      out.push({
+        studentId: s.id, studentName: s.fullName, className: s.className,
+        remaining: s.remaining, currency: s.currency,
+        parentId: p.id, parentName: p.name, parentPhone: p.phone,
+      });
+    }
+    return out;
+  } catch { return []; }
+}
+
 function buildOverview(rows: FinanceStudentRow[], currency: string): FinanceOverview {
   const totalDue = rows.reduce((a, r) => a + r.totalDue, 0);
   const totalPaid = rows.reduce((a, r) => a + Math.min(r.paid, r.totalDue || r.paid), 0);
   const pending = Math.max(0, totalDue - totalPaid);
-  const late = rows.filter((r) => r.financeStatus === "en_retard").reduce((a, r) => a + r.remaining, 0);
+  // « En attente non payé » : reste des élèves marqués non payés.
+  const late = rows.filter((r) => r.financeStatus === "non_paye").reduce((a, r) => a + r.remaining, 0);
 
-  const distribution = { paid: 0, partial: 0, late: 0, unpaid: 0 };
-  const situation = { enOrdre: 0, enRetard: 0, insolvable: 0, enTraitement: 0 };
+  const distribution = { paid: 0, partial: 0, unpaid: 0 };
+  const situation = { enOrdre: 0, nonPaye: 0, avance: 0, insolvable: 0 };
   for (const r of rows) {
     distribution[donutBucket(r)]++;
-    if (r.financeStatus === "en_retard") situation.enRetard++;
-    else if (r.financeStatus === "insolvable") situation.insolvable++;
-    else if (r.financeStatus === "en_traitement") situation.enTraitement++;
-    else if (r.totalDue > 0 && r.totalDue - r.paid <= 0.001) situation.enOrdre++;
+    if (r.financeStatus === "insolvable") situation.insolvable++;
+    else if (r.financeStatus === "non_paye") situation.nonPaye++;
+    else if (r.financeStatus === "avance") situation.avance++;
+    else situation.enOrdre++;
   }
   return { currency, kpis: { totalDue, totalPaid, pending, late }, students: rows, distribution, situation, total: rows.length };
 }
 
 function emptyOverview(): FinanceOverview {
-  return { currency: "CDF", kpis: { totalDue: 0, totalPaid: 0, pending: 0, late: 0 }, students: [], distribution: { paid: 0, partial: 0, late: 0, unpaid: 0 }, situation: { enOrdre: 0, enRetard: 0, insolvable: 0, enTraitement: 0 }, total: 0 };
+  return { currency: "CDF", kpis: { totalDue: 0, totalPaid: 0, pending: 0, late: 0 }, students: [], distribution: { paid: 0, partial: 0, unpaid: 0 }, situation: { enOrdre: 0, nonPaye: 0, avance: 0, insolvable: 0 }, total: 0 };
 }
 
 // ── Données de démonstration (mode non connecté) ─────────────────────
@@ -522,7 +619,7 @@ const MOCK_NAMES: [string, string, string][] = [
   ["Diabaté", "Jean", "M"], ["Cissé", "Awa", "F"], ["Bah", "Ousmane", "M"], ["Fofana", "Kadiatou", "F"],
 ];
 const MOCK_CLASSES = ["5ème A", "4ème B", "3ème A", "6ème A"];
-const MOCK_STATUSES: FinanceStatus[] = ["en_ordre", "en_retard", "insolvable", "en_ordre", "en_retard", "en_ordre", "en_traitement", "en_ordre", "en_retard", "en_ordre"];
+const MOCK_STATUSES: FinanceStatus[] = ["en_ordre", "non_paye", "insolvable", "en_ordre", "non_paye", "avance", "en_ordre", "en_ordre", "non_paye", "avance"];
 
 function mockRows(): FinanceStudentRow[] {
   return MOCK_NAMES.map(([last, first, sex], i) => {
@@ -594,3 +691,9 @@ const MOCK_INSTALLMENTS: StudentInstallment[] = mockRows().slice(0, 5).map((r, i
   dueDate: `2025-0${6 + (i % 3)}-15`, paidAt: i % 2 === 0 ? "2025-06-10" : null,
   studentName: r.fullName, className: r.className,
 }));
+
+const MOCK_CASH: CashEntry[] = [
+  { id: "ce1", kind: "recette", amount: 250000, currency: "CDF", label: "Encaissement scolarité", entryDate: "2025-06-05", signatory: "La direction", note: null, createdAt: "2025-06-05" },
+  { id: "ce2", kind: "depense", amount: 80000, currency: "CDF", label: "Achat fournitures", entryDate: "2025-06-07", signatory: "La direction", note: null, createdAt: "2025-06-07" },
+  { id: "ce3", kind: "depense", amount: 45000, currency: "CDF", label: "Facture électricité", entryDate: "2025-06-10", signatory: "La direction", note: null, createdAt: "2025-06-10" },
+];

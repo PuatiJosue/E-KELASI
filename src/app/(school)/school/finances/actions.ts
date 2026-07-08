@@ -263,8 +263,8 @@ export async function deleteInstallment(id: string): Promise<Result> {
   return { ok: true };
 }
 
-// Statut financier (Actions rapides : insolvabilité, en retard…).
-export async function setStudentFinanceStatus(studentId: string, status: "en_ordre" | "en_retard" | "insolvable" | "en_traitement"): Promise<Result> {
+// Statut financier (En ordre / Non payé / Avance / Insolvable).
+export async function setStudentFinanceStatus(studentId: string, status: "en_ordre" | "non_paye" | "avance" | "insolvable"): Promise<Result> {
   if (!studentId) return { ok: false, message: "Élève invalide." };
   if (!isLiveMode()) return { ok: true };
   const schoolId = await callerSchoolId();
@@ -272,6 +272,143 @@ export async function setStudentFinanceStatus(studentId: string, status: "en_ord
   const svc = service();
   const { error } = await (svc.from("students").update as any)({ finance_status: status }).eq("id", studentId).eq("school_id", schoolId);
   if (error) return { ok: false, message: "Mise à jour impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+// ── Facture (point 5) ────────────────────────────────────────────────
+// Enregistre un paiement rangé dans la rubrique correspondant au type, en
+// créant la rubrique si elle n'existe pas encore. Renvoie un aperçu pour le PDF.
+export type InvoiceType = "acompte" | "tranche" | "autre";
+
+// Trouve (ou crée) la rubrique cible pour un type de facture.
+async function resolveCategory(
+  svc: ReturnType<typeof service>,
+  schoolId: string,
+  type: InvoiceType,
+  opts: { categoryName?: string; amount: number; currency: string }
+): Promise<string | null> {
+  const { data: cats } = await svc
+    .from("fee_categories")
+    .select("id, name, kind")
+    .eq("school_id", schoolId);
+  const list = (cats ?? []) as any[];
+
+  const defaults: Record<InvoiceType, { name: string; kind: string }> = {
+    acompte: { name: "Acompte", kind: "acompte" },
+    tranche: { name: "Frais de scolarité", kind: "scolarite" },
+    autre: { name: (opts.categoryName || "Autres frais").trim(), kind: "autre" },
+  };
+  const target = defaults[type];
+
+  // Correspondance : par kind pour acompte/tranche, par nom pour « autre ».
+  const found = type === "autre"
+    ? list.find((c) => (c.name ?? "").trim().toLowerCase() === target.name.toLowerCase())
+    : list.find((c) => c.kind === target.kind) ?? list.find((c) => (c.name ?? "").toLowerCase().includes(type === "tranche" ? "scolar" : "acompte"));
+  if (found) return found.id;
+
+  const { count } = await svc.from("fee_categories").select("id", { count: "exact", head: true }).eq("school_id", schoolId);
+  const { data: inserted, error } = await (svc.from("fee_categories").insert as any)({
+    school_id: schoolId, name: target.name, kind: target.kind, amount: opts.amount || 0, currency: opts.currency || "CDF", position: count ?? 0,
+  }).select("id").single();
+  if (error || !inserted) return null;
+  return (inserted as any).id;
+}
+
+export async function createInvoice(input: {
+  studentId: string;
+  type: InvoiceType;
+  label: string;
+  categoryName?: string;   // requis si type === "autre"
+  trancheLabel?: string;   // requis si type === "tranche"
+  amount: number;
+  currency: string;
+  date?: string;
+}): Promise<Result> {
+  if (!input.studentId) return { ok: false, message: "Élève requis." };
+  if (!(input.amount > 0)) return { ok: false, message: "Montant invalide." };
+  if (input.type === "autre" && !input.categoryName?.trim()) return { ok: false, message: "Nom de la rubrique requis." };
+  if (!isLiveMode()) return { ok: true };
+
+  const session = createClient();
+  const { data: { user } } = await session.auth.getUser();
+  if (!user) return { ok: false, message: "Non authentifié." };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+
+  const svc = service();
+  const { data: st } = await svc.from("students").select("id").eq("id", input.studentId).eq("school_id", schoolId).maybeSingle();
+  if (!st) return { ok: false, message: "Élève introuvable." };
+
+  const currency = input.currency || "CDF";
+  const categoryId = await resolveCategory(svc, schoolId, input.type, { categoryName: input.categoryName, amount: input.amount, currency });
+  if (!categoryId) return { ok: false, message: "Rubrique impossible à créer." };
+
+  const date = input.date?.trim() || new Date().toISOString().slice(0, 10);
+  const label = input.label?.trim() || null;
+
+  let error: any = null;
+  if (input.type === "acompte") {
+    ({ error } = await (svc.from("student_advances").insert as any)({
+      school_id: schoolId, student_id: input.studentId, category_id: categoryId,
+      amount: input.amount, currency, note: label,
+    }));
+  } else if (input.type === "tranche") {
+    ({ error } = await (svc.from("student_installments").insert as any)({
+      school_id: schoolId, student_id: input.studentId, category_id: categoryId,
+      label: input.trancheLabel?.trim() || label || "Tranche", amount: input.amount, currency,
+      due_date: date, paid_at: date,
+    }));
+  } else {
+    ({ error } = await (svc.from("student_fee_payments").insert as any)({
+      school_id: schoolId, student_id: input.studentId, category_id: categoryId,
+      amount: input.amount, currency, label, paid_at: date, recorded_by: user.id,
+    }));
+  }
+  if (error) return { ok: false, message: "Enregistrement impossible." };
+
+  revalidatePath("/school/finances");
+  revalidatePath(`/school/students/${input.studentId}`);
+  return { ok: true };
+}
+
+// ── Caisse : dépenses & recettes (point 7) ───────────────────────────
+export async function addCashEntry(input: {
+  kind: "depense" | "recette";
+  amount: number;
+  currency?: string;
+  label: string;
+  entryDate?: string;
+  signatory?: string;
+  note?: string;
+}): Promise<Result> {
+  if (input.kind !== "depense" && input.kind !== "recette") return { ok: false, message: "Type invalide." };
+  if (!(input.amount > 0)) return { ok: false, message: "Montant invalide." };
+  if (!input.label?.trim()) return { ok: false, message: "Libellé requis." };
+  if (!isLiveMode()) return { ok: true };
+  const session = createClient();
+  const { data: { user } } = await session.auth.getUser();
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await (svc.from("cash_entries").insert as any)({
+    school_id: schoolId, kind: input.kind, amount: input.amount, currency: input.currency || "CDF",
+    label: input.label.trim(), entry_date: input.entryDate?.trim() || new Date().toISOString().slice(0, 10),
+    signatory: input.signatory?.trim() || null, note: input.note?.trim() || null, recorded_by: user?.id ?? null,
+  });
+  if (error) return { ok: false, message: "Enregistrement impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+export async function deleteCashEntry(id: string): Promise<Result> {
+  if (!id) return { ok: false, message: "Écriture invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await svc.from("cash_entries").delete().eq("id", id).eq("school_id", schoolId);
+  if (error) return { ok: false, message: "Suppression impossible." };
   revalidatePath("/school/finances");
   return { ok: true };
 }

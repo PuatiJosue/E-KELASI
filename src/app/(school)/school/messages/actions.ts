@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { caller, service } from "@/lib/messages-db";
+import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
 
 export type SchoolThreadMessage = { id: string; body: string; fromSchool: boolean; createdAt: string };
@@ -76,6 +77,39 @@ export async function getSchoolThread(conversationId: string): Promise<SchoolThr
       createdAt: fmtTime(m.created_at),
     })),
   };
+}
+
+// Envoie un rappel de paiement à une sélection de parents (point 3).
+// Utilise la RPC start_conversation (SECURITY DEFINER, migration 0053) via le
+// client de SESSION pour que auth.uid() = directeur : la RPC réutilise ou crée
+// la conversation 1:1 puis insère le message (qui notifie le parent, trigger 0058).
+export async function sendPaymentReminders(
+  parentIds: string[],
+  body: string
+): Promise<{ ok: true; sent: number } | { ok: false; message: string }> {
+  const text = body?.trim();
+  if (!text) return { ok: false, message: "Message vide." };
+  const ids = [...new Set((parentIds ?? []).filter(Boolean))];
+  if (ids.length === 0) return { ok: false, message: "Aucun parent sélectionné." };
+  if (!isLiveMode()) return { ok: true, sent: ids.length };
+
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+
+  const session = createClient();
+  let sent = 0;
+  for (const pid of ids) {
+    const { error } = await (session.rpc as any)("start_conversation", {
+      p_other: pid,
+      p_subject: "Rappel de paiement",
+      p_body: text,
+    });
+    if (!error) sent++;
+  }
+  if (sent === 0) return { ok: false, message: "Envoi impossible." };
+
+  revalidatePath("/school/messages");
+  return { ok: true, sent };
 }
 
 // Répond dans une conversation (en tant que direction).

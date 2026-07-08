@@ -5,15 +5,27 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { Avatar } from "@/components/Avatar";
 import { SexBadge } from "@/components/SexBadge";
+import { ClassPicker } from "@/components/school/ClassPicker";
 import {
   createFeeCategory, updateFeeCategory, deleteFeeCategory, applyCategoryToStudents,
   upsertStudentFee, deleteStudentFee, setStudentFinanceStatus, recordStudentPayment, loadStudentFinance,
   addAdvance, deleteAdvance, addInstallment, toggleInstallmentPaid, deleteInstallment,
+  createInvoice, addCashEntry, deleteCashEntry, type InvoiceType,
 } from "./actions";
 import type {
   FinanceOverview, FeeCategory, FinanceStudentRow, StudentFinanceDetail,
   StudentAdvance, StudentInstallment, PaymentStatus, FinanceStatus,
+  CashEntry, CashSummary,
 } from "@/lib/finance-db";
+
+export type SchoolBranding = {
+  name: string;
+  city: string | null;
+  commune: string | null;
+  logoUrl: string | null;
+  signatureUrl: string | null;
+  directorName: string | null;
+};
 
 const cur = (c: string) => (c === "CDF" ? "FC" : c === "USD" ? "USD" : c);
 const money = (n: number, c = "CDF") => `${Math.round(n).toLocaleString("fr-FR")} ${cur(c)}`;
@@ -24,11 +36,18 @@ const PAY: Record<PaymentStatus, { label: string; bg: string; fg: string }> = {
   non_paye: { label: "Non payé", bg: "rgba(225,29,72,0.12)",  fg: "#E11D48" },
 };
 const STA: Record<FinanceStatus, { label: string; bg: string; fg: string }> = {
-  en_ordre:      { label: "En ordre",      bg: "rgba(22,163,74,0.12)",  fg: "#16A34A" },
-  en_retard:     { label: "En retard",     bg: "rgba(225,29,72,0.12)",  fg: "#E11D48" },
-  insolvable:    { label: "Insolvable",    bg: "rgba(120,53,15,0.12)",  fg: "#92400E" },
-  en_traitement: { label: "En traitement", bg: "rgba(79,102,232,0.12)", fg: "#4F66E8" },
+  en_ordre:   { label: "En ordre",   bg: "rgba(22,163,74,0.12)",  fg: "#16A34A" },
+  non_paye:   { label: "Non payé",   bg: "rgba(225,29,72,0.12)",  fg: "#E11D48" },
+  avance:     { label: "Avance",     bg: "rgba(79,102,232,0.12)", fg: "#4F66E8" },
+  insolvable: { label: "Insolvable", bg: "rgba(120,53,15,0.12)",  fg: "#92400E" },
 };
+
+const STATUS_OPTIONS: { v: FinanceStatus; l: string }[] = [
+  { v: "en_ordre", l: "En ordre" },
+  { v: "non_paye", l: "Non payé" },
+  { v: "avance", l: "Avance" },
+  { v: "insolvable", l: "Insolvable" },
+];
 
 const TABS = [
   { key: "overview", label: "Vue d'ensemble" },
@@ -37,12 +56,14 @@ const TABS = [
   { key: "echeances", label: "Tranches & Échéances" },
   { key: "eleves", label: "Élèves" },
   { key: "insolvabilite", label: "Insolvabilité" },
+  { key: "caisse", label: "Caisse" },
   { key: "rapports", label: "Rapports" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
 export function FinanceDashboard({
   overview, categories, advances, installments, year, classNames,
+  cashEntries, cashSummary, school,
 }: {
   overview: FinanceOverview;
   categories: FeeCategory[];
@@ -50,9 +71,12 @@ export function FinanceDashboard({
   installments: StudentInstallment[];
   year: string;
   classNames: string[];
+  cashEntries: CashEntry[];
+  cashSummary: CashSummary;
+  school: SchoolBranding;
 }) {
   const [tab, setTab] = useState<TabKey>("eleves");
-  const [rubriqueModal, setRubriqueModal] = useState(false);
+  const [invoiceModal, setInvoiceModal] = useState(false);
   const c = overview.currency;
   const k = overview.kpis;
 
@@ -71,8 +95,8 @@ export function FinanceDashboard({
         <select defaultValue={year} style={selStyle}>
           <option>{`Année scolaire ${year}`}</option>
         </select>
-        <button onClick={() => setRubriqueModal(true)} className="ek-btn ek-btn-primary" style={{ height: 40 }}>
-          <Icon name="plus" size={15} stroke={2.5} /> Nouvelle rubrique
+        <button onClick={() => setInvoiceModal(true)} className="ek-btn ek-btn-primary" style={{ height: 40 }}>
+          <Icon name="file" size={15} stroke={2.5} /> Créer une facture
         </button>
       </div>
 
@@ -104,15 +128,16 @@ export function FinanceDashboard({
         })}
       </div>
 
-      {tab === "eleves" && <ElevesTab overview={overview} classNames={classNames} />}
+      {tab === "eleves" && <ElevesTab overview={overview} categories={categories} />}
       {tab === "rubriques" && <RubriquesTab categories={categories} classNames={classNames} />}
       {tab === "overview" && <OverviewTab overview={overview} />}
       {tab === "insolvabilite" && <InsolvabiliteTab overview={overview} />}
+      {tab === "caisse" && <CaisseTab entries={cashEntries} summary={cashSummary} school={school} />}
       {tab === "rapports" && <RapportsTab overview={overview} />}
       {tab === "avances" && <AdvancesTab advances={advances} currency={c} />}
       {tab === "echeances" && <InstallmentsTab installments={installments} currency={c} />}
 
-      {rubriqueModal && <RubriqueModal onClose={() => setRubriqueModal(false)} />}
+      {invoiceModal && <InvoiceModal students={overview.students} categories={categories} school={school} onClose={() => setInvoiceModal(false)} />}
     </div>
   );
 }
@@ -133,27 +158,38 @@ function Kpi({ icon, tint, label, value, sub }: { icon: string; tint: string; la
   );
 }
 
-// ── Onglet Élèves (vue principale de l'image) ────────────────────────
-function ElevesTab({ overview, classNames }: { overview: FinanceOverview; classNames: string[] }) {
+// ── Onglet Élèves (tuiles de classes) ────────────────────────────────
+function ElevesTab({ overview, categories }: { overview: FinanceOverview; categories: FeeCategory[] }) {
   const c = overview.currency;
   const [query, setQuery] = useState("");
-  const [classF, setClassF] = useState("");
+  const [activeClass, setActiveClass] = useState("");
   const [payF, setPayF] = useState<"" | PaymentStatus>("");
   const [statF, setStatF] = useState<"" | FinanceStatus>("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [selected, setSelected] = useState<string | null>(null);
 
+  // Classes (avec effectif) pour les tuiles.
+  const classList = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of overview.students) counts.set(s.className, (counts.get(s.className) ?? 0) + 1);
+    return [...counts.entries()].map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name, "fr", { numeric: true }));
+  }, [overview.students]);
+
+  const q = query.trim().toLowerCase();
+  const cls = activeClass && classList.some((x) => x.name === activeClass) ? activeClass : classList[0]?.name ?? "";
+
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return overview.students.filter((s) => {
-      if (classF && s.className !== classF) return false;
+      if (q) {
+        if (!s.fullName.toLowerCase().includes(q) && !s.matricule.toLowerCase().includes(q) && !s.className.toLowerCase().includes(q)) return false;
+      } else if (s.className !== cls) return false;
       if (payF && s.paymentStatus !== payF) return false;
       if (statF && s.financeStatus !== statF) return false;
-      if (q && !s.fullName.toLowerCase().includes(q) && !s.matricule.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [overview.students, query, classF, payF, statF]);
+  }, [overview.students, q, cls, payF, statF]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const cur = Math.min(page, pages - 1);
@@ -164,21 +200,26 @@ function ElevesTab({ overview, classNames }: { overview: FinanceOverview; classN
 
   return (
     <>
+      {/* Tuiles de classes (masquées pendant une recherche) */}
+      {!q && classList.length > 0 && (
+        <div className="ek-card" style={{ padding: 16 }}>
+          <ClassPicker classes={classList} selected={cls} onSelect={(n) => { setActiveClass(n); setPage(0); }} />
+        </div>
+      )}
+
       {/* Barre d'outils */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--ink-3)", display: "flex" }}>
             <Icon name="search" size={15} />
           </span>
-          <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} placeholder="Rechercher un élève (nom, code…)"
+          <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} placeholder="Rechercher un élève (nom, code, classe…)"
             style={{ width: "100%", padding: "9px 12px 9px 34px", borderRadius: 9, border: "1px solid var(--border-strong)", background: "var(--surface)", fontSize: 13, color: "var(--ink)" }} />
         </div>
-        <Select label="Classe" value={classF} onChange={(v) => { setClassF(v); setPage(0); }}
-          options={[{ v: "", l: "Toutes" }, ...classNames.map((n) => ({ v: n, l: n }))]} />
         <Select label="Statut de paiement" value={payF} onChange={(v) => { setPayF(v as any); setPage(0); }}
           options={[{ v: "", l: "Tous" }, { v: "paye", l: "Payé" }, { v: "partiel", l: "Partiel" }, { v: "non_paye", l: "Non payé" }]} />
         <Select label="Statut" value={statF} onChange={(v) => { setStatF(v as any); setPage(0); }}
-          options={[{ v: "", l: "Tous" }, { v: "en_ordre", l: "En ordre" }, { v: "en_retard", l: "En retard" }, { v: "insolvable", l: "Insolvable" }, { v: "en_traitement", l: "En traitement" }]} />
+          options={[{ v: "", l: "Tous" }, ...STATUS_OPTIONS.map((o) => ({ v: o.v, l: o.l }))]} />
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button onClick={exportPdf} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5 }}>
             <Icon name="file" size={14} /> PDF
@@ -257,7 +298,7 @@ function ElevesTab({ overview, classNames }: { overview: FinanceOverview; classN
       </div>
 
       {/* Panneau détail */}
-      {selected && <DetailPanel studentId={selected} currency={c} />}
+      {selected && <DetailPanel studentId={selected} currency={c} categories={categories} />}
 
       <style>{`@media (max-width: 980px){ .ek-fin-grid{ grid-template-columns: 1fr !important; } }`}</style>
     </>
@@ -294,15 +335,14 @@ function RightPanel({ overview, selected }: { overview: FinanceOverview; selecte
   const segs = [
     { label: "Payés", value: d.paid, color: "#16A34A" },
     { label: "Partiels", value: d.partial, color: "#D97706" },
-    { label: "En retard", value: d.late, color: "#E11D48" },
-    { label: "Non payés", value: d.unpaid, color: "#94A3B8" },
+    { label: "Non payés", value: d.unpaid, color: "#E11D48" },
   ];
   const s = overview.situation;
   const sit = [
     { label: "En ordre", value: s.enOrdre, color: "#16A34A" },
-    { label: "En retard", value: s.enRetard, color: "#E11D48" },
+    { label: "Non payés", value: s.nonPaye, color: "#E11D48" },
+    { label: "Avance", value: s.avance, color: "#4F66E8" },
     { label: "Insolvables", value: s.insolvable, color: "#92400E" },
-    { label: "En traitement", value: s.enTraitement, color: "#4F66E8" },
   ];
 
   const act = (status: FinanceStatus) => {
@@ -354,12 +394,13 @@ function RightPanel({ overview, selected }: { overview: FinanceOverview; selecte
       <div className="ek-card" style={{ padding: 16 }}>
         <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)", marginBottom: 10 }}>Actions rapides</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-          <QuickAction icon="flag" label="Marquer un élève en insolvabilité" onClick={() => act("insolvable")} disabled={pending} />
-          <QuickAction icon="check" label="Retirer l'insolvabilité" onClick={() => act("en_ordre")} disabled={pending} />
-          <QuickAction icon="bell" label="Envoyer un rappel de paiement" onClick={() => act("en_retard")} disabled={pending} />
-          <QuickAction icon="file" label="Voir les dettes par élève" onClick={() => act("en_traitement")} disabled={pending} />
+          <QuickAction icon="check" label="Marquer « En ordre »" onClick={() => act("en_ordre")} disabled={pending} />
+          <QuickAction icon="clock" label="Marquer « Non payé »" onClick={() => act("non_paye")} disabled={pending} />
+          <QuickAction icon="creditcard" label="Marquer « Avance »" onClick={() => act("avance")} disabled={pending} />
+          <QuickAction icon="flag" label="Marquer en insolvabilité" onClick={() => act("insolvable")} disabled={pending} />
+          <QuickAction icon="bell" label="Envoyer un rappel de paiement" onClick={() => router.push("/school/messages?compose=reminder")} disabled={pending} />
         </div>
-        {!selected && <div style={{ fontSize: 10.5, color: "var(--ink-3)", marginTop: 8 }}>Sélectionnez un élève dans la liste pour ces actions.</div>}
+        {!selected && <div style={{ fontSize: 10.5, color: "var(--ink-3)", marginTop: 8 }}>Sélectionnez un élève pour changer son statut. Le rappel ouvre la messagerie.</div>}
       </div>
     </div>
   );
@@ -396,7 +437,7 @@ function Donut({ segments }: { segments: { label: string; value: number; color: 
 }
 
 // ── Panneau détail (bas) ─────────────────────────────────────────────
-function DetailPanel({ studentId, currency }: { studentId: string; currency: string }) {
+function DetailPanel({ studentId, currency, categories }: { studentId: string; currency: string; categories: FeeCategory[] }) {
   const router = useRouter();
   const [detail, setDetail] = useState<StudentFinanceDetail | null>(null);
   const [subtab, setSubtab] = useState<"frais" | "echeances" | "paiements" | "avances" | "historique">("frais");
@@ -429,7 +470,9 @@ function DetailPanel({ studentId, currency }: { studentId: string; currency: str
           </div>
           <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>Classe : {s.className} · Parent : {s.parentName}{s.parentPhone ? ` · ${s.parentPhone}` : ""}</div>
         </div>
-        <div style={{ marginLeft: "auto" }}><Chip meta={STA[s.financeStatus]} /></div>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <StatusSelect studentId={studentId} value={s.financeStatus} onChanged={() => { reload(); router.refresh(); }} />
+        </div>
       </div>
 
       {/* Résumé chiffres */}
@@ -550,9 +593,25 @@ function DetailPanel({ studentId, currency }: { studentId: string; currency: str
 
       {feeForm && <FeeModal studentId={studentId} onClose={() => setFeeForm(false)} onDone={() => { setFeeForm(false); reload(); }} />}
       {payForm && <PaymentModal studentId={studentId} onClose={() => setPayForm(false)} onDone={() => { setPayForm(false); reload(); router.refresh(); }} />}
-      {advForm && <AdvanceModal studentId={studentId} onClose={() => setAdvForm(false)} onDone={() => { setAdvForm(false); reload(); router.refresh(); }} />}
-      {instForm && <InstallmentModal studentId={studentId} onClose={() => setInstForm(false)} onDone={() => { setInstForm(false); reload(); router.refresh(); }} />}
+      {advForm && <AdvanceModal studentId={studentId} categories={categories} onClose={() => setAdvForm(false)} onDone={() => { setAdvForm(false); reload(); router.refresh(); }} />}
+      {instForm && <InstallmentModal studentId={studentId} categories={categories} onClose={() => setInstForm(false)} onDone={() => { setInstForm(false); reload(); router.refresh(); }} />}
     </div>
+  );
+}
+
+// Sélecteur de statut financier de l'élève (En ordre / Non payé / Avance / Insolvable).
+function StatusSelect({ studentId, value, onChanged }: { studentId: string; value: FinanceStatus; onChanged: () => void }) {
+  const [pending, start] = useTransition();
+  const meta = STA[value];
+  return (
+    <select
+      value={value}
+      disabled={pending}
+      onChange={(e) => { const v = e.target.value as FinanceStatus; start(async () => { const r = await setStudentFinanceStatus(studentId, v); if (r.ok) onChanged(); else alert(r.message); }); }}
+      style={{ height: 30, padding: "0 8px", borderRadius: 999, border: `1px solid ${meta.fg}`, background: meta.bg, color: meta.fg, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+    >
+      {STATUS_OPTIONS.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+    </select>
   );
 }
 
@@ -672,19 +731,32 @@ function InstallmentsTab({ installments, currency }: { installments: StudentInst
   );
 }
 
-function AdvanceModal({ studentId, onClose, onDone }: { studentId: string; onClose: () => void; onDone: () => void }) {
+function AdvanceModal({ studentId, categories, onClose, onDone }: { studentId: string; categories: FeeCategory[]; onClose: () => void; onDone: () => void }) {
   const [pending, start] = useTransition();
+  const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("CDF");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Préremplit le montant depuis la rubrique choisie (montant par défaut).
+  const pickCategory = (id: string) => {
+    setCategoryId(id);
+    const cat = categories.find((c) => c.id === id);
+    if (cat) { setAmount(String(cat.amount)); setCurrency(cat.currency); }
+  };
   const submit = () => {
     const amt = parseFloat(amount.replace(",", ".")) || 0;
     if (!(amt > 0)) { setError("Montant invalide."); return; }
-    start(async () => { const r = await addAdvance({ studentId, amount: amt, currency, note }); if (r.ok) onDone(); else setError(r.message); });
+    start(async () => { const r = await addAdvance({ studentId, categoryId: categoryId || null, amount: amt, currency, note }); if (r.ok) onDone(); else setError(r.message); });
   };
   return (
     <Modal title="Avance / acompte" onClose={onClose}>
+      <Labeled label="Rubrique (optionnel)">
+        <select value={categoryId} onChange={(e) => pickCategory(e.target.value)} style={modalInp}>
+          <option value="">Général</option>
+          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </Labeled>
       <div style={{ display: "flex", gap: 10 }}>
         <Labeled label="Montant" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="10000" style={modalInp} /></Labeled>
         <Labeled label="Devise" style={{ width: 110 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
@@ -696,20 +768,32 @@ function AdvanceModal({ studentId, onClose, onDone }: { studentId: string; onClo
   );
 }
 
-function InstallmentModal({ studentId, onClose, onDone }: { studentId: string; onClose: () => void; onDone: () => void }) {
+function InstallmentModal({ studentId, categories, onClose, onDone }: { studentId: string; categories: FeeCategory[]; onClose: () => void; onDone: () => void }) {
   const [pending, start] = useTransition();
+  const [categoryId, setCategoryId] = useState("");
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("CDF");
   const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const pickCategory = (id: string) => {
+    setCategoryId(id);
+    const cat = categories.find((c) => c.id === id);
+    if (cat) { setAmount(String(cat.amount)); setCurrency(cat.currency); }
+  };
   const submit = () => {
     const amt = parseFloat(amount.replace(",", ".")) || 0;
     if (!(amt > 0)) { setError("Montant invalide."); return; }
-    start(async () => { const r = await addInstallment({ studentId, label: label || "Tranche", amount: amt, currency, dueDate }); if (r.ok) onDone(); else setError(r.message); });
+    start(async () => { const r = await addInstallment({ studentId, categoryId: categoryId || null, label: label || "Tranche", amount: amt, currency, dueDate }); if (r.ok) onDone(); else setError(r.message); });
   };
   return (
     <Modal title="Tranche / échéance" onClose={onClose}>
+      <Labeled label="Rubrique (optionnel)">
+        <select value={categoryId} onChange={(e) => pickCategory(e.target.value)} style={modalInp}>
+          <option value="">Général</option>
+          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </Labeled>
       <Labeled label="Libellé"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Tranche 1 — scolarité" style={modalInp} /></Labeled>
       <div style={{ display: "flex", gap: 10 }}>
         <Labeled label="Montant" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="25000" style={modalInp} /></Labeled>
@@ -781,22 +865,62 @@ function OverviewTab({ overview }: { overview: FinanceOverview }) {
   );
 }
 
-// ── Onglet Insolvabilité ─────────────────────────────────────────────
+// ── Onglet Insolvabilité (par classe) ────────────────────────────────
 function InsolvabiliteTab({ overview }: { overview: FinanceOverview }) {
-  const rows = overview.students.filter((s) => s.financeStatus === "insolvable");
+  const c = overview.currency;
+  const [classF, setClassF] = useState("");
+  const all = overview.students.filter((s) => s.financeStatus === "insolvable");
+  const classNames = [...new Set(all.map((s) => s.className))].sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
+  const rows = classF ? all.filter((s) => s.className === classF) : all;
+
+  // Regroupement par classe.
+  const byClass = new Map<string, FinanceStudentRow[]>();
+  for (const s of rows) { if (!byClass.has(s.className)) byClass.set(s.className, []); byClass.get(s.className)!.push(s); }
+  const groups = [...byClass.entries()].sort((a, b) => a[0].localeCompare(b[0], "fr", { numeric: true }));
+  const grandTotal = rows.reduce((a, s) => a + s.remaining, 0);
+
   return (
-    <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--divider)", fontSize: 13.5, fontWeight: 700 }}>Élèves en insolvabilité ({rows.length})</div>
-      {rows.length === 0 ? (
-        <div style={{ padding: 30, textAlign: "center", color: "var(--ink-3)", fontSize: 12.5 }}>Aucun élève marqué en insolvabilité.</div>
-      ) : rows.map((s, i) => (
-        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", borderTop: i > 0 ? "1px solid var(--divider)" : "none", fontSize: 12.5 }}>
-          <Avatar name={s.fullName} url={s.avatarUrl} size={30} />
-          <div style={{ flex: 1 }}><span style={{ fontWeight: 600 }}>{s.fullName}</span> <span style={{ color: "var(--ink-3)" }}>· {s.className}</span></div>
-          <span style={{ color: "#E11D48", fontWeight: 700 }}>{money(s.remaining, overview.currency)}</span>
-          <InsolvableToggle studentId={s.id} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <Select label="Classe" value={classF} onChange={setClassF}
+          options={[{ v: "", l: "Toutes" }, ...classNames.map((n) => ({ v: n, l: n }))]} />
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button onClick={() => exportInsolvablesPdf(rows, c)} disabled={rows.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: rows.length === 0 ? 0.5 : 1 }}><Icon name="file" size={14} /> PDF</button>
+          <button onClick={() => exportInsolvablesCsv(rows, c)} disabled={rows.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: rows.length === 0 ? 0.5 : 1 }}><Icon name="download" size={14} /> Excel</button>
         </div>
-      ))}
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="ek-card" style={{ padding: 30, textAlign: "center", color: "var(--ink-3)", fontSize: 12.5 }}>Aucun élève marqué en insolvabilité.</div>
+      ) : groups.map(([className, list]) => {
+        const total = list.reduce((a, s) => a + s.remaining, 0);
+        return (
+          <div key={className} className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center", fontSize: 13, fontWeight: 700 }}>
+              <span style={{ flex: 1 }}>{className} ({list.length})</span>
+              <span style={{ color: "#E11D48" }}>{money(total, c)}</span>
+            </div>
+            {list.map((s, i) => (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", borderTop: i > 0 ? "1px solid var(--divider)" : "none", fontSize: 12.5 }}>
+                <Avatar name={s.fullName} url={s.avatarUrl} size={30} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontWeight: 600 }}>{s.fullName}</span>
+                  <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{s.parentName}{s.parentPhone ? ` · ${s.parentPhone}` : ""}</div>
+                </div>
+                <span style={{ color: "#E11D48", fontWeight: 700 }}>{money(s.remaining, c)}</span>
+                <InsolvableToggle studentId={s.id} />
+              </div>
+            ))}
+          </div>
+        );
+      })}
+
+      {rows.length > 0 && (
+        <div className="ek-card" style={{ padding: "12px 16px", display: "flex", alignItems: "center", fontSize: 13, fontWeight: 800 }}>
+          <span style={{ flex: 1 }}>Total insolvabilité ({rows.length} élève(s))</span>
+          <span style={{ color: "#E11D48" }}>{money(grandTotal, c)}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -811,18 +935,28 @@ function InsolvableToggle({ studentId }: { studentId: string }) {
   );
 }
 
-// ── Onglet Rapports (export + calculatrice) ──────────────────────────
+// ── Onglet Rapports (export global + par classe + calculatrice) ──────
 function RapportsTab({ overview }: { overview: FinanceOverview }) {
   const c = overview.currency;
+  const [classF, setClassF] = useState("");
+  const classNames = [...new Set(overview.students.map((s) => s.className))].sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
+  const rows = classF ? overview.students.filter((s) => s.className === classF) : overview.students;
+  const scopeLabel = classF || "Toutes les classes";
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: 16 }}>
       <div className="ek-card" style={{ padding: 18 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 6 }}>Exporter les données</div>
-        <p style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 14 }}>Téléchargez la liste des élèves et leur situation financière.</p>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button onClick={() => exportStudentsCsv(overview.students, c)} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5 }}><Icon name="download" size={14} /> Excel (CSV)</button>
-          <button onClick={() => exportStudentsPdf(overview.students, c)} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5 }}><Icon name="file" size={14} /> PDF</button>
+        <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 6 }}>Rapport de frais par classe</div>
+        <p style={{ fontSize: 12, color: "var(--ink-3)", marginBottom: 12 }}>Choisissez une classe (ou toutes) puis exportez la situation financière, groupée par classe avec sous-totaux.</p>
+        <div style={{ marginBottom: 12 }}>
+          <Select label="Classe" value={classF} onChange={setClassF}
+            options={[{ v: "", l: "Toutes les classes" }, ...classNames.map((n) => ({ v: n, l: n }))]} />
         </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button onClick={() => exportByClassCsv(rows, c, scopeLabel)} disabled={rows.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: rows.length === 0 ? 0.5 : 1 }}><Icon name="download" size={14} /> Excel (CSV)</button>
+          <button onClick={() => exportByClassPdf(rows, c, scopeLabel)} disabled={rows.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: rows.length === 0 ? 0.5 : 1 }}><Icon name="file" size={14} /> PDF</button>
+        </div>
+        <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 10 }}>{rows.length} élève(s) · {scopeLabel}</div>
       </div>
       <Calculator currency={c} />
     </div>
@@ -983,6 +1117,242 @@ function PaymentModal({ studentId, onClose, onDone }: { studentId: string; onClo
   );
 }
 
+// ── Facture (point 5) ────────────────────────────────────────────────
+const INVOICE_TYPES: { v: InvoiceType; l: string }[] = [
+  { v: "acompte", l: "Acompte / avance" },
+  { v: "tranche", l: "Tranche (frais de scolarité)" },
+  { v: "autre", l: "Autre frais" },
+];
+
+function InvoiceModal({ students, categories, school, onClose }: { students: FinanceStudentRow[]; categories: FeeCategory[]; school: SchoolBranding; onClose: () => void }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [q, setQ] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [type, setType] = useState<InvoiceType>("acompte");
+  const [label, setLabel] = useState("");
+  const [categoryName, setCategoryName] = useState("");
+  const [trancheLabel, setTrancheLabel] = useState("");
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("CDF");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [error, setError] = useState<string | null>(null);
+
+  const student = students.find((s) => s.id === studentId) ?? null;
+  const matches = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    if (!query) return [];
+    return students.filter((s) => s.fullName.toLowerCase().includes(query) || s.matricule.toLowerCase().includes(query) || s.className.toLowerCase().includes(query)).slice(0, 8);
+  }, [students, q]);
+
+  // Préremplit le montant depuis la rubrique correspondant au type.
+  const prefillFor = (t: InvoiceType) => {
+    const cat = t === "acompte"
+      ? categories.find((c) => (c as any).kind === "acompte") ?? categories.find((c) => c.name.toLowerCase().includes("acompte"))
+      : t === "tranche"
+        ? categories.find((c) => (c as any).kind === "scolarite") ?? categories.find((c) => c.name.toLowerCase().includes("scolar"))
+        : null;
+    if (cat) { setAmount(String(cat.amount)); setCurrency(cat.currency); }
+  };
+
+  const submit = () => {
+    if (!studentId) { setError("Sélectionnez un élève."); return; }
+    if (type === "autre" && !categoryName.trim()) { setError("Nom de la rubrique requis."); return; }
+    const amt = parseFloat(amount.replace(",", ".")) || 0;
+    if (!(amt > 0)) { setError("Montant invalide."); return; }
+    start(async () => {
+      const r = await createInvoice({ studentId, type, label, categoryName, trancheLabel, amount: amt, currency, date });
+      if (!r.ok) { setError(r.message); return; }
+      if (student) buildInvoiceHtml(student, { type, label, categoryName, trancheLabel, amount: amt, currency, date }, school);
+      onClose();
+      router.refresh();
+    });
+  };
+
+  return (
+    <Modal title="Créer une facture" onClose={onClose}>
+      <Labeled label="Élève">
+        {student ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 11px", borderRadius: 9, border: "1px solid var(--border-strong)", background: "var(--surface)" }}>
+            <Avatar name={student.fullName} url={student.avatarUrl} size={26} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ fontWeight: 600, fontSize: 12.5 }}>{student.fullName}</span><SexBadge sex={student.sex} size={13} /></div>
+              <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{student.className} · {student.matricule}</div>
+            </div>
+            <button onClick={() => { setStudentId(""); setQ(""); }} style={iconBtn} title="Changer"><Icon name="close" size={14} /></button>
+          </div>
+        ) : (
+          <div style={{ position: "relative" }}>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un élève (nom, code, classe)…" style={modalInp} />
+            {matches.length > 0 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 5, marginTop: 4, background: "var(--surface)", border: "1px solid var(--border-strong)", borderRadius: 9, overflow: "hidden", maxHeight: 220, overflowY: "auto" }}>
+                {matches.map((s) => (
+                  <button key={s.id} onClick={() => { setStudentId(s.id); setQ(""); }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", padding: "8px 10px", border: "none", background: "none", cursor: "pointer", fontSize: 12.5 }}>
+                    <Avatar name={s.fullName} url={s.avatarUrl} size={24} />
+                    <span style={{ flex: 1, minWidth: 0 }}><span style={{ fontWeight: 600 }}>{s.fullName}</span> <span style={{ color: "var(--ink-3)" }}>· {s.className}</span></span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Labeled>
+
+      <Labeled label="Type de frais">
+        <select value={type} onChange={(e) => { const t = e.target.value as InvoiceType; setType(t); prefillFor(t); }} style={modalInp}>
+          {INVOICE_TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}
+        </select>
+      </Labeled>
+
+      {type === "autre" && (
+        <Labeled label="Nom de la rubrique"><input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="Frais de transport…" style={modalInp} /></Labeled>
+      )}
+      {type === "tranche" && (
+        <Labeled label="Tranche (n° / libellé)"><input value={trancheLabel} onChange={(e) => setTrancheLabel(e.target.value)} placeholder="Tranche 1" style={modalInp} /></Labeled>
+      )}
+
+      <Labeled label="Libellé"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Objet de la facture" style={modalInp} /></Labeled>
+      <div style={{ display: "flex", gap: 10 }}>
+        <Labeled label="Montant payé" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="50000" style={modalInp} /></Labeled>
+        <Labeled label="Devise" style={{ width: 100 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
+      </div>
+      <Labeled label="Date"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={modalInp} /></Labeled>
+      {error && <div style={errBox}>{error}</div>}
+      <ModalActions onClose={onClose} onSubmit={submit} pending={pending} submitLabel="Enregistrer & imprimer" />
+    </Modal>
+  );
+}
+
+// Construit une facture imprimable (fenêtre d'impression → PDF).
+function buildInvoiceHtml(
+  s: FinanceStudentRow,
+  inv: { type: InvoiceType; label: string; categoryName: string; trancheLabel: string; amount: number; currency: string; date: string },
+  school: SchoolBranding
+) {
+  const rubrique = inv.type === "acompte" ? "Acompte / avance" : inv.type === "tranche" ? `Tranche${inv.trancheLabel ? ` — ${inv.trancheLabel}` : ""}` : (inv.categoryName || "Autre frais");
+  const sexe = s.sex === "M" ? "Masculin" : s.sex === "F" ? "Féminin" : "—";
+  const dateFr = inv.date ? new Date(inv.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "—";
+  const sub = [school.commune, school.city].filter(Boolean).join(", ");
+  const num = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const logo = school.logoUrl ? `<img src="${escHtml(school.logoUrl)}" style="height:54px;object-fit:contain" />` : "";
+  const sign = school.signatureUrl ? `<img src="${escHtml(school.signatureUrl)}" style="height:46px;object-fit:contain;display:block" />` : "";
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Facture ${num}</title><style>*{font-family:Arial,sans-serif;box-sizing:border-box}body{margin:32px;color:#1a1410}.head{display:flex;align-items:center;gap:16px;border-bottom:2px solid #1D6650;padding-bottom:14px;margin-bottom:18px}.head .n{font-size:20px;font-weight:800}.head .s{font-size:12px;color:#6b5f52}.title{margin-left:auto;text-align:right}.title .t{font-size:22px;font-weight:800;color:#1D6650;letter-spacing:.05em}.title .d{font-size:12px;color:#6b5f52}.stu{display:flex;justify-content:space-between;gap:16px;background:#F4EFE3;border-radius:10px;padding:14px 16px;margin-bottom:18px}.lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#8a7c6e;font-weight:600}.val{font-size:14px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}th{background:#1D6650;color:#fff;text-align:left;padding:9px 10px;font-size:11px;text-transform:uppercase}td{padding:9px 10px;border-bottom:1px solid #ECE3D2}.r{text-align:right}.amount{font-size:20px;font-weight:800;color:#1D6650}.sig{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:36px;padding-top:16px;border-top:1px solid #ECE3D2}.foot{margin-top:26px;font-size:10px;color:#b5a99a;text-align:center}</style></head><body>
+<div class="head">${logo}<div><div class="n">${escHtml(school.name)}</div><div class="s">${escHtml(sub)}</div></div><div class="title"><div class="t">FACTURE</div><div class="d">N° ${num} · ${escHtml(dateFr)}</div></div></div>
+<div class="stu"><div><div class="lbl">Élève</div><div class="val">${escHtml(s.fullName)}</div><div class="s" style="font-size:12px;color:#6b5f52">Sexe : ${sexe} · Classe : ${escHtml(s.className)}</div></div><div style="text-align:right"><div class="lbl">Montant payé</div><div class="amount">${money(inv.amount, inv.currency)}</div></div></div>
+<table><thead><tr><th>Libellé</th><th>Rubrique</th><th class="r">Montant</th><th class="r">Date</th></tr></thead><tbody><tr><td>${escHtml(inv.label || rubrique)}</td><td>${escHtml(rubrique)}</td><td class="r">${money(inv.amount, inv.currency)}</td><td class="r">${escHtml(dateFr)}</td></tr></tbody></table>
+<div class="sig"><div><div class="lbl">Cachet &amp; signature</div>${sign}<div style="border-bottom:1px solid #1a1410;padding-bottom:4px;font-size:11.5px;font-weight:600;margin-top:4px">${escHtml(school.directorName || "La direction")}</div></div><div style="text-align:right"><div class="lbl">Reçu par le parent</div><div style="height:46px"></div><div style="border-bottom:1px solid #1a1410"></div></div></div>
+<div class="foot">Facture générée via E-KELASI · ${escHtml(new Date().toLocaleDateString("fr-FR"))}</div>
+<script>window.onload=function(){window.print()}</script></body></html>`;
+  openPrint(html);
+}
+
+// ── Onglet Caisse : dépenses & recettes (point 7) ────────────────────
+function CaisseTab({ entries, summary, school }: { entries: CashEntry[]; summary: CashSummary; school: SchoolBranding }) {
+  const router = useRouter();
+  const [form, setForm] = useState<null | "depense" | "recette">(null);
+  const c = summary.currency;
+  const depenses = entries.filter((e) => e.kind === "depense");
+  const recettes = entries.filter((e) => e.kind === "recette");
+
+  const Section = ({ title, rows, tint, kind }: { title: string; rows: CashEntry[]; tint: string; kind: "depense" | "recette" }) => (
+    <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: tint, flex: 1 }}>{title} ({rows.length})</span>
+        <button onClick={() => setForm(kind)} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 11.5 }}><Icon name="plus" size={12} /> Ajouter</button>
+      </div>
+      {rows.length === 0 ? <div style={{ padding: 18, textAlign: "center", color: "var(--ink-3)", fontSize: 12 }}>—</div> : rows.map((e, i) => (
+        <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderTop: i > 0 ? "1px solid var(--divider)" : "none", fontSize: 12.5 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: 600 }}>{e.label}</span>
+            <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{new Date(e.entryDate).toLocaleDateString("fr-FR")}{e.signatory ? ` · ${e.signatory}` : ""}</div>
+          </div>
+          <span style={{ fontWeight: 700, color: tint }}>{money(e.amount, e.currency)}</span>
+          <CashDelete id={e.id} />
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
+        <Kpi icon="download" tint="#16A34A" label="Total recettes" value={money(summary.recettes, c)} sub="Entrées de caisse" />
+        <Kpi icon="upload" tint="#E11D48" label="Total dépenses" value={money(summary.depenses, c)} sub="Sorties de caisse" />
+        <Kpi icon="dollar" tint={summary.solde >= 0 ? "#16A34A" : "#E11D48"} label="Solde" value={money(summary.solde, c)} sub="Recettes − Dépenses" />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <button onClick={() => exportCashPdf(entries, summary, school)} disabled={entries.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: entries.length === 0 ? 0.5 : 1 }}><Icon name="file" size={14} /> Rapport PDF</button>
+        <button onClick={() => exportCashCsv(entries, summary)} disabled={entries.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: entries.length === 0 ? 0.5 : 1 }}><Icon name="download" size={14} /> Excel (CSV)</button>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }} className="ek-fin-grid">
+        <Section title="Recettes" rows={recettes} tint="#16A34A" kind="recette" />
+        <Section title="Dépenses" rows={depenses} tint="#E11D48" kind="depense" />
+      </div>
+
+      {form && <CashEntryModal kind={form} defaultSignatory={school.directorName ?? ""} onClose={() => setForm(null)} onDone={() => { setForm(null); router.refresh(); }} />}
+      <style>{`@media (max-width: 760px){ .ek-fin-grid{ grid-template-columns: 1fr !important; } }`}</style>
+    </div>
+  );
+}
+
+function CashDelete({ id }: { id: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <button onClick={() => { if (confirm("Supprimer cette écriture ?")) start(async () => { await deleteCashEntry(id); router.refresh(); }); }} disabled={pending} title="Supprimer" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-3)", padding: 4, display: "flex" }}>
+      <Icon name="trash" size={13} />
+    </button>
+  );
+}
+
+function CashEntryModal({ kind, defaultSignatory, onClose, onDone }: { kind: "depense" | "recette"; defaultSignatory: string; onClose: () => void; onDone: () => void }) {
+  const [pending, start] = useTransition();
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("CDF");
+  const [labelTxt, setLabelTxt] = useState("");
+  const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
+  const [signatory, setSignatory] = useState(defaultSignatory);
+  const [error, setError] = useState<string | null>(null);
+  const submit = () => {
+    const amt = parseFloat(amount.replace(",", ".")) || 0;
+    if (!(amt > 0)) { setError("Montant invalide."); return; }
+    if (!labelTxt.trim()) { setError("Libellé requis."); return; }
+    start(async () => { const r = await addCashEntry({ kind, amount: amt, currency, label: labelTxt, entryDate, signatory }); if (r.ok) onDone(); else setError(r.message); });
+  };
+  return (
+    <Modal title={kind === "recette" ? "Nouvelle recette" : "Nouvelle dépense"} onClose={onClose}>
+      <Labeled label="Libellé"><input value={labelTxt} onChange={(e) => setLabelTxt(e.target.value)} placeholder={kind === "recette" ? "Encaissement scolarité…" : "Achat fournitures…"} style={modalInp} /></Labeled>
+      <div style={{ display: "flex", gap: 10 }}>
+        <Labeled label="Montant" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="50000" style={modalInp} /></Labeled>
+        <Labeled label="Devise" style={{ width: 100 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
+      </div>
+      <Labeled label="Date"><input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} style={modalInp} /></Labeled>
+      <Labeled label="Signataire"><input value={signatory} onChange={(e) => setSignatory(e.target.value)} placeholder="La direction" style={modalInp} /></Labeled>
+      {error && <div style={errBox}>{error}</div>}
+      <ModalActions onClose={onClose} onSubmit={submit} pending={pending} />
+    </Modal>
+  );
+}
+
+function exportCashCsv(entries: CashEntry[], summary: CashSummary) {
+  const lines: (string | number)[][] = [["Journal de caisse"], [], ["Type", "Date", "Libellé", "Signataire", "Montant"]];
+  for (const e of entries) lines.push([e.kind === "recette" ? "Recette" : "Dépense", e.entryDate, e.label, e.signatory ?? "", Math.round(e.amount)]);
+  lines.push([]);
+  lines.push(["Total recettes", "", "", "", Math.round(summary.recettes)]);
+  lines.push(["Total dépenses", "", "", "", Math.round(summary.depenses)]);
+  lines.push(["Solde", "", "", "", Math.round(summary.solde)]);
+  downloadCsv(lines, "journal-de-caisse.csv");
+}
+
+function exportCashPdf(entries: CashEntry[], summary: CashSummary, school: SchoolBranding) {
+  const c = summary.currency;
+  const body = entries.map((e) => `<tr><td>${e.kind === "recette" ? "Recette" : "Dépense"}</td><td>${escHtml(new Date(e.entryDate).toLocaleDateString("fr-FR"))}</td><td>${escHtml(e.label)}</td><td>${escHtml(e.signatory ?? "")}</td><td class="r" style="color:${e.kind === "recette" ? "#16A34A" : "#E11D48"}">${money(e.amount, e.currency)}</td></tr>`).join("");
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Journal de caisse</title><style>*{font-family:Arial,sans-serif}body{margin:28px;color:#1a1a2e}h1{font-size:18px;margin:0 0 4px}.sub{color:#666;font-size:12px;margin-bottom:12px}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#1D6650;color:#fff;text-align:left;padding:7px 8px;font-size:10px;text-transform:uppercase}td{padding:6px 8px;border-bottom:1px solid #e5e7eb}.r{text-align:right}.tot{margin-top:14px;font-size:13px}.tot div{display:flex;justify-content:space-between;padding:3px 0;max-width:320px;margin-left:auto}.tot .solde{font-weight:800;border-top:2px solid #1D6650;padding-top:6px}</style></head><body><h1>Journal de caisse</h1><div class="sub">${escHtml(school.name)} · ${escHtml(new Date().toLocaleDateString("fr-FR"))}</div><table><thead><tr><th>Type</th><th>Date</th><th>Libellé</th><th>Signataire</th><th class="r">Montant</th></tr></thead><tbody>${body}</tbody></table><div class="tot"><div><span>Total recettes</span><span style="color:#16A34A">${money(summary.recettes, c)}</span></div><div><span>Total dépenses</span><span style="color:#E11D48">${money(summary.depenses, c)}</span></div><div class="solde"><span>Solde</span><span>${money(summary.solde, c)}</span></div></div><script>window.onload=function(){window.print()}</script></body></html>`;
+  openPrint(html);
+}
+
 // ── Helpers UI ───────────────────────────────────────────────────────
 function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { v: string; l: string }[] }) {
   return (
@@ -1043,6 +1413,72 @@ function exportStudentsPdf(rows: FinanceStudentRow[], c: string) {
   const w = window.open("", "_blank");
   if (!w) { alert("Autorisez les fenêtres pop-up pour générer le PDF."); return; }
   w.document.write(html); w.document.close();
+}
+
+const escHtml = (s: string) => String(s).replace(/[&<>"]/g, (x) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[x]!));
+function groupByClass(rows: FinanceStudentRow[]): [string, FinanceStudentRow[]][] {
+  const m = new Map<string, FinanceStudentRow[]>();
+  for (const s of rows) { if (!m.has(s.className)) m.set(s.className, []); m.get(s.className)!.push(s); }
+  return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], "fr", { numeric: true }));
+}
+function downloadCsv(lines: (string | number)[][], name: string) {
+  const csv = lines.map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+function openPrint(html: string) {
+  const w = window.open("", "_blank");
+  if (!w) { alert("Autorisez les fenêtres pop-up pour générer le PDF."); return; }
+  w.document.write(html); w.document.close();
+}
+
+// Rapport de frais groupé par classe (CSV) avec sous-totaux.
+function exportByClassCsv(rows: FinanceStudentRow[], c: string, scope: string) {
+  const lines: (string | number)[][] = [["Rapport de frais", scope], [], ["Classe", "Code", "Élève", "Sexe", "Parent", "Total dû", "Payé", "Reste", "Statut paiement", "Statut"]];
+  let gDue = 0, gPaid = 0, gRem = 0;
+  for (const [cls, list] of groupByClass(rows)) {
+    let due = 0, paid = 0, rem = 0;
+    for (const s of list) { lines.push([cls, s.matricule, s.fullName, s.sex ?? "", s.parentName, Math.round(s.totalDue), Math.round(s.paid), Math.round(s.remaining), PAY[s.paymentStatus].label, STA[s.financeStatus].label]); due += s.totalDue; paid += s.paid; rem += s.remaining; }
+    lines.push([`Sous-total ${cls}`, "", "", "", "", Math.round(due), Math.round(paid), Math.round(rem), "", ""]);
+    lines.push([]);
+    gDue += due; gPaid += paid; gRem += rem;
+  }
+  lines.push(["TOTAL GÉNÉRAL", "", "", "", "", Math.round(gDue), Math.round(gPaid), Math.round(gRem), "", ""]);
+  downloadCsv(lines, "rapport-frais-par-classe.csv");
+}
+
+function exportByClassPdf(rows: FinanceStudentRow[], c: string, scope: string) {
+  let gDue = 0, gPaid = 0, gRem = 0;
+  const blocks = groupByClass(rows).map(([cls, list]) => {
+    let due = 0, paid = 0, rem = 0;
+    const body = list.map((s) => { due += s.totalDue; paid += s.paid; rem += s.remaining; return `<tr><td>${escHtml(s.matricule)}</td><td>${escHtml(s.fullName)}</td><td>${escHtml(s.parentName)}</td><td class="r">${money(s.totalDue, c)}</td><td class="r" style="color:#16A34A">${money(s.paid, c)}</td><td class="r" style="color:#E11D48">${money(s.remaining, c)}</td><td>${STA[s.financeStatus].label}</td></tr>`; }).join("");
+    gDue += due; gPaid += paid; gRem += rem;
+    return `<h2>${escHtml(cls)} (${list.length})</h2><table><thead><tr><th>Code</th><th>Élève</th><th>Parent</th><th>Total dû</th><th>Payé</th><th>Reste</th><th>Statut</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td colspan="3">Sous-total</td><td class="r">${money(due, c)}</td><td class="r">${money(paid, c)}</td><td class="r">${money(rem, c)}</td><td></td></tr></tfoot></table>`;
+  }).join("");
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport de frais par classe</title><style>*{font-family:Arial,sans-serif}body{margin:28px;color:#1a1a2e}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 6px;color:#1f3a8a}.sub{color:#666;font-size:12px;margin-bottom:8px}table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px}th{background:#1f3a8a;color:#fff;text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase}td{padding:5px 8px;border-bottom:1px solid #e5e7eb}.r{text-align:right}tfoot td{font-weight:700;border-top:2px solid #1f3a8a}</style></head><body><h1>Rapport de frais par classe</h1><div class="sub">${escHtml(scope)} · ${rows.length} élève(s)</div>${blocks}<h2>Total général</h2><table><tfoot><tr><td colspan="3">TOTAL</td><td class="r">${money(gDue, c)}</td><td class="r">${money(gPaid, c)}</td><td class="r">${money(gRem, c)}</td><td></td></tr></tfoot></table><script>window.onload=function(){window.print()}</script></body></html>`;
+  openPrint(html);
+}
+
+// Rapport d'insolvabilité (par classe).
+function exportInsolvablesCsv(rows: FinanceStudentRow[], c: string) {
+  const lines: (string | number)[][] = [["Classe", "Code", "Élève", "Parent", "Téléphone", "Reste à payer"]];
+  let total = 0;
+  for (const [cls, list] of groupByClass(rows)) for (const s of list) { lines.push([cls, s.matricule, s.fullName, s.parentName, s.parentPhone ?? "", Math.round(s.remaining)]); total += s.remaining; }
+  lines.push(["TOTAL", "", "", "", "", Math.round(total)]);
+  downloadCsv(lines, "insolvabilite-par-classe.csv");
+}
+function exportInsolvablesPdf(rows: FinanceStudentRow[], c: string) {
+  let total = 0;
+  const blocks = groupByClass(rows).map(([cls, list]) => {
+    let sub = 0;
+    const body = list.map((s) => { sub += s.remaining; return `<tr><td>${escHtml(s.matricule)}</td><td>${escHtml(s.fullName)}</td><td>${escHtml(s.parentName)}</td><td>${escHtml(s.parentPhone ?? "")}</td><td class="r" style="color:#E11D48">${money(s.remaining, c)}</td></tr>`; }).join("");
+    total += sub;
+    return `<h2>${escHtml(cls)} (${list.length})</h2><table><thead><tr><th>Code</th><th>Élève</th><th>Parent</th><th>Téléphone</th><th>Reste</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td colspan="4">Sous-total</td><td class="r">${money(sub, c)}</td></tr></tfoot></table>`;
+  }).join("");
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Insolvabilité par classe</title><style>*{font-family:Arial,sans-serif}body{margin:28px;color:#1a1a2e}h1{font-size:18px;margin:0 0 8px}h2{font-size:14px;margin:18px 0 6px;color:#92400E}table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px}th{background:#92400E;color:#fff;text-align:left;padding:6px 8px;font-size:10px;text-transform:uppercase}td{padding:5px 8px;border-bottom:1px solid #e5e7eb}.r{text-align:right}tfoot td{font-weight:700;border-top:2px solid #92400E}</style></head><body><h1>Élèves en insolvabilité (${rows.length})</h1>${blocks}<h2>Total général</h2><table><tfoot><tr><td>TOTAL</td><td class="r">${money(total, c)}</td></tr></tfoot></table><script>window.onload=function(){window.print()}</script></body></html>`;
+  openPrint(html);
 }
 
 // ── Styles ───────────────────────────────────────────────────────────
