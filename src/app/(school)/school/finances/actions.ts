@@ -220,7 +220,7 @@ export async function deleteAdvance(id: string): Promise<Result> {
 }
 
 // ── Tranches & Échéances ─────────────────────────────────────────────
-export async function addInstallment(input: { studentId: string; categoryId?: string | null; label: string; amount: number; currency?: string; dueDate?: string }): Promise<Result> {
+export async function addInstallment(input: { studentId: string; categoryId?: string | null; label: string; period?: string; amount: number; currency?: string; dueDate?: string }): Promise<Result> {
   if (!input.studentId) return { ok: false, message: "Élève invalide." };
   if (!(input.amount > 0)) return { ok: false, message: "Montant invalide." };
   if (!isLiveMode()) return { ok: true };
@@ -229,10 +229,84 @@ export async function addInstallment(input: { studentId: string; categoryId?: st
   const svc = service();
   const { error } = await (svc.from("student_installments").insert as any)({
     school_id: schoolId, student_id: input.studentId, category_id: input.categoryId ?? null,
-    label: input.label?.trim() || "Tranche", amount: input.amount, currency: input.currency || "CDF",
+    label: input.label?.trim() || "Tranche", period: input.period?.trim() || null, amount: input.amount, currency: input.currency || "CDF",
     due_date: input.dueDate?.trim() || null,
   });
   if (error) return { ok: false, message: "Enregistrement impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+// ── Barème des tranches (échéancier réutilisable) ────────────────────
+export async function addInstallmentTemplate(input: { name: string; period?: string; amount: number; currency?: string }): Promise<Result> {
+  const name = input.name?.trim();
+  if (!name) return { ok: false, message: "Nom de la tranche requis." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { count } = await svc.from("installment_templates").select("id", { count: "exact", head: true }).eq("school_id", schoolId);
+  const { error } = await (svc.from("installment_templates").insert as any)({
+    school_id: schoolId, name, period: input.period?.trim() || null, amount: input.amount || 0, currency: input.currency || "CDF", position: count ?? 0,
+  });
+  if (error) return { ok: false, message: "Création impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+export async function updateInstallmentTemplate(input: { id: string; name: string; period?: string; amount: number; currency?: string }): Promise<Result> {
+  if (!input.id) return { ok: false, message: "Tranche invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await (svc.from("installment_templates").update as any)({
+    name: input.name?.trim() || "Tranche", period: input.period?.trim() || null, amount: input.amount || 0, currency: input.currency || "CDF",
+  }).eq("id", input.id).eq("school_id", schoolId);
+  if (error) return { ok: false, message: "Mise à jour impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+export async function deleteInstallmentTemplate(id: string): Promise<Result> {
+  if (!id) return { ok: false, message: "Tranche invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await svc.from("installment_templates").delete().eq("id", id).eq("school_id", schoolId);
+  if (error) return { ok: false, message: "Suppression impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+// Applique une tranche du barème aux élèves choisis d'une classe : crée une
+// échéance (student_installments) par élève avec le montant saisi.
+export async function applyInstallmentToClass(input: {
+  name: string;
+  period?: string;
+  currency?: string;
+  entries: { studentId: string; amount: number }[];
+}): Promise<Result> {
+  const name = input.name?.trim();
+  if (!name) return { ok: false, message: "Nom de la tranche requis." };
+  const entries = (input.entries ?? []).filter((e) => e.studentId && e.amount > 0);
+  if (entries.length === 0) return { ok: false, message: "Aucun élève avec un montant valide." };
+  if (!isLiveMode()) return { ok: true };
+  const schoolId = await callerSchoolId();
+  if (!schoolId) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+
+  // Rubrique « scolarité » cible (créée si absente) pour rattacher les tranches.
+  const categoryId = await resolveCategory(svc, schoolId, "tranche", { amount: 0, currency: input.currency || "CDF" });
+
+  const rows = entries.map((e) => ({
+    school_id: schoolId, student_id: e.studentId, category_id: categoryId,
+    label: name, period: input.period?.trim() || null, amount: e.amount, currency: input.currency || "CDF",
+    due_date: null, paid_at: null,
+  }));
+  const { error } = await (svc.from("student_installments").insert as any)(rows);
+  if (error) return { ok: false, message: "Application impossible." };
   revalidatePath("/school/finances");
   return { ok: true };
 }

@@ -223,12 +223,22 @@ export type StudentInstallment = {
   categoryId: string | null;
   categoryLabel: string | null;
   label: string;
+  period: string | null;
   amount: number;
   currency: string;
   dueDate: string | null;
   paidAt: string | null;
   studentName?: string;
   className?: string;
+};
+
+export type InstallmentTemplate = {
+  id: string;
+  name: string;
+  period: string | null;
+  amount: number;
+  currency: string;
+  position: number;
 };
 
 export type StudentFinanceDetail = {
@@ -272,6 +282,25 @@ export async function listFeeCategories(): Promise<FeeCategory[]> {
   } catch {
     return [];
   }
+}
+
+export async function listInstallmentTemplates(): Promise<InstallmentTemplate[]> {
+  if (!isLiveMode()) return MOCK_TEMPLATES;
+  try {
+    const school = await getMySchool();
+    if (!school) return [];
+    const svc = service();
+    const { data } = await svc
+      .from("installment_templates")
+      .select("id, name, period, amount, currency, position")
+      .eq("school_id", school.id)
+      .order("position")
+      .order("created_at");
+    return (data ?? []).map((t: any) => ({
+      id: t.id, name: t.name, period: t.period ?? null,
+      amount: Number(t.amount), currency: t.currency ?? "CDF", position: t.position ?? 0,
+    }));
+  } catch { return []; }
 }
 
 export async function getFinanceOverview(): Promise<FinanceOverview> {
@@ -371,7 +400,7 @@ export async function getStudentFinanceDetail(studentId: string): Promise<Studen
       listStudentPayments(studentId),
       svc.from("parent_links").select("is_primary, profiles!parent_links_parent_id_fkey(full_name, phone)").eq("student_id", studentId),
       svc.from("student_advances").select("id, category_id, amount, currency, note, created_at").eq("school_id", school.id).eq("student_id", studentId).order("created_at", { ascending: false }),
-      svc.from("student_installments").select("id, category_id, label, amount, currency, due_date, paid_at").eq("school_id", school.id).eq("student_id", studentId).order("due_date"),
+      svc.from("student_installments").select("id, category_id, label, period, amount, currency, due_date, paid_at").eq("school_id", school.id).eq("student_id", studentId).order("due_date"),
       listFeeCategories(),
     ]);
 
@@ -386,7 +415,7 @@ export async function getStudentFinanceDetail(studentId: string): Promise<Studen
     const installments: StudentInstallment[] = (instRows ?? []).map((it: any) => ({
       id: it.id, studentId, categoryId: it.category_id ?? null,
       categoryLabel: it.category_id ? catLabel.get(it.category_id) ?? null : null,
-      label: it.label ?? "Tranche", amount: Number(it.amount), currency: it.currency ?? currency,
+      label: it.label ?? "Tranche", period: it.period ?? null, amount: Number(it.amount), currency: it.currency ?? currency,
       dueDate: it.due_date ?? null, paidAt: it.paid_at ?? null,
     }));
 
@@ -474,11 +503,11 @@ export async function getSchoolInstallments(): Promise<StudentInstallment[]> {
     if (!school) return [];
     const svc = service();
     const { data } = await svc.from("student_installments")
-      .select("id, student_id, category_id, label, amount, currency, due_date, paid_at, students(full_name, class_name, option), fee_categories(name)")
+      .select("id, student_id, category_id, label, period, amount, currency, due_date, paid_at, students(full_name, class_name, option), fee_categories(name)")
       .eq("school_id", school.id).order("due_date");
     return (data ?? []).map((it: any) => ({
       id: it.id, studentId: it.student_id, categoryId: it.category_id ?? null,
-      categoryLabel: it.fee_categories?.name ?? null, label: it.label ?? "Tranche", amount: Number(it.amount),
+      categoryLabel: it.fee_categories?.name ?? null, label: it.label ?? "Tranche", period: it.period ?? null, amount: Number(it.amount),
       currency: it.currency ?? "CDF", dueDate: it.due_date ?? null, paidAt: it.paid_at ?? null,
       studentName: it.students?.full_name ?? "—", className: classLabel(it.students?.class_name, it.students?.option),
     }));
@@ -672,7 +701,7 @@ function MOCK_DETAIL(studentId: string): StudentFinanceDetail {
   const installments: StudentInstallment[] = fees.filter((f) => f.echTotalCount > 0).flatMap((f) =>
     Array.from({ length: f.echTotalCount }).map((_, i) => ({
       id: `inst-${f.id}-${i}`, studentId: row.id, categoryId: f.categoryId, categoryLabel: f.label,
-      label: `Tranche ${i + 1}`, amount: Math.round(f.echTotalAmount / f.echTotalCount), currency: "CDF",
+      label: `Tranche ${i + 1}`, period: null, amount: Math.round(f.echTotalAmount / f.echTotalCount), currency: "CDF",
       dueDate: `2025-0${6 + i}-15`, paidAt: i < f.echPaidCount ? "2025-06-01" : null,
     }))
   );
@@ -687,10 +716,16 @@ const MOCK_ADVANCES: StudentAdvance[] = mockRows().slice(0, 4).map((r, i) => ({
 
 const MOCK_INSTALLMENTS: StudentInstallment[] = mockRows().slice(0, 5).map((r, i) => ({
   id: `inst-${i}`, studentId: r.id, categoryId: "c1", categoryLabel: "Frais de scolarité",
-  label: `Tranche ${(i % 2) + 1}`, amount: 25000, currency: "CDF",
+  label: `Tranche ${(i % 2) + 1}`, period: `Période ${(i % 2) + 1}`, amount: 25000, currency: "CDF",
   dueDate: `2025-0${6 + (i % 3)}-15`, paidAt: i % 2 === 0 ? "2025-06-10" : null,
   studentName: r.fullName, className: r.className,
 }));
+
+const MOCK_TEMPLATES: InstallmentTemplate[] = [
+  { id: "t1", name: "1ère tranche", period: "Début octobre à fin décembre 2026 (durant 3 mois)", amount: 100, currency: "USD", position: 0 },
+  { id: "t2", name: "2ème tranche", period: "Début janvier à fin février 2027 (durant 2 mois)", amount: 100, currency: "USD", position: 1 },
+  { id: "t3", name: "3ème tranche", period: "Début mars à début avril 2027 (durant 1 mois)", amount: 50, currency: "USD", position: 2 },
+];
 
 const MOCK_CASH: CashEntry[] = [
   { id: "ce1", kind: "recette", amount: 250000, currency: "CDF", label: "Encaissement scolarité", entryDate: "2025-06-05", signatory: "La direction", note: null, createdAt: "2025-06-05" },

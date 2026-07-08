@@ -1,14 +1,15 @@
-import { getFinanceOverview, listFeeCategories, getSchoolAdvances, getSchoolInstallments, getCashEntries, getCashSummary } from "@/lib/finance-db";
+import { getFinanceOverview, listFeeCategories, getSchoolAdvances, getSchoolInstallments, getCashEntries, getCashSummary, listInstallmentTemplates } from "@/lib/finance-db";
 import { getMySchool } from "@/lib/school-db";
 import { schoolYearLabel } from "@/lib/trimester";
 import { FinanceDashboard, type SchoolBranding } from "./FinanceDashboard";
 
 export default async function SchoolFinances() {
-  const [overview, categories, advances, installments, cashEntries, cashSummary, school] = await Promise.all([
+  const [overview, categories, advances, installments, templates, cashEntries, cashSummary, school] = await Promise.all([
     getFinanceOverview(),
     listFeeCategories(),
     getSchoolAdvances(),
     getSchoolInstallments(),
+    listInstallmentTemplates(),
     getCashEntries(),
     getCashSummary(),
     getMySchool(),
@@ -34,6 +35,7 @@ export default async function SchoolFinances() {
       categories={categories}
       advances={advances}
       installments={installments}
+      templates={templates}
       year={year}
       classNames={classNames}
       cashEntries={cashEntries}

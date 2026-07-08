@@ -11,11 +11,12 @@ import {
   upsertStudentFee, deleteStudentFee, setStudentFinanceStatus, recordStudentPayment, loadStudentFinance,
   addAdvance, deleteAdvance, addInstallment, toggleInstallmentPaid, deleteInstallment,
   createInvoice, addCashEntry, deleteCashEntry, type InvoiceType,
+  addInstallmentTemplate, updateInstallmentTemplate, deleteInstallmentTemplate, applyInstallmentToClass,
 } from "./actions";
 import type {
   FinanceOverview, FeeCategory, FinanceStudentRow, StudentFinanceDetail,
   StudentAdvance, StudentInstallment, PaymentStatus, FinanceStatus,
-  CashEntry, CashSummary,
+  CashEntry, CashSummary, InstallmentTemplate,
 } from "@/lib/finance-db";
 
 export type SchoolBranding = {
@@ -62,13 +63,14 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export function FinanceDashboard({
-  overview, categories, advances, installments, year, classNames,
+  overview, categories, advances, installments, templates, year, classNames,
   cashEntries, cashSummary, school,
 }: {
   overview: FinanceOverview;
   categories: FeeCategory[];
   advances: StudentAdvance[];
   installments: StudentInstallment[];
+  templates: InstallmentTemplate[];
   year: string;
   classNames: string[];
   cashEntries: CashEntry[];
@@ -135,7 +137,7 @@ export function FinanceDashboard({
       {tab === "caisse" && <CaisseTab entries={cashEntries} summary={cashSummary} school={school} />}
       {tab === "rapports" && <RapportsTab overview={overview} />}
       {tab === "avances" && <AdvancesTab advances={advances} currency={c} />}
-      {tab === "echeances" && <InstallmentsTab installments={installments} currency={c} />}
+      {tab === "echeances" && <InstallmentsTab installments={installments} templates={templates} students={overview.students} currency={c} />}
 
       {invoiceModal && <InvoiceModal students={overview.students} categories={categories} school={school} onClose={() => setInvoiceModal(false)} />}
     </div>
@@ -695,10 +697,194 @@ function AdvancesTab({ advances, currency }: { advances: StudentAdvance[]; curre
   );
 }
 
-// ── Onglet Tranches & Échéances (école) ──────────────────────────────
-function InstallmentsTab({ installments, currency }: { installments: StudentInstallment[]; currency: string }) {
+// ── Onglet Tranches & Échéances (barème → classes → montant par élève) ─
+function InstallmentsTab({ installments, templates, students, currency }: { installments: StudentInstallment[]; templates: InstallmentTemplate[]; students: FinanceStudentRow[]; currency: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* 1) Barème des tranches */}
+      <BaremeTranches templates={templates} />
+
+      {/* 2) Application par classe (montant par élève) */}
+      <ApplyInstallmentsByClass templates={templates} students={students} />
+
+      {/* 3) État des tranches enregistrées */}
+      <InstallmentsStatus installments={installments} pending={pending} start={start} router={router} />
+    </div>
+  );
+}
+
+// Barème réutilisable : Tranche · Période · Montant.
+function BaremeTranches({ templates }: { templates: InstallmentTemplate[] }) {
+  const [modal, setModal] = useState<null | InstallmentTemplate | "new">(null);
+  return (
+    <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center" }}>
+        <div style={{ fontSize: 13.5, fontWeight: 700, flex: 1 }}>Barème des tranches ({templates.length})</div>
+        <button onClick={() => setModal("new")} className="ek-btn ek-btn-primary" style={{ height: 34, fontSize: 12.5 }}><Icon name="plus" size={13} /> Ajouter une tranche</button>
+      </div>
+      <div className="ek-tablewrap">
+        <div style={{ minWidth: 560 }}>
+          <div style={{ display: "grid", gridTemplateColumns: TR_GRID, padding: "8px 16px", fontSize: 10.5, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.04em", background: "var(--surface-2)" }}>
+            <div>Tranche</div><div>Période</div><div style={{ textAlign: "right" }}>Montant</div><div style={{ textAlign: "center" }}>Actions</div>
+          </div>
+          {templates.length === 0 ? (
+            <div style={{ padding: 24, textAlign: "center", color: "var(--ink-3)", fontSize: 12.5 }}>Aucune tranche. Cliquez sur « Ajouter une tranche ».</div>
+          ) : templates.map((t, i) => (
+            <div key={t.id} style={{ display: "grid", gridTemplateColumns: TR_GRID, padding: "10px 16px", alignItems: "center", fontSize: 12.5, borderTop: i > 0 ? "1px solid var(--divider)" : "none" }}>
+              <div style={{ fontWeight: 600, color: "var(--ink)" }}>{t.name}</div>
+              <div style={{ color: "var(--ink-2)" }}>{t.period || "—"}</div>
+              <div style={{ textAlign: "right", fontWeight: 700 }}>{money(t.amount, t.currency)}</div>
+              <div style={{ display: "flex", justifyContent: "center", gap: 4 }}>
+                <button onClick={() => setModal(t)} title="Modifier" style={iconBtn}><Icon name="edit" size={14} /></button>
+                <TemplateDelete id={t.id} name={t.name} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {modal && <TemplateModal existing={modal === "new" ? undefined : modal} onClose={() => setModal(null)} />}
+    </div>
+  );
+}
+
+const TR_GRID = "1.1fr 2.2fr 0.9fr 0.7fr";
+
+function TemplateDelete({ id, name }: { id: string; name: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <button onClick={() => { if (confirm(`Supprimer « ${name} » du barème ?`)) start(async () => { await deleteInstallmentTemplate(id); router.refresh(); }); }} disabled={pending} title="Supprimer" style={iconBtn}><Icon name="trash" size={14} /></button>
+  );
+}
+
+function TemplateModal({ existing, onClose }: { existing?: InstallmentTemplate; onClose: () => void }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [name, setName] = useState(existing?.name ?? "");
+  const [period, setPeriod] = useState(existing?.period ?? "");
+  const [amount, setAmount] = useState(existing ? String(existing.amount) : "");
+  const [currency, setCurrency] = useState(existing?.currency ?? "CDF");
+  const [error, setError] = useState<string | null>(null);
+  const submit = () => {
+    if (!name.trim()) { setError("Nom requis."); return; }
+    const amt = parseFloat(amount.replace(",", ".")) || 0;
+    start(async () => {
+      const r = existing
+        ? await updateInstallmentTemplate({ id: existing.id, name, period, amount: amt, currency })
+        : await addInstallmentTemplate({ name, period, amount: amt, currency });
+      if (r.ok) { onClose(); router.refresh(); } else setError(r.message);
+    });
+  };
+  return (
+    <Modal title={existing ? "Modifier la tranche" : "Nouvelle tranche"} onClose={onClose}>
+      <Labeled label="Tranche"><input value={name} onChange={(e) => setName(e.target.value)} placeholder="2ème tranche" style={modalInp} /></Labeled>
+      <Labeled label="Période"><input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="Début janvier à fin février 2027 (durant 2 mois)" style={modalInp} /></Labeled>
+      <div style={{ display: "flex", gap: 10 }}>
+        <Labeled label="Montant" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="100" style={modalInp} /></Labeled>
+        <Labeled label="Devise" style={{ width: 100 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
+      </div>
+      {error && <div style={errBox}>{error}</div>}
+      <ModalActions onClose={onClose} onSubmit={submit} pending={pending} />
+    </Modal>
+  );
+}
+
+// Application d'une tranche à une classe : montant par élève (nom, post-nom, sexe).
+function ApplyInstallmentsByClass({ templates, students }: { templates: InstallmentTemplate[]; students: FinanceStudentRow[] }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [activeClass, setActiveClass] = useState("");
+  const [templateId, setTemplateId] = useState("");
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [skip, setSkip] = useState<Set<string>>(new Set());
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const classList = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of students) counts.set(s.className, (counts.get(s.className) ?? 0) + 1);
+    return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name, "fr", { numeric: true }));
+  }, [students]);
+  const cls = activeClass && classList.some((x) => x.name === activeClass) ? activeClass : classList[0]?.name ?? "";
+  const tpl = templates.find((t) => t.id === templateId) ?? templates[0] ?? null;
+  const classStudents = useMemo(() => students.filter((s) => s.className === cls).sort((a, b) => a.fullName.localeCompare(b.fullName)), [students, cls]);
+
+  const amountOf = (id: string) => (amounts[id] !== undefined ? amounts[id] : tpl ? String(tpl.amount) : "");
+  const toggleSkip = (id: string) => setSkip((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  const apply = () => {
+    setMsg(null);
+    if (!tpl) { setMsg({ ok: false, text: "Créez d'abord une tranche dans le barème." }); return; }
+    const entries = classStudents.filter((s) => !skip.has(s.id)).map((s) => ({ studentId: s.id, amount: parseFloat(amountOf(s.id).replace(",", ".")) || 0 }));
+    start(async () => {
+      const r = await applyInstallmentToClass({ name: tpl.name, period: tpl.period ?? undefined, currency: tpl.currency, entries });
+      if (r.ok) { setMsg({ ok: true, text: `Tranche « ${tpl.name} » appliquée à la classe.` }); setAmounts({}); setSkip(new Set()); router.refresh(); }
+      else setMsg({ ok: false, text: r.message });
+    });
+  };
+
+  return (
+    <div className="ek-card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ fontSize: 13.5, fontWeight: 700 }}>Appliquer une tranche à une classe</div>
+
+      {classList.length === 0 ? (
+        <div style={{ color: "var(--ink-3)", fontSize: 12.5 }}>Aucune classe (aucun élève actif).</div>
+      ) : (
+        <>
+          <ClassPicker classes={classList} selected={cls} onSelect={(n) => { setActiveClass(n); setAmounts({}); setSkip(new Set()); }} />
+
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <Labeled label="Tranche à appliquer" style={{ minWidth: 240, flex: 1 }}>
+              <select value={tpl?.id ?? ""} onChange={(e) => { setTemplateId(e.target.value); setAmounts({}); }} style={modalInp}>
+                {templates.length === 0 && <option value="">— aucune tranche —</option>}
+                {templates.map((t) => <option key={t.id} value={t.id}>{t.name} · {money(t.amount, t.currency)}</option>)}
+              </select>
+            </Labeled>
+            {tpl?.period && <div style={{ fontSize: 12, color: "var(--ink-3)", alignSelf: "flex-end", paddingBottom: 8 }}>Période : {tpl.period}</div>}
+          </div>
+
+          <div className="ek-tablewrap">
+            <div style={{ minWidth: 520 }}>
+              <div style={{ display: "grid", gridTemplateColumns: APP_GRID, padding: "8px 4px", fontSize: 10.5, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.03em", borderBottom: "1px solid var(--divider)" }}>
+                <div>Élève (nom · post-nom)</div><div style={{ textAlign: "center" }}>Sexe</div><div style={{ textAlign: "right" }}>Montant</div><div style={{ textAlign: "center" }}>Inclure</div>
+              </div>
+              {classStudents.length === 0 ? (
+                <div style={{ padding: 16, color: "var(--ink-3)", fontSize: 12.5 }}>Aucun élève dans cette classe.</div>
+              ) : classStudents.map((s) => (
+                <div key={s.id} style={{ display: "grid", gridTemplateColumns: APP_GRID, padding: "8px 4px", alignItems: "center", fontSize: 12.5, borderBottom: "1px solid var(--divider)", opacity: skip.has(s.id) ? 0.45 : 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                    <Avatar name={s.fullName} url={s.avatarUrl} size={24} />
+                    <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.fullName}</span>
+                  </div>
+                  <div style={{ textAlign: "center" }}><SexBadge sex={s.sex} size={14} /></div>
+                  <div style={{ textAlign: "right" }}>
+                    <input value={amountOf(s.id)} onChange={(e) => setAmounts((p) => ({ ...p, [s.id]: e.target.value.replace(/[^\d.,]/g, "") }))} inputMode="decimal"
+                      style={{ width: 110, textAlign: "right", padding: "6px 8px", borderRadius: 8, border: "1px solid var(--border-strong)", background: "var(--surface)", fontSize: 12.5, color: "var(--ink)" }} />
+                  </div>
+                  <div style={{ textAlign: "center" }}><input type="checkbox" checked={!skip.has(s.id)} onChange={() => toggleSkip(s.id)} /></div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {msg && <div style={{ fontSize: 12.5, fontWeight: 600, color: msg.ok ? "#16A34A" : "var(--danger)" }}>{msg.text}</div>}
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button onClick={apply} disabled={pending || !tpl || classStudents.length === 0} className="ek-btn ek-btn-primary" style={{ height: 40, fontSize: 13, opacity: pending || !tpl || classStudents.length === 0 ? 0.6 : 1 }}>
+              <Icon name="check" size={15} /> Appliquer à la classe
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+const APP_GRID = "1.8fr 0.6fr 1fr 0.6fr";
+
+// État des tranches enregistrées (suivi + marquage payé).
+function InstallmentsStatus({ installments, pending, start, router }: { installments: StudentInstallment[]; pending: boolean; start: React.TransitionStartFunction; router: ReturnType<typeof useRouter> }) {
   const today = new Date();
   const overdue = installments.filter((i) => !i.paidAt && i.dueDate && new Date(i.dueDate) < today);
   const upcoming = installments.filter((i) => !i.paidAt && (!i.dueDate || new Date(i.dueDate) >= today));
@@ -712,10 +898,9 @@ function InstallmentsTab({ installments, currency }: { installments: StudentInst
           <input type="checkbox" checked={!!it.paidAt} onChange={(e) => start(async () => { await toggleInstallmentPaid(it.id, e.target.checked); router.refresh(); })} disabled={pending} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <span style={{ fontWeight: 600 }}>{it.studentName}</span> <span style={{ color: "var(--ink-3)" }}>· {it.className}</span>
-            <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{it.label}{it.categoryLabel ? ` · ${it.categoryLabel}` : ""}</div>
+            <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{it.label}{it.period ? ` · ${it.period}` : ""}</div>
           </div>
           <span style={{ fontWeight: 700 }}>{money(it.amount, it.currency)}</span>
-          <span style={{ fontSize: 11, color: "var(--ink-3)" }}>{it.dueDate ? new Date(it.dueDate).toLocaleDateString("fr-FR") : "—"}</span>
         </div>
       ))}
     </div>
@@ -723,7 +908,8 @@ function InstallmentsTab({ installments, currency }: { installments: StudentInst
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>Pour créer une tranche, ouvrez un élève dans « Élèves » → sous-onglet « Échéances ». Cochez pour marquer une tranche payée.</div>
+      <div style={{ fontSize: 13.5, fontWeight: 700 }}>État des tranches</div>
+      <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>Cochez pour marquer une tranche payée. (Les tranches appliquées ci-dessus apparaissent ici.)</div>
       <Section title="En retard" rows={overdue} tint="#E11D48" />
       <Section title="À venir" rows={upcoming} tint="#B45309" />
       <Section title="Payées" rows={paid} tint="#16A34A" />
@@ -772,6 +958,7 @@ function InstallmentModal({ studentId, categories, onClose, onDone }: { studentI
   const [pending, start] = useTransition();
   const [categoryId, setCategoryId] = useState("");
   const [label, setLabel] = useState("");
+  const [period, setPeriod] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("CDF");
   const [dueDate, setDueDate] = useState("");
@@ -784,7 +971,7 @@ function InstallmentModal({ studentId, categories, onClose, onDone }: { studentI
   const submit = () => {
     const amt = parseFloat(amount.replace(",", ".")) || 0;
     if (!(amt > 0)) { setError("Montant invalide."); return; }
-    start(async () => { const r = await addInstallment({ studentId, categoryId: categoryId || null, label: label || "Tranche", amount: amt, currency, dueDate }); if (r.ok) onDone(); else setError(r.message); });
+    start(async () => { const r = await addInstallment({ studentId, categoryId: categoryId || null, label: label || "Tranche", period, amount: amt, currency, dueDate }); if (r.ok) onDone(); else setError(r.message); });
   };
   return (
     <Modal title="Tranche / échéance" onClose={onClose}>
@@ -795,11 +982,12 @@ function InstallmentModal({ studentId, categories, onClose, onDone }: { studentI
         </select>
       </Labeled>
       <Labeled label="Libellé"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Tranche 1 — scolarité" style={modalInp} /></Labeled>
+      <Labeled label="Période (optionnel)"><input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="Début janvier à fin février 2027" style={modalInp} /></Labeled>
       <div style={{ display: "flex", gap: 10 }}>
         <Labeled label="Montant" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="25000" style={modalInp} /></Labeled>
         <Labeled label="Devise" style={{ width: 110 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
       </div>
-      <Labeled label="Date d'échéance"><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={modalInp} /></Labeled>
+      <Labeled label="Date d'échéance (optionnel)"><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={modalInp} /></Labeled>
       {error && <div style={errBox}>{error}</div>}
       <ModalActions onClose={onClose} onSubmit={submit} pending={pending} />
     </Modal>
