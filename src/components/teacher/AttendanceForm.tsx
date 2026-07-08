@@ -174,6 +174,7 @@ export function AttendanceForm({ classes, initialClassName, initialOption, initi
                 <span style={{ color: "var(--ink-3)", fontSize: 12, fontFamily: "var(--font-display)", width: 18 }}>{i + 1}</span>
                 <Avatar name={s.fullName} size={30} />
                 <span style={{ fontWeight: 600, color: "var(--ink)", fontSize: 13.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.fullName}</span>
+                <SexBadge sex={s.sex} />
               </div>
               <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                 {STATUSES.map((st) => {
@@ -206,6 +207,31 @@ export function AttendanceForm({ classes, initialClassName, initialOption, initi
         </div>
       </div>
     </>
+  );
+}
+
+function SexBadge({ sex }: { sex: string | null }) {
+  if (sex !== "M" && sex !== "F") return null;
+  const isM = sex === "M";
+  return (
+    <span
+      title={isM ? "Masculin" : "Féminin"}
+      style={{
+        flexShrink: 0,
+        width: 17,
+        height: 17,
+        borderRadius: "50%",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 10,
+        fontWeight: 700,
+        color: "#fff",
+        background: isM ? "#2563EB" : "#DB2777",
+      }}
+    >
+      {isM ? "M" : "F"}
+    </span>
   );
 }
 

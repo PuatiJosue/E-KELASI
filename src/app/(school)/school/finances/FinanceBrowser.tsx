@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
+import { createClient } from "@/lib/supabase/client";
+import { recordStudentPayment } from "./actions";
 import type { FeeSummaryRow } from "@/lib/finance-db";
+
+const CURRENCIES = ["USD", "CDF"];
 
 function fmt(total: number, currency: string) {
   return `${total.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} ${currency === "CDF" ? "FC" : currency}`;
@@ -18,6 +23,8 @@ function fmtDate(d: string | null) {
 export function FinanceBrowser({ rows }: { rows: FeeSummaryRow[] }) {
   const [query, setQuery] = useState("");
   const [onlyPaid, setOnlyPaid] = useState(false);
+  // Élève dont le formulaire de paiement est ouvert (un seul à la fois).
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -96,11 +103,11 @@ export function FinanceBrowser({ rows }: { rows: FeeSummaryRow[] }) {
             </div>
 
             <div className="ek-tablewrap">
-              <div style={{ minWidth: 640 }}>
+              <div style={{ minWidth: 680 }}>
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "2.4fr 1.6fr 0.8fr 1.4fr",
+                    gridTemplateColumns: GRID,
                     padding: "10px 18px",
                     fontSize: 11,
                     fontWeight: 700,
@@ -114,27 +121,15 @@ export function FinanceBrowser({ rows }: { rows: FeeSummaryRow[] }) {
                   <div><T fr="Total payé" en="Total paid" /></div>
                   <div style={{ textAlign: "center" }}><T fr="Paiements" en="Payments" /></div>
                   <div><T fr="Dernier" en="Last" /></div>
+                  <div style={{ textAlign: "right" }}><T fr="Action" en="Action" /></div>
                 </div>
-                {g.students.map((r, i) => (
-                  <Link
+                {g.students.map((r) => (
+                  <PayRow
                     key={r.studentId}
-                    href={`/school/students/${r.studentId}`}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "2.4fr 1.6fr 0.8fr 1.4fr",
-                      padding: "11px 18px",
-                      alignItems: "center",
-                      fontSize: 12.5,
-                      borderTop: "1px solid var(--divider)",
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, color: "var(--ink)" }}>{r.fullName}</div>
-                    <div style={{ color: r.count > 0 ? "var(--ink)" : "var(--ink-3)", fontWeight: 600 }}>
-                      {r.totals.length > 0 ? r.totals.map((t) => fmt(t.total, t.currency)).join(" + ") : "—"}
-                    </div>
-                    <div style={{ textAlign: "center", color: "var(--ink-2)" }}>{r.count || "—"}</div>
-                    <div style={{ color: "var(--ink-3)" }}>{fmtDate(r.lastPaidAt)}</div>
-                  </Link>
+                    row={r}
+                    open={openId === r.studentId}
+                    onToggle={() => setOpenId((cur) => (cur === r.studentId ? null : r.studentId))}
+                  />
                 ))}
               </div>
             </div>
@@ -143,4 +138,144 @@ export function FinanceBrowser({ rows }: { rows: FeeSummaryRow[] }) {
       )}
     </>
   );
+}
+
+const GRID = "2.2fr 1.5fr 0.8fr 1.3fr 1.5fr";
+
+function PayRow({ row, open, onToggle }: { row: FeeSummaryRow; open: boolean; onToggle: () => void }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [label, setLabel] = useState("");
+  const [comment, setComment] = useState("");
+  const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
+
+  const submit = async () => {
+    setError(null);
+    setOkMsg(null);
+    const amt = parseFloat(amount.replace(",", "."));
+    if (!(amt > 0)) { setError("Entrez un montant valide."); return; }
+
+    let receiptUrl: string | undefined;
+    const file = fileRef.current?.files?.[0];
+    if (file) {
+      setUploading(true);
+      try {
+        const supabase = createClient();
+        const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+        const path = `${row.studentId}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("fee-receipts").upload(path, file, { upsert: false });
+        if (upErr) { setUploading(false); setError("Échec de l'envoi du reçu."); return; }
+        receiptUrl = supabase.storage.from("fee-receipts").getPublicUrl(path).data.publicUrl;
+      } catch {
+        setUploading(false); setError("Échec de l'envoi du reçu."); return;
+      }
+      setUploading(false);
+    }
+
+    startTransition(async () => {
+      const res = await recordStudentPayment({
+        studentId: row.studentId, amount: amt, currency, label, comment, receiptUrl, paidAt,
+      });
+      if (res.ok) {
+        setOkMsg(`Paiement de ${fmt(amt, currency)} enregistré.`);
+        setAmount(""); setLabel(""); setComment("");
+        setPaidAt(new Date().toISOString().slice(0, 10));
+        if (fileRef.current) fileRef.current.value = "";
+        router.refresh();
+      } else {
+        setError(res.message);
+      }
+    });
+  };
+
+  return (
+    <div style={{ borderTop: "1px solid var(--divider)" }}>
+      <div
+        onClick={onToggle}
+        style={{
+          display: "grid",
+          gridTemplateColumns: GRID,
+          padding: "11px 18px",
+          alignItems: "center",
+          fontSize: 12.5,
+          cursor: "pointer",
+          background: open ? "var(--surface-2)" : "transparent",
+        }}
+      >
+        <div style={{ fontWeight: 600, color: "var(--ink)" }}>{row.fullName}</div>
+        <div style={{ color: row.count > 0 ? "var(--ink)" : "var(--ink-3)", fontWeight: 600 }}>
+          {row.totals.length > 0 ? row.totals.map((t) => fmt(t.total, t.currency)).join(" + ") : "—"}
+        </div>
+        <div style={{ textAlign: "center", color: "var(--ink-2)" }}>{row.count || "—"}</div>
+        <div style={{ color: "var(--ink-3)" }}>{fmtDate(row.lastPaidAt)}</div>
+        <div style={{ textAlign: "right" }}>
+          <span className="ek-btn ek-btn-primary" style={{ height: 28, fontSize: 11.5, pointerEvents: "none", display: "inline-flex" }}>
+            <Icon name={open ? "close" : "plus"} size={12} />
+            {open ? <T fr="Fermer" en="Close" /> : <T fr="Paiement" en="Payment" />}
+          </span>
+        </div>
+      </div>
+
+      {open && (
+        <div style={{ padding: "0 18px 16px", background: "var(--surface-2)" }}>
+          <div style={{ padding: 14, borderRadius: 10, background: "var(--surface)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 110 }}>
+                <FieldLabel>Montant</FieldLabel>
+                <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} placeholder="50" inputMode="decimal" style={inp} />
+              </div>
+              <div style={{ width: 90 }}>
+                <FieldLabel>Devise</FieldLabel>
+                <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={inp}>
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c === "CDF" ? "FC" : c}</option>)}
+                </select>
+              </div>
+              <div style={{ width: 150 }}>
+                <FieldLabel>Date</FieldLabel>
+                <input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} style={inp} />
+              </div>
+            </div>
+            <div>
+              <FieldLabel>Libellé (optionnel)</FieldLabel>
+              <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="ex. 1ère tranche, minerval…" style={inp} />
+            </div>
+            <div>
+              <FieldLabel>Commentaire (optionnel)</FieldLabel>
+              <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} placeholder="Remarque…" style={{ ...inp, resize: "vertical" as const }} />
+            </div>
+            <div>
+              <FieldLabel>Reçu (photo / scan, optionnel)</FieldLabel>
+              <input ref={fileRef} type="file" accept="image/*,application/pdf" capture="environment" style={{ fontSize: 12.5, color: "var(--ink-2)" }} />
+            </div>
+            {error && <div style={{ color: "var(--danger)", fontSize: 12, fontWeight: 600 }}>{error}</div>}
+            {okMsg && <div style={{ color: "var(--accent)", fontSize: 12, fontWeight: 600 }}>✓ {okMsg}</div>}
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <button onClick={submit} disabled={pending || uploading} className="ek-btn ek-btn-primary" style={{ height: 36, fontSize: 13, opacity: pending || uploading ? 0.6 : 1 }}>
+                {uploading ? "Envoi du reçu…" : pending ? "Enregistrement…" : <T fr="Enregistrer le paiement" en="Save payment" />}
+              </button>
+              <Link href={`/school/students/${row.studentId}`} className="ek-btn ek-btn-outline" style={{ height: 36, fontSize: 12.5 }}>
+                <Icon name="file" size={13} /> <T fr="Fiche complète & historique" en="Full record & history" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const inp: React.CSSProperties = {
+  width: "100%", padding: "9px 10px", borderRadius: 9, border: "1px solid var(--border-strong)",
+  background: "var(--surface)", fontSize: 13, color: "var(--ink)",
+};
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-2)", marginBottom: 4 }}>{children}</div>;
 }

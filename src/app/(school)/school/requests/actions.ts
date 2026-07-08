@@ -33,6 +33,9 @@ async function callerSchoolId(): Promise<string | null> {
 export type PendingStudent = {
   id: string;
   fullName: string;
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
   sex: string | null;
   birthDate: string | null;
   className: string | null;
@@ -41,6 +44,7 @@ export type PendingStudent = {
   parentName: string;
   parentEmail: string;
   parentPhone: string | null;
+  parentRelation: string | null;
   createdAt: string;
   // Doublon possible : un élève ACTIF du même nom existe déjà dans l'école.
   possibleDuplicate: { id: string; label: string } | null;
@@ -53,7 +57,7 @@ export async function getPendingStudents(): Promise<PendingStudent[]> {
   const svc = service();
   const { data: students } = await svc
     .from("students")
-    .select("id, full_name, sex, birth_date, class_name, option, address, created_at, created_by")
+    .select("id, full_name, first_name, middle_name, last_name, sex, birth_date, class_name, option, address, created_at, created_by")
     .eq("school_id", schoolId)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
@@ -64,6 +68,20 @@ export async function getPendingStudents(): Promise<PendingStudent[]> {
     ? await svc.from("profiles").select("id, full_name, email, phone").in("id", parentIds)
     : { data: [] as any[] };
   const pmap = new Map((parents ?? []).map((p: any) => [p.id, p]));
+
+  // Relation du parent demandeur (père / mère / tuteur…) issue de parent_links.
+  const studentIds = students.map((s: any) => s.id);
+  const { data: links } = studentIds.length
+    ? await svc.from("parent_links").select("student_id, parent_id, relation, is_primary").in("student_id", studentIds)
+    : { data: [] as any[] };
+  const relByStudent = new Map<string, string>();
+  for (const l of (links ?? []) as any[]) {
+    // Priorité au lien du parent qui a créé la demande, sinon au lien primaire.
+    const st = students.find((s: any) => s.id === l.student_id);
+    if (st && (l.parent_id === st.created_by || (l.is_primary && !relByStudent.has(l.student_id)))) {
+      if (l.relation) relByStudent.set(l.student_id, l.relation);
+    }
+  }
 
   // Élèves actifs de l'école → index par nom normalisé (détection de doublon).
   const { data: active } = await svc
@@ -83,6 +101,9 @@ export async function getPendingStudents(): Promise<PendingStudent[]> {
     return {
       id: s.id,
       fullName: s.full_name,
+      firstName: s.first_name ?? null,
+      middleName: s.middle_name ?? null,
+      lastName: s.last_name ?? null,
       sex: s.sex,
       birthDate: s.birth_date,
       className: s.class_name,
@@ -91,7 +112,8 @@ export async function getPendingStudents(): Promise<PendingStudent[]> {
       parentName: p?.full_name ?? "—",
       parentEmail: p?.email ?? "",
       parentPhone: p?.phone ?? null,
-      createdAt: new Date(s.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }),
+      parentRelation: relByStudent.get(s.id) ?? null,
+      createdAt: new Date(s.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }),
       possibleDuplicate: dup,
     };
   });

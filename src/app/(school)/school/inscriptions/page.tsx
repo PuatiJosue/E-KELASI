@@ -10,7 +10,7 @@ export default async function SchoolInscriptions() {
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxWidth: 960 }}>
       <PageHeader
-        title={{ fr: "Inscriptions", en: "Admissions" }}
+        title={{ fr: "Inscription", en: "Admission" }}
         sub={{ fr: `${pending} dossier(s) en attente · nouveaux élèves`, en: `${pending} pending` }}
       />
       <InscriptionsManager requests={requests} hasSignature={!!school?.signatureUrl || !!school?.directorName} />

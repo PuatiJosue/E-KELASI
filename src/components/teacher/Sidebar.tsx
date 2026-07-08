@@ -14,7 +14,7 @@ const NAV: NavItem[] = [
   { id: "dashboard", href: "/teacher/dashboard", icon: "home",       fr: "Tableau de bord", en: "Dashboard" },
   { id: "classes",   href: "/teacher/classes",   icon: "users",      fr: "Mes classes",     en: "My classes" },
   { id: "attendance",href: "/teacher/attendance",icon: "calendar",   fr: "Présence",        en: "Attendance" },
-  { id: "grades",    href: "/teacher/grades",    icon: "chart",      fr: "Saisir notes",    en: "Enter grades" },
+  { id: "grades",    href: "/teacher/grades",    icon: "chart",      fr: "Saisie notes",    en: "Enter grades" },
   { id: "history",   href: "/teacher/history",   icon: "clock",      fr: "Historique des notes", en: "Grade history" },
   { id: "journal",   href: "/teacher/journal",   icon: "edit",       fr: "Journal de bord", en: "Class logbook" },
   { id: "bulletins", href: "/teacher/bulletins", icon: "file",       fr: "Bulletins",       en: "Report cards" },

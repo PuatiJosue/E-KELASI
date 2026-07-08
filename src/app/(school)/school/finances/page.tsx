@@ -28,7 +28,7 @@ export default async function SchoolFinances() {
 
       <div style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>
         Suivi des frais scolaires / minerval. Cliquez sur un élève pour enregistrer un paiement
-        (montant, commentaire, photo du reçu) et voir son historique.
+        directement ici (montant, libellé, commentaire, photo du reçu) — sans quitter la rubrique Finance.
       </div>
 
       <FinanceBrowser rows={rows} />

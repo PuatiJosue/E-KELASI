@@ -14,7 +14,7 @@ export default async function SchoolReenrollments() {
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxWidth: 920 }}>
       <PageHeader
-        title={{ fr: "Inscriptions / Réinscriptions", en: "Enrollment" }}
+        title={{ fr: "Réinscription", en: "Enrollment" }}
         sub={{ fr: `${pending} demande(s) en attente`, en: `${pending} pending` }}
       />
       <ReenrollmentsManager

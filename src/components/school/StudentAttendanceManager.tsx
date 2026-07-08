@@ -79,12 +79,13 @@ export function StudentAttendanceManager({
   });
 
   const exportCsv = () => {
-    const header = ["N°", "Nom et prénoms", "Classe", "Date", "Statut"];
+    const header = ["N°", "Nom et prénoms", "Sexe", "Classe", "Date", "Statut"];
     const lines = [
       header,
       ...current.map((s, i) => [
         i + 1,
         s.name,
+        s.sex === "M" ? "M" : s.sex === "F" ? "F" : "—",
         s.className,
         dateFr,
         labelOf(marks[s.id] ?? "")?.fr ?? "—",
@@ -104,7 +105,8 @@ export function StudentAttendanceManager({
     const rows = current
       .map((s, i) => {
         const st = labelOf(marks[s.id] ?? "");
-        return `<tr><td class="num">${i + 1}</td><td>${escapeHtml(s.name)}</td><td style="color:${st?.color ?? "#888"};font-weight:600">${st?.fr ?? "—"}</td></tr>`;
+        const sx = s.sex === "M" ? "M" : s.sex === "F" ? "F" : "—";
+        return `<tr><td class="num">${i + 1}</td><td>${escapeHtml(s.name)}</td><td class="num" style="text-align:center">${sx}</td><td style="color:${st?.color ?? "#888"};font-weight:600">${st?.fr ?? "—"}</td></tr>`;
       })
       .join("");
     const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Présences — ${escapeHtml(selected)}</title>
@@ -123,7 +125,7 @@ export function StudentAttendanceManager({
 </style></head><body>
   <h1>${escapeHtml(schoolName)}</h1>
   <div class="sub">Liste de présence — ${escapeHtml(selected)} · ${dateFr} · ${current.length} élève(s)</div>
-  <table><thead><tr><th>N°</th><th>Nom et prénoms</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>N°</th><th>Nom et prénoms</th><th>Sexe</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="totals">
     <span>Présents : <b>${counts.present}</b></span>
     <span>Retards : <b>${counts.late}</b></span>
@@ -192,7 +194,10 @@ export function StudentAttendanceManager({
               return (
                 <div key={s.id} style={{ display: "grid", gridTemplateColumns: GRID, padding: "10px 18px", alignItems: "center", borderTop: "1px solid var(--divider)" }}>
                   <div style={{ color: "var(--ink-3)", fontSize: 12, fontFamily: "var(--font-display)" }}>{i + 1}</div>
-                  <div style={{ fontWeight: 600, color: "var(--ink)", fontSize: 13 }}>{s.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                    <span style={{ fontWeight: 600, color: "var(--ink)", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
+                    <SexBadge sex={s.sex} />
+                  </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {STATUSES.map((st) => {
                       const on = cur === st.key;
@@ -237,6 +242,31 @@ export function StudentAttendanceManager({
 }
 
 const GRID = "0.5fr 2.4fr 2.6fr";
+
+function SexBadge({ sex }: { sex: string | null }) {
+  if (sex !== "M" && sex !== "F") return null;
+  const isM = sex === "M";
+  return (
+    <span
+      title={isM ? "Masculin" : "Féminin"}
+      style={{
+        flexShrink: 0,
+        width: 17,
+        height: 17,
+        borderRadius: "50%",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 10,
+        fontWeight: 700,
+        color: "#fff",
+        background: isM ? "#2563EB" : "#DB2777",
+      }}
+    >
+      {isM ? "M" : "F"}
+    </span>
+  );
+}
 
 function Dot({ color, label }: { color: string; label: string }) {
   return (

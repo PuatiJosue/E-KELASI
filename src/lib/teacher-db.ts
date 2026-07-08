@@ -45,6 +45,7 @@ export type StudentRow = {
   className: string;
   avg: number | null;
   avatarUrl: string | null;
+  sex: string | null;
 };
 
 export type GradeRow = {
@@ -256,7 +257,7 @@ export async function listStudentsInClass(className: string, option?: string | n
 
     const { data: studentsRaw } = await supabase
       .from("students")
-      .select("id, full_name, class_name, option, avatar_url")
+      .select("id, full_name, class_name, option, avatar_url, sex")
       .eq("school_id", assigned.schoolId)
       .eq("class_name", className)
       .eq("status", "active")
@@ -292,6 +293,7 @@ export async function listStudentsInClass(className: string, option?: string | n
         className: s.class_name,
         avg,
         avatarUrl: s.avatar_url ?? null,
+        sex: s.sex ?? null,
       };
     });
   } catch {

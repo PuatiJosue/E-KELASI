@@ -68,17 +68,18 @@ export function AddStudentButton({ classNames = [] }: { classNames?: string[] })
             </h2>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Ordre congolais : Nom, Post-nom, Prénom — conservé tel quel après enregistrement. */}
               <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <Field label={<T fr="Nom" en="Last name" />}>
                   <input value={lastName} onChange={(e) => setLastName(e.target.value)} required placeholder="NDOYE" style={inputStyle} />
                 </Field>
-                <Field label={<T fr="Prénom" en="First name" />}>
-                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required placeholder="Mamadou" style={inputStyle} />
+                <Field label={<T fr="Post-nom (facultatif)" en="Middle name (optional)" />}>
+                  <input value={middleName} onChange={(e) => setMiddleName(e.target.value)} placeholder="Amadou" style={inputStyle} />
                 </Field>
               </div>
               <div className="ek-stack-md" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <Field label={<T fr="Post-nom (facultatif)" en="Middle name (optional)" />}>
-                  <input value={middleName} onChange={(e) => setMiddleName(e.target.value)} placeholder="Amadou" style={inputStyle} />
+                <Field label={<T fr="Prénom" en="First name" />}>
+                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required placeholder="Mamadou" style={inputStyle} />
                 </Field>
                 <Field label={<T fr="Sexe" en="Sex" />}>
                   <select value={sex} onChange={(e) => setSex(e.target.value)} style={inputStyle}>

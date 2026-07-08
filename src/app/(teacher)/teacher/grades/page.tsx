@@ -21,7 +21,7 @@ export default async function GradesPage({
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
       <PageHeader
-        title={{ fr: "Saisir des notes", en: "Enter grades" }}
+        title={{ fr: "Saisie notes", en: "Enter grades" }}
         sub={{
           fr: "Choisis la classe, la matière, le type d'évaluation, puis saisis les notes en bloc.",
           en: "Pick class, subject, kind, then enter grades in bulk.",

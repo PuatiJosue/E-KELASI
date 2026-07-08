@@ -54,8 +54,8 @@ export function SchoolTopbar({ school, pending }: { school: MySchool | null; pen
   }, [notifOpen]);
   const notifItems = [
     { href: "/school/requests", count: pending?.requests ?? 0, fr: "Demandes d'ajout", en: "Add requests" },
-    { href: "/school/inscriptions", count: pending?.inscriptions ?? 0, fr: "Inscriptions", en: "Admissions" },
-    { href: "/school/reenrollments", count: pending?.reenrollments ?? 0, fr: "Réinscriptions", en: "Re-enrollments" },
+    { href: "/school/inscriptions", count: pending?.inscriptions ?? 0, fr: "Inscription", en: "Admission" },
+    { href: "/school/reenrollments", count: pending?.reenrollments ?? 0, fr: "Réinscription", en: "Re-enrollment" },
   ];
 
   // Actualisation automatique : recharge les données du serveur sans perdre
