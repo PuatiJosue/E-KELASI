@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
+import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import type { StudentRow, TeacherSubject } from "@/lib/teacher-db";
 import { submitGradesAction, type GradeInput } from "@/app/(teacher)/teacher/grades/actions";
@@ -202,6 +203,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialOp
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <Avatar name={s.fullName} size={30} />
                 <span style={{ fontWeight: 600, color: "var(--ink)", fontSize: 13.5 }}>{s.fullName}</span>
+                <SexBadge sex={s.sex} size={16} />
               </div>
               <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>
                 <T fr="Moyenne actuelle" en="Current avg" /> :{" "}

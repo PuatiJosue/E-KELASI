@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
+import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import { listSchoolStudents } from "@/lib/school-db";
 
@@ -61,7 +62,10 @@ export default async function SchoolReports() {
               }}
             >
               <Avatar name={s.fullName} size={32} />
-              <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{s.fullName}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{s.fullName}</span>
+                <SexBadge sex={s.sex} size={16} />
+              </div>
               <div style={{ fontSize: 12, color: "var(--ink-2)" }}>
                 <T fr="Moyenne" en="Avg" /> : <span style={{ fontWeight: 700 }}>{s.avg !== null ? `${s.avg}/20` : "—"}</span>
               </div>

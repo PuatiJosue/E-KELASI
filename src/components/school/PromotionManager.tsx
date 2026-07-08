@@ -3,12 +3,13 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
+import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import { classLabel, classKey, normOption } from "@/lib/classes";
 import { nextClassFor, proposeDecision, PROMOTION_LEVELS, PROMOTION_OPTIONS } from "@/lib/promotion";
 import { applyPromotion, undoLastPromotion, type PromotionAction, type PromotionDecision } from "@/app/(school)/school/promotion/actions";
 
-type StudentLite = { id: string; name: string; className: string; option: string | null };
+type StudentLite = { id: string; name: string; className: string; option: string | null; sex: string | null };
 type Decision = { action: PromotionAction; targetClass: string; option: string | null };
 
 const ACTIONS: { key: PromotionAction; fr: string; en: string; color: string }[] = [
@@ -188,8 +189,9 @@ export function PromotionManager({
             const showOption = d.action === "promote" && isHumanities(d.targetClass);
             return (
               <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1.4fr auto 1.2fr", gap: 12, alignItems: "center", padding: "11px 18px", borderTop: i > 0 ? "1px solid var(--divider)" : "none" }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 7 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
+                  <SexBadge sex={s.sex} size={16} />
                 </div>
 
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>

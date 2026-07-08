@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
+import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import { getStudentDossier } from "@/lib/school-db";
 import { currentTrimester } from "@/lib/trimester";
@@ -63,7 +64,10 @@ export default async function StudentDossierPage({ params }: { params: { student
       <div className="ek-card" style={{ padding: 20, display: "flex", alignItems: "center", gap: 16 }}>
         <Avatar name={d.fullName} url={d.avatarUrl} size={64} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{d.fullName}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <span style={{ fontSize: 20, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{d.fullName}</span>
+            <SexBadge sex={d.sex} size={20} />
+          </div>
           <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 2 }}>
             {[d.className, d.option, d.schoolName].filter(Boolean).join(" · ")}
           </div>
@@ -83,16 +87,32 @@ export default async function StudentDossierPage({ params }: { params: { student
         <div className="ek-card" style={{ padding: 18 }}>
           <SectionTitle fr="Informations" en="Information" />
           <InfoRow label="Sexe" value={sexLabel(d.sex)} />
+          <InfoRow label="Lieu de naissance" value={d.birthPlace?.trim() || "—"} />
           <InfoRow label="Date de naissance" value={fmtDate(d.birthDate)} />
           <InfoRow label="Âge" value={ageFrom(d.birthDate)} />
           <InfoRow label="Classe" value={d.className} />
           {d.option && <InfoRow label="Option" value={d.option} />}
           <InfoRow label="Adresse" value={d.address?.trim() || "—"} />
+          <InfoRow label="Province d'origine" value={d.provinceOrigin?.trim() || "—"} />
+          <InfoRow label="Inscrit à l'école le" value={fmtDate(d.enrolledAt)} />
           <InfoRow label="Statut" value={d.status === "active" ? "Actif" : d.status === "pending" ? "En attente" : "Refusé"} />
+          {d.observation?.trim() && <InfoRow label="Observation" value={d.observation} />}
         </div>
 
         <div className="ek-card" style={{ padding: 18 }}>
-          <SectionTitle fr="Parents / Tuteurs" en="Parents / Guardians" />
+          <SectionTitle fr="Parents / Responsable" en="Parents / Guardian" />
+          {(d.fatherName || d.motherName || d.guardianName || d.guardianPhone) && (
+            <div style={{ marginBottom: 6 }}>
+              {d.fatherName?.trim() && <InfoRow label="Nom du père" value={d.fatherName} />}
+              {d.motherName?.trim() && <InfoRow label="Nom de la mère" value={d.motherName} />}
+              {d.guardianName?.trim() && <InfoRow label="Responsable" value={d.guardianName} />}
+              {d.guardianRelation?.trim() && <InfoRow label="Degré de parenté" value={d.guardianRelation} />}
+              {d.guardianPhone?.trim() && <InfoRow label="Tél. responsable" value={d.guardianPhone} />}
+            </div>
+          )}
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.05em", margin: "8px 0 6px" }}>
+            <T fr="Comptes parents liés" en="Linked parent accounts" />
+          </div>
           {d.parents.length === 0 ? (
             <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
               <T fr="Aucun parent lié." en="No linked parent." />
@@ -115,6 +135,27 @@ export default async function StudentDossierPage({ params }: { params: { student
           )}
         </div>
       </div>
+
+      {/* Documents joints */}
+      {d.documents.length > 0 && (
+        <div className="ek-card" style={{ padding: 18 }}>
+          <SectionTitle fr="Documents joints" en="Attached documents" />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {d.documents.map((doc, i) => (
+              <a
+                key={i}
+                href={doc.url}
+                target="_blank"
+                rel="noreferrer"
+                className="ek-btn ek-btn-outline"
+                style={{ height: 32, fontSize: 12 }}
+              >
+                <Icon name="file" size={13} /> {doc.name || `Document ${i + 1}`}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Frais scolaires / minerval */}
       <PaymentManager studentId={d.id} payments={payments} />

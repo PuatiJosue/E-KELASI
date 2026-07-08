@@ -72,15 +72,29 @@ export async function importStudentsAction(args: { rows: ImportRow[] }): Promise
   return { ok: true, inserted: rows.length, duplicates };
 }
 
+export type StudentDocument = { name: string; url: string };
+
 export async function addStudentAction(args: {
   lastName: string;      // Nom
   middleName?: string;   // Post-nom
   firstName: string;     // Prénom
   sex?: string;          // 'M' | 'F'
   birthDate?: string;    // date de naissance (facultatif)
-  className: string;
+  birthPlace?: string;   // Lieu de naissance
+  className: string;     // Inscrit(e) en
   option?: string;
   gradeLevel?: string;   // facultatif → défaut = classe
+  address?: string;      // Adresse
+  fatherName?: string;   // Nom du père
+  motherName?: string;   // Nom de la mère
+  guardianName?: string; // Nom du responsable
+  guardianRelation?: string; // Degré de parenté
+  guardianPhone?: string;    // Téléphone du responsable
+  provinceOrigin?: string;   // Province d'origine
+  observation?: string;      // Observation
+  enrolledAt?: string;       // Date d'inscription à l'école
+  avatarUrl?: string;        // Photo de l'enfant
+  documents?: StudentDocument[]; // Documents joints
 }): Promise<Result> {
   if (!isLiveMode()) return { ok: true };
   const lastName = args.lastName?.trim();
@@ -92,7 +106,12 @@ export async function addStudentAction(args: {
   }
   const sex = args.sex === "M" || args.sex === "F" ? args.sex : null;
   const birthDate = args.birthDate?.trim() || null;
+  const enrolledAt = args.enrolledAt?.trim() || null;
   const fullName = [lastName, middleName, firstName].filter(Boolean).join(" ");
+  const clean = (v?: string) => v?.trim() || null;
+  const documents = (args.documents ?? [])
+    .filter((d) => d && d.url)
+    .map((d) => ({ name: (d.name || "Document").slice(0, 120), url: d.url }));
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -106,7 +125,9 @@ export async function addStudentAction(args: {
     .maybeSingle();
   if (!staff) return { ok: false, message: "Vous n'êtes pas direction d'une école." };
 
-  const { error } = await supabase.from("students").insert({
+  // Cast : les nouvelles colonnes (fiche complète) sont ajoutées par la
+  // migration 0062 ; les types Supabase générés ne les connaissent pas encore.
+  const insertRow: Record<string, any> = {
     school_id: staff.school_id,
     full_name: fullName,
     first_name: firstName,
@@ -114,11 +135,24 @@ export async function addStudentAction(args: {
     last_name: lastName,
     sex,
     birth_date: birthDate,
+    birth_place: clean(args.birthPlace),
     class_name: className,
     grade_level: args.gradeLevel?.trim() || className,
     option: args.option?.trim() || null,
+    address: clean(args.address),
+    father_name: clean(args.fatherName),
+    mother_name: clean(args.motherName),
+    guardian_name: clean(args.guardianName),
+    guardian_relation: clean(args.guardianRelation),
+    guardian_phone: clean(args.guardianPhone),
+    province_origin: clean(args.provinceOrigin),
+    observation: clean(args.observation),
+    enrolled_at: enrolledAt,
+    avatar_url: clean(args.avatarUrl),
+    documents,
     status: "active",
-  });
+  };
+  const { error } = await (supabase.from("students").insert as any)(insertRow);
   if (error) return { ok: false, message: error.message };
 
   revalidatePath("/school/students");

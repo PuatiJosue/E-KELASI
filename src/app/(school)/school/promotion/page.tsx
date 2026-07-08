@@ -33,7 +33,7 @@ export default async function PromotionPage() {
         }}
       />
       <PromotionManager
-        students={students.map((s) => ({ id: s.id, name: s.fullName, className: s.className, option: s.option }))}
+        students={students.map((s) => ({ id: s.id, name: s.fullName, className: s.className, option: s.option, sex: s.sex }))}
         defaultYear={targetYear}
         schoolName={school?.name ?? ""}
         lastBatch={lastBatch}

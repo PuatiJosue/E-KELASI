@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
+import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
 import { recordStudentPayment } from "./actions";
@@ -209,7 +210,10 @@ function PayRow({ row, open, onToggle }: { row: FeeSummaryRow; open: boolean; on
           background: open ? "var(--surface-2)" : "transparent",
         }}
       >
-        <div style={{ fontWeight: 600, color: "var(--ink)" }}>{row.fullName}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+          <span style={{ fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.fullName}</span>
+          <SexBadge sex={row.sex} size={16} />
+        </div>
         <div style={{ color: row.count > 0 ? "var(--ink)" : "var(--ink-3)", fontWeight: 600 }}>
           {row.totals.length > 0 ? row.totals.map((t) => fmt(t.total, t.currency)).join(" + ") : "—"}
         </div>

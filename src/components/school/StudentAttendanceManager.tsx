@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { ClassPicker } from "@/components/school/ClassPicker";
+import { SexBadge } from "@/components/SexBadge";
 import { T, useLang } from "@/lib/i18n";
 import { setStudentAttendance } from "@/app/(school)/school/student-attendance/actions";
 import type { StudentLite, StudentDayAttendance } from "@/lib/attendance-db";
@@ -242,31 +243,6 @@ export function StudentAttendanceManager({
 }
 
 const GRID = "0.5fr 2.4fr 2.6fr";
-
-function SexBadge({ sex }: { sex: string | null }) {
-  if (sex !== "M" && sex !== "F") return null;
-  const isM = sex === "M";
-  return (
-    <span
-      title={isM ? "Masculin" : "Féminin"}
-      style={{
-        flexShrink: 0,
-        width: 17,
-        height: 17,
-        borderRadius: "50%",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 10,
-        fontWeight: 700,
-        color: "#fff",
-        background: isM ? "#2563EB" : "#DB2777",
-      }}
-    >
-      {isM ? "M" : "F"}
-    </span>
-  );
-}
 
 function Dot({ color, label }: { color: string; label: string }) {
   return (

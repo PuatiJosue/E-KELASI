@@ -104,11 +104,21 @@ export type StudentDossier = {
   avatarUrl: string | null;
   sex: string | null;
   birthDate: string | null;
+  birthPlace: string | null;
   className: string;
   option: string | null;
   schoolName: string | null;
   status: string;
   address: string | null;
+  enrolledAt: string | null;
+  provinceOrigin: string | null;
+  fatherName: string | null;
+  motherName: string | null;
+  guardianName: string | null;
+  guardianRelation: string | null;
+  guardianPhone: string | null;
+  observation: string | null;
+  documents: { name: string; url: string }[];
   parents: { name: string; email: string; phone: string | null; address: string | null; access: string }[];
   subjects: DossierSubject[];
   overallAvg: number;
@@ -780,7 +790,7 @@ export async function getStudentDossier(studentId: string): Promise<StudentDossi
 
     const { data: s } = await supabase
       .from("students")
-      .select("id, full_name, avatar_url, sex, birth_date, class_name, option, status, address, school_id, schools(name)")
+      .select("id, full_name, avatar_url, sex, birth_date, birth_place, class_name, option, status, address, enrolled_at, province_origin, father_name, mother_name, guardian_name, guardian_relation, guardian_phone, observation, documents, school_id, schools(name)")
       .eq("id", studentId)
       .eq("school_id", school.id)
       .maybeSingle();
@@ -828,11 +838,21 @@ export async function getStudentDossier(studentId: string): Promise<StudentDossi
       avatarUrl: (s as any).avatar_url ?? null,
       sex: (s as any).sex ?? null,
       birthDate: (s as any).birth_date ?? null,
+      birthPlace: (s as any).birth_place ?? null,
       className: (s as any).class_name ?? "—",
       option: (s as any).option ?? null,
       schoolName: (s as any).schools?.name ?? null,
       status: (s as any).status,
       address: (s as any).address ?? null,
+      enrolledAt: (s as any).enrolled_at ?? null,
+      provinceOrigin: (s as any).province_origin ?? null,
+      fatherName: (s as any).father_name ?? null,
+      motherName: (s as any).mother_name ?? null,
+      guardianName: (s as any).guardian_name ?? null,
+      guardianRelation: (s as any).guardian_relation ?? null,
+      guardianPhone: (s as any).guardian_phone ?? null,
+      observation: (s as any).observation ?? null,
+      documents: Array.isArray((s as any).documents) ? (s as any).documents : [],
       parents,
       subjects,
       overallAvg,

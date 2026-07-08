@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
+import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import type { SchoolStudentRow } from "@/lib/school-db";
 
@@ -26,8 +27,8 @@ export function StudentsBrowser({ students }: { students: SchoolStudentRow[] }) 
   const classes = Object.keys(grouped).sort();
 
   const exportCsv = () => {
-    const header = ["Nom", "Classe", "Option", "Moyenne", "Parents"];
-    const lines = [header, ...students.map((s) => [s.fullName, s.className, s.option ?? "", s.avg ?? "", s.parentNames.join(" / ")])];
+    const header = ["Nom", "Sexe", "Classe", "Option", "Moyenne", "Parents"];
+    const lines = [header, ...students.map((s) => [s.fullName, s.sex === "M" ? "M" : s.sex === "F" ? "F" : "", s.className, s.option ?? "", s.avg ?? "", s.parentNames.join(" / ")])];
     const csv = lines.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -113,6 +114,7 @@ export function StudentsBrowser({ students }: { students: SchoolStudentRow[] }) 
                       <Avatar name={s.fullName} url={s.avatarUrl} size={32} />
                       <span style={{ fontWeight: 600, color: "var(--ink)" }}>{s.fullName}</span>
                     </Link>
+                    <SexBadge sex={s.sex} size={16} />
                     {s.option ? (
                       <span
                         title={s.option}

@@ -29,6 +29,7 @@ export type FeeSummaryRow = {
   studentId: string;
   fullName: string;
   className: string;
+  sex: string | null;
   totals: { currency: string; total: number }[];
   count: number;
   lastPaidAt: string | null;
@@ -135,6 +136,7 @@ export async function getSchoolFeeSummary(): Promise<FeeSummaryRow[]> {
         studentId: s.id,
         fullName: s.fullName,
         className: s.className,
+        sex: s.sex ?? null,
         totals: e ? [...e.totals.entries()].map(([currency, total]) => ({ currency, total })) : [],
         count: e?.count ?? 0,
         lastPaidAt: e?.last ?? null,

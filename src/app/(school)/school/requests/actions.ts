@@ -133,15 +133,18 @@ export async function attachToExisting(pendingStudentId: string, existingStudent
   const { data: exist } = await svc.from("students").select(cols).eq("id", existingStudentId).eq("school_id", schoolId).maybeSingle();
   if (!pend || !exist) return { ok: false, message: "Élève introuvable." };
 
-  // ── Fusion : priorité aux données du parent (fiche en attente), plus
-  //    complètes et récentes. On n'écrase JAMAIS une donnée du parent par
-  //    l'ancienne donnée de l'école ; les champs vides du parent conservent
-  //    la valeur existante. Aucune perte d'information → une seule fiche.
+  // ── Fusion : LES DONNÉES DE L'ÉCOLE SONT PRINCIPALES. On ne remplace jamais
+  //    une valeur déjà saisie par l'école par celle du parent ; on se contente
+  //    de COMBLER les champs que l'école avait laissés vides avec ce que le
+  //    parent a fourni. Aucune perte d'information → une seule fiche, l'école
+  //    reste la source de vérité.
   const FIELDS = ["full_name", "first_name", "middle_name", "last_name", "sex", "birth_date", "class_name", "grade_level", "option", "address", "avatar_url"] as const;
   const merged: Record<string, any> = {};
+  const isEmpty = (v: any) => v === null || v === undefined || String(v).trim() === "";
   for (const f of FIELDS) {
-    const pv = (pend as any)[f];
-    if (pv !== null && pv !== undefined && String(pv).trim() !== "") merged[f] = pv;
+    const ev = (exist as any)[f]; // valeur école (prioritaire)
+    const pv = (pend as any)[f];  // valeur parent (comble seulement les trous)
+    if (isEmpty(ev) && !isEmpty(pv)) merged[f] = pv;
   }
   // grade_level est NOT NULL : s'assurer qu'il reste cohérent avec la classe.
   if (!merged.grade_level && merged.class_name) merged.grade_level = merged.class_name;
@@ -169,7 +172,7 @@ export async function attachToExisting(pendingStudentId: string, existingStudent
   await svc.from("students").delete().eq("id", pendingStudentId).eq("school_id", schoolId);
 
   // Notifie le(s) parent(s) que la demande a été acceptée (rattachement).
-  const name = merged.full_name ?? (exist as any).full_name ?? "l'élève";
+  const name = (exist as any).full_name ?? merged.full_name ?? "l'élève";
   const uniqParents = [...new Set(movedParents.filter(Boolean))];
   if (uniqParents.length > 0) {
     await svc.from("notifications").insert(

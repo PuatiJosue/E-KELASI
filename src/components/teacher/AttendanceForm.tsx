@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
+import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import type { StudentRow, StudentAttendanceMap } from "@/lib/teacher-db";
 import { saveAttendanceAction } from "@/app/(teacher)/teacher/attendance/actions";
@@ -207,31 +208,6 @@ export function AttendanceForm({ classes, initialClassName, initialOption, initi
         </div>
       </div>
     </>
-  );
-}
-
-function SexBadge({ sex }: { sex: string | null }) {
-  if (sex !== "M" && sex !== "F") return null;
-  const isM = sex === "M";
-  return (
-    <span
-      title={isM ? "Masculin" : "Féminin"}
-      style={{
-        flexShrink: 0,
-        width: 17,
-        height: 17,
-        borderRadius: "50%",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 10,
-        fontWeight: 700,
-        color: "#fff",
-        background: isM ? "#2563EB" : "#DB2777",
-      }}
-    >
-      {isM ? "M" : "F"}
-    </span>
   );
 }
 

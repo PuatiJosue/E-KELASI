@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
+import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import { listStudentsInClass } from "@/lib/teacher-db";
 import { classLabel, normOption } from "@/lib/classes";
@@ -107,6 +108,7 @@ export default async function ClassDetail({
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Avatar name={s.fullName} url={s.avatarUrl} size={32} />
               <span style={{ fontWeight: 600, color: "var(--ink)" }}>{s.fullName}</span>
+              <SexBadge sex={s.sex} size={16} />
             </div>
             <div style={{ textAlign: "right" }}>
               {s.avg !== null ? (
