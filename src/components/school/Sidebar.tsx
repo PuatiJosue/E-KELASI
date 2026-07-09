@@ -33,7 +33,7 @@ const NAV: NavItem[] = [
 
 const SEC: NavItem[] = [
   { id: "billing",  href: "/school/billing",  icon: "creditcard", fr: "Abonnement",   en: "Subscription" },
-  { id: "year-archive", href: "/school/year-archive", icon: "refresh", fr: "Nouvelle année", en: "New school year" },
+  { id: "year-archive", href: "/school/year-archive", icon: "refresh", fr: "Archivage", en: "Archiving" },
   { id: "branding", href: "/school/branding", icon: "star",     fr: "Branding école", en: "School branding" },
   { id: "settings", href: "/school/settings", icon: "settings", fr: "Paramètres",     en: "Settings" },
 ];

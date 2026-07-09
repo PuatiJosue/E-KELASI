@@ -1,8 +1,10 @@
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { PageHeader } from "@/components/KPI";
 import { getMySchool } from "@/lib/school-db";
+import { schoolYearLabel } from "@/lib/trimester";
+import { getArchiveYears } from "@/lib/year-archive-db";
 import { isLiveMode } from "@/lib/db";
-import { YearArchiveForm } from "./YearArchiveForm";
+import { ArchivageManager } from "./ArchivageManager";
 
 function service() {
   return createServiceClient(
@@ -34,18 +36,22 @@ async function counts(schoolId: string): Promise<{ grades: number; homework: num
 
 export default async function SchoolYearArchive() {
   const school = await getMySchool();
-  const c = school && isLiveMode() ? await counts(school.id) : { grades: 0, homework: 0 };
+  const [c, years] = await Promise.all([
+    school && isLiveMode() ? counts(school.id) : Promise.resolve({ grades: 0, homework: 0 }),
+    getArchiveYears(),
+  ]);
+  const defaultYear = (school as any)?.currentYear || schoolYearLabel();
 
   return (
-    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxWidth: 720 }}>
+    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxWidth: 900 }}>
       <PageHeader
-        title={{ fr: "Nouvelle année scolaire", en: "New school year" }}
+        title={{ fr: "Archivage", en: "Archiving" }}
         sub={{
-          fr: "Archivez l'année écoulée et repartez sur une base propre.",
-          en: "Archive the past year and start fresh.",
+          fr: "Archivez l'année écoulée (dossiers par classe) puis démarrez la nouvelle année.",
+          en: "Archive the past year (dossiers by class) then start the new one.",
         }}
       />
-      <YearArchiveForm activeGrades={c.grades} activeHomework={c.homework} />
+      <ArchivageManager activeGrades={c.grades} activeHomework={c.homework} defaultYear={defaultYear} years={years} />
     </div>
   );
 }

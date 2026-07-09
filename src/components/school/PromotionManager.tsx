@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
+import { ClassPicker } from "@/components/school/ClassPicker";
 import { T } from "@/lib/i18n";
 import { classLabel, classKey, normOption } from "@/lib/classes";
 import { nextClassFor, proposeDecision, PROMOTION_LEVELS, PROMOTION_OPTIONS } from "@/lib/promotion";
@@ -47,6 +48,7 @@ export function PromotionManager({
     });
   };
   const [year, setYear] = useState(defaultYear);
+  const [activeClass, setActiveClass] = useState("");
   const [done, setDone] = useState<{ promoted: number; repeated: number; graduated: number } | null>(null);
 
   // Décision initiale par élève (proposition automatique).
@@ -74,6 +76,11 @@ export function PromotionManager({
     return [...map.values()].sort((a, b) => a.label.localeCompare(b.label, "fr", { numeric: true }));
   }, [students]);
 
+  // Tuiles de classes + classe active.
+  const classList = useMemo(() => groups.map((g) => ({ name: g.label, count: g.list.length })), [groups]);
+  const activeGroup = groups.find((g) => g.label === activeClass) ?? groups[0] ?? null;
+  const activeList = activeGroup?.list ?? [];
+
   const setDec = (id: string, patch: Partial<Decision>) =>
     setDecisions((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
 
@@ -93,29 +100,31 @@ export function PromotionManager({
     });
   };
 
+  // Récap limité à la classe active.
   const counts = useMemo(() => {
     const c = { promote: 0, redouble: 0, graduate: 0, skip: 0 };
-    for (const d of Object.values(decisions)) c[d.action] += 1;
+    for (const s of activeList) { const d = decisions[s.id]; if (d) c[d.action] += 1; }
     return c;
-  }, [decisions]);
+  }, [decisions, activeList]);
 
-  // Élèves « Passe » vers les humanités sans option choisie → bloquant.
+  // Élèves « Passe » vers les humanités sans option choisie → bloquant (classe active).
   const missingOption = useMemo(
-    () => Object.values(decisions).filter((d) => d.action === "promote" && isHumanities(d.targetClass) && !d.option).length,
-    [decisions]
+    () => activeList.filter((s) => { const d = decisions[s.id]; return d && d.action === "promote" && isHumanities(d.targetClass) && !d.option; }).length,
+    [decisions, activeList]
   );
 
   const submit = () => {
     if (!year.trim()) { alert("Indiquez l'année scolaire cible."); return; }
+    if (!activeGroup) { alert("Sélectionnez une classe."); return; }
     if (missingOption > 0) { alert(`${missingOption} élève(s) entrant en humanités sans option. Choisissez l'option avant de valider.`); return; }
     const total = counts.promote + counts.redouble + counts.graduate;
-    if (total === 0) { alert("Aucun élève à traiter."); return; }
+    if (total === 0) { alert("Aucun élève à traiter dans cette classe."); return; }
     const ok = window.confirm(
-      `Appliquer pour l'année ${year} ?\n\n• ${counts.promote} passage(s)\n• ${counts.redouble} redoublant(s)\n• ${counts.graduate} diplômé(s)\n\nUn certificat signé est généré pour chaque passage et redoublant.`
+      `Appliquer le passage de la classe ${activeGroup.label} pour l'année ${year} ?\n\n• ${counts.promote} passage(s)\n• ${counts.redouble} redoublant(s)\n• ${counts.graduate} diplômé(s)\n\nUn certificat signé est généré pour chaque passage et redoublant.`
     );
     if (!ok) return;
 
-    const payload: PromotionDecision[] = students.map((s) => {
+    const payload: PromotionDecision[] = activeList.map((s) => {
       const d = decisions[s.id];
       return {
         studentId: s.id,
@@ -172,19 +181,24 @@ export function PromotionManager({
         </div>
       )}
 
-      {/* Groupes par classe */}
-      {groups.map((g) => (
-        <div key={g.label} className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+      {/* Tuiles de classes */}
+      <div className="ek-card" style={{ padding: 16 }}>
+        <ClassPicker classes={classList} selected={activeGroup?.label ?? ""} onSelect={setActiveClass} />
+      </div>
+
+      {/* Classe active uniquement */}
+      {activeGroup && (
+        <div key={activeGroup.label} className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "13px 18px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{g.label}</div>
-            <span style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{g.list.length} <T fr="élèves" en="students" /></span>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{activeGroup.label}</div>
+            <span style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{activeGroup.list.length} <T fr="élèves" en="students" /></span>
             <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-              <button onClick={() => setGroupAction(g.list, "promote")} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}><T fr="Tout faire passer" en="Promote all" /></button>
-              <button onClick={() => setGroupAction(g.list, "redouble")} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}><T fr="Tout redoubler" en="Repeat all" /></button>
+              <button onClick={() => setGroupAction(activeGroup.list, "promote")} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}><T fr="Tout faire passer" en="Promote all" /></button>
+              <button onClick={() => setGroupAction(activeGroup.list, "redouble")} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12 }}><T fr="Tout redoubler" en="Repeat all" /></button>
             </div>
           </div>
 
-          {g.list.map((s, i) => {
+          {activeGroup.list.map((s, i) => {
             const d = decisions[s.id];
             const showOption = d.action === "promote" && isHumanities(d.targetClass);
             return (
@@ -241,7 +255,7 @@ export function PromotionManager({
             );
           })}
         </div>
-      ))}
+      )}
 
       {/* Barre d'action */}
       <div className="ek-card" style={{ padding: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", position: "sticky", bottom: 0 }}>
@@ -257,7 +271,7 @@ export function PromotionManager({
           )}
           <button onClick={submit} disabled={pending} className="ek-btn ek-btn-primary" style={{ height: 40, fontSize: 13.5, opacity: pending ? 0.6 : 1 }}>
             <Icon name="graduation" size={16} />
-            {pending ? "…" : <T fr="Appliquer le passage" en="Apply promotion" />}
+            {pending ? "…" : <T fr={`Appliquer le passage${activeGroup ? ` — ${activeGroup.label}` : ""}`} en={`Apply promotion${activeGroup ? ` — ${activeGroup.label}` : ""}`} />}
           </button>
         </div>
       </div>
