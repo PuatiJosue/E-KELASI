@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
 import { getFeeDetail, type FeeDetail, type FeeKind } from "@/lib/finance/fees";
 import { listFeePayments, type FeePayment } from "@/lib/finance/payments";
+import type { TreasuryKind } from "@/lib/finance/treasury";
 
 type Result = { ok: true } | { ok: false; message: string };
 
@@ -106,6 +107,7 @@ export async function updateFee(input: {
   currency?: string;
   installments?: InstallmentInput[];
 }): Promise<Result> {
+  // (category persistée ci-dessous)
   if (!input.id) return { ok: false, message: "Frais invalide." };
   if (!isLiveMode()) return { ok: true };
   const c = await caller();
@@ -116,7 +118,8 @@ export async function updateFee(input: {
     return { ok: false, message: "Modification impossible : des paiements ont déjà été enregistrés." };
 
   const { error } = await (svc.from("fees").update as any)({
-    label: input.label?.trim() || "Frais", category: input.category?.trim() || null,
+    label: input.label?.trim() || "Frais",
+    category: input.category === undefined ? undefined : (input.category?.trim() || null),
     class_name: input.className || null, option: input.option || null,
     total_amount: input.totalAmount || 0, currency: input.currency || "CDF",
   }).eq("id", input.id).eq("school_id", c.schoolId);
@@ -239,6 +242,81 @@ export async function cancelFeePayment(id: string, reason: string): Promise<Resu
   if (error) return { ok: false, message: "Annulation impossible." };
   await (svc.from("finance_audit").insert as any)({
     school_id: c.schoolId, entity_type: "fee_payment", entity_id: id, action: "cancel", actor: c.userId, reason: reason.trim(),
+  });
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+// ── Trésorerie : dépenses & recettes exceptionnelles ─────────────────
+export async function addTreasuryEntry(input: {
+  kind: TreasuryKind;
+  amount: number;
+  currency?: string;
+  label: string;
+  category?: string;
+  entryDate?: string;
+  schoolYear?: string;
+  note?: string;
+}): Promise<Result> {
+  if (input.kind !== "depense" && input.kind !== "recette_exceptionnelle") return { ok: false, message: "Type invalide." };
+  if (!(input.amount > 0)) return { ok: false, message: "Montant invalide." };
+  if (!input.label?.trim()) return { ok: false, message: "Libellé requis." };
+  if (!isLiveMode()) return { ok: true };
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await (svc.from("treasury_entries").insert as any)({
+    school_id: c.schoolId, kind: input.kind, amount: input.amount, currency: input.currency || "CDF",
+    label: input.label.trim(), category: input.category?.trim() || null,
+    entry_date: input.entryDate?.trim() || new Date().toISOString().slice(0, 10),
+    school_year: input.schoolYear || null, note: input.note?.trim() || null, recorded_by: c.userId,
+  });
+  if (error) return { ok: false, message: "Enregistrement impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+export async function updateTreasuryEntry(input: {
+  id: string;
+  amount: number;
+  currency?: string;
+  label: string;
+  category?: string;
+  entryDate?: string;
+  note?: string;
+}): Promise<Result> {
+  if (!input.id) return { ok: false, message: "Écriture invalide." };
+  if (!(input.amount > 0)) return { ok: false, message: "Montant invalide." };
+  if (!input.label?.trim()) return { ok: false, message: "Libellé requis." };
+  if (!isLiveMode()) return { ok: true };
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await (svc.from("treasury_entries").update as any)({
+    amount: input.amount, currency: input.currency || "CDF", label: input.label.trim(),
+    category: input.category?.trim() || null, entry_date: input.entryDate?.trim() || undefined, note: input.note?.trim() || null,
+  }).eq("id", input.id).eq("school_id", c.schoolId).is("cancelled_at", null);
+  if (error) return { ok: false, message: "Mise à jour impossible." };
+  await (svc.from("finance_audit").insert as any)({
+    school_id: c.schoolId, entity_type: "treasury_entry", entity_id: input.id, action: "update", actor: c.userId,
+  });
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+export async function cancelTreasuryEntry(id: string, reason: string): Promise<Result> {
+  if (!id) return { ok: false, message: "Écriture invalide." };
+  if (!reason?.trim()) return { ok: false, message: "Motif d'annulation requis." };
+  if (!isLiveMode()) return { ok: true };
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await (svc.from("treasury_entries").update as any)({
+    cancelled_at: new Date().toISOString(), cancel_reason: reason.trim(), cancelled_by: c.userId,
+  }).eq("id", id).eq("school_id", c.schoolId).is("cancelled_at", null);
+  if (error) return { ok: false, message: "Annulation impossible." };
+  await (svc.from("finance_audit").insert as any)({
+    school_id: c.schoolId, entity_type: "treasury_entry", entity_id: id, action: "cancel", actor: c.userId, reason: reason.trim(),
   });
   revalidatePath("/school/finances");
   return { ok: true };

@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
-import { FraisScolairesTab, type ClassOption } from "./FraisScolairesTab";
+import { RubriqueFraisTab, type ClassOption } from "./FraisScolairesTab";
+import { TresorerieTab } from "./TresorerieTab";
 import type { SchoolBranding } from "./finance-ui";
 import type { FeesOverview } from "@/lib/finance/fees";
+import type { TreasuryOverview } from "@/lib/finance/treasury";
 
 const TABS = [
   { key: "scolaires", label: "Frais scolaires", icon: "creditcard" },
@@ -14,9 +16,11 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export function FinanceModule({
-  feesScolaire, year, school, classes, years,
+  feesScolaire, feesAutre, treasury, year, school, classes, years,
 }: {
   feesScolaire: FeesOverview;
+  feesAutre: FeesOverview;
+  treasury: TreasuryOverview;
   year: string;
   school: SchoolBranding;
   classes: ClassOption[];
@@ -57,21 +61,9 @@ export function FinanceModule({
         })}
       </div>
 
-      {tab === "scolaires" && <FraisScolairesTab overview={feesScolaire} year={year} school={school} classes={classes} />}
-      {tab === "autres" && <ComingSoon title="Autres frais" note="Catégories libres (uniforme, transport, cantine…), paiements et statistiques. Disponible en phase 2." />}
-      {tab === "tresorerie" && <ComingSoon title="Trésorerie" note="Recettes (frais + exceptionnelles), dépenses, solde, graphiques d’évolution et clôture de caisse. Disponible en phase 2." />}
-    </div>
-  );
-}
-
-function ComingSoon({ title, note }: { title: string; note: string }) {
-  return (
-    <div className="ek-card" style={{ padding: 40, textAlign: "center", display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
-      <span style={{ width: 44, height: 44, borderRadius: 12, background: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-3)" }}>
-        <Icon name="clock" size={22} />
-      </span>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>{title}</div>
-      <div style={{ fontSize: 12.5, color: "var(--ink-3)", maxWidth: 380 }}>{note}</div>
+      {tab === "scolaires" && <RubriqueFraisTab kind="scolaire" overview={feesScolaire} year={year} school={school} classes={classes} />}
+      {tab === "autres" && <RubriqueFraisTab kind="autre" overview={feesAutre} year={year} school={school} classes={classes} />}
+      {tab === "tresorerie" && <TresorerieTab overview={treasury} year={year} school={school} />}
     </div>
   );
 }

@@ -15,20 +15,24 @@ import {
   createFee, updateFee, deleteFee, archiveFee, recordFeePayment, cancelFeePayment,
   setFeeOverride, removeFeeOverride, loadFeeDetail, loadFeePayments, type InstallmentInput,
 } from "./actions-v2";
-import type { FeesOverview, Fee, FeeDetail, FeeStudentRow } from "@/lib/finance/fees";
+import type { FeesOverview, Fee, FeeDetail, FeeStudentRow, FeeKind } from "@/lib/finance/fees";
 import type { FeePayment } from "@/lib/finance/payments";
 
 export type ClassOption = { className: string; option: string | null; display: string };
 
-export function FraisScolairesTab({
-  overview, year, school, classes,
+export function RubriqueFraisTab({
+  kind, overview, year, school, classes,
 }: {
+  kind: FeeKind;
   overview: FeesOverview;
   year: string;
   school: SchoolBranding;
   classes: ClassOption[];
 }) {
   const router = useRouter();
+  const isScol = kind === "scolaire";
+  const rubTitle = isScol ? "Frais scolaires" : "Autres frais";
+  const createLabel = isScol ? "Créer un frais" : "Créer une catégorie";
   const c = overview.currency;
   const k = overview.kpis;
   const [query, setQuery] = useState("");
@@ -57,7 +61,7 @@ export function FraisScolairesTab({
 
       {/* Barre d’outils */}
       <Toolbar>
-        <SearchInput value={query} onChange={setQuery} placeholder="Rechercher un frais ou une classe…" />
+        <SearchInput value={query} onChange={setQuery} placeholder={isScol ? "Rechercher un frais ou une classe…" : "Rechercher une catégorie…"} />
         <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           <span style={{ fontSize: 9.5, color: "var(--ink-3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Classe</span>
           <select value={classF} onChange={(e) => setClassF(e.target.value)} style={{ ...selStyle, height: 38 }}>
@@ -66,18 +70,18 @@ export function FraisScolairesTab({
           </select>
         </label>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <button onClick={() => exportFeesPdf(fees, c, school, year)} disabled={fees.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: fees.length === 0 ? 0.5 : 1 }}><Icon name="file" size={14} /> PDF</button>
-          <button onClick={() => exportFeesCsv(fees)} disabled={fees.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: fees.length === 0 ? 0.5 : 1 }}><Icon name="download" size={14} /> Excel</button>
-          <button onClick={() => setFeeModal("new")} className="ek-btn ek-btn-primary" style={{ height: 38, fontSize: 12.5 }}><Icon name="plus" size={14} stroke={2.5} /> Créer un frais</button>
+          <button onClick={() => exportFeesPdf(fees, c, school, year, rubTitle)} disabled={fees.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: fees.length === 0 ? 0.5 : 1 }}><Icon name="file" size={14} /> PDF</button>
+          <button onClick={() => exportFeesCsv(fees, rubTitle)} disabled={fees.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: fees.length === 0 ? 0.5 : 1 }}><Icon name="download" size={14} /> Excel</button>
+          <button onClick={() => setFeeModal("new")} className="ek-btn ek-btn-primary" style={{ height: 38, fontSize: 12.5 }}><Icon name="plus" size={14} stroke={2.5} /> {createLabel}</button>
         </div>
       </Toolbar>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 320px", gap: 16, alignItems: "start" }} className="ek-fin-grid">
         {/* Liste des frais */}
         <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--divider)", fontSize: 13.5, fontWeight: 700 }}>Frais scolaires ({fees.length})</div>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--divider)", fontSize: 13.5, fontWeight: 700 }}>{rubTitle} ({fees.length})</div>
           {fees.length === 0 ? (
-            <div style={{ padding: 30, textAlign: "center", color: "var(--ink-3)", fontSize: 12.5 }}>Aucun frais. Cliquez sur « Créer un frais ».</div>
+            <div style={{ padding: 30, textAlign: "center", color: "var(--ink-3)", fontSize: 12.5 }}>Aucun élément. Cliquez sur « {createLabel} ».</div>
           ) : fees.map((f, i) => (
             <FeeRow key={f.id} fee={f} first={i === 0} onOpen={() => setOpenFee(f)} onEdit={() => setFeeModal(f)} onChanged={() => router.refresh()} />
           ))}
@@ -92,6 +96,7 @@ export function FraisScolairesTab({
 
       {feeModal && (
         <FeeFormModal
+          kind={kind}
           existing={feeModal === "new" ? null : feeModal}
           classes={classes} year={year}
           onClose={() => setFeeModal(null)}
@@ -120,7 +125,7 @@ function FeeRow({ fee, first, onOpen, onEdit, onChanged }: { fee: Fee; first: bo
       <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={onOpen}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{fee.label}</span>
-          {fee.classDisplay && <span style={{ fontSize: 11, color: "var(--ink-3)" }}>· {fee.classDisplay}</span>}
+          <span style={{ fontSize: 11, color: "var(--ink-3)" }}>· {fee.classDisplay ?? "École entière"}</span>
           {fee.installments.length > 0 && <span style={{ fontSize: 10.5, color: "var(--ink-3)" }}>· {fee.installments.length} tranche(s)</span>}
           {fee.archived && <span style={{ fontSize: 10.5, color: "var(--ink-3)" }}>· archivé</span>}
         </div>
@@ -138,10 +143,12 @@ function FeeRow({ fee, first, onOpen, onEdit, onChanged }: { fee: Fee; first: bo
 }
 
 // ── Modale création / modification d’un frais ────────────────────────
-function FeeFormModal({ existing, classes, year, onClose, onDone }: { existing: Fee | null; classes: ClassOption[]; year: string; onClose: () => void; onDone: () => void }) {
+function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind: FeeKind; existing: Fee | null; classes: ClassOption[]; year: string; onClose: () => void; onDone: () => void }) {
+  const isScol = kind === "scolaire";
   const [pending, start] = useTransition();
   const [label, setLabel] = useState(existing?.label ?? "");
-  const [classKeyVal, setClassKeyVal] = useState(existing ? `${existing.className ?? ""}${existing.option ?? ""}` : (classes[0] ? `${classes[0].className}${classes[0].option ?? ""}` : ""));
+  const [category, setCategory] = useState(existing?.category ?? existing?.label ?? "");
+  const [classKeyVal, setClassKeyVal] = useState(existing ? classKey(existing.className, existing.option) : (classes[0] ? classKey(classes[0].className, classes[0].option) : ""));
   const [totalAmount, setTotalAmount] = useState(existing ? String(existing.totalAmount) : "");
   const [currency, setCurrency] = useState(existing?.currency ?? "CDF");
   const [rows, setRows] = useState<{ name: string; amount: string; dueDate: string }[]>(
@@ -158,8 +165,10 @@ function FeeFormModal({ existing, classes, year, onClose, onDone }: { existing: 
 
   const submit = () => {
     setError(null);
-    if (!label.trim()) { setError("Libellé requis."); return; }
-    if (!existing && !classKeyVal) { setError("Choisissez une classe."); return; }
+    const effLabel = (isScol ? label : (label.trim() || category)).trim();
+    if (isScol && !label.trim()) { setError("Libellé requis."); return; }
+    if (!isScol && !category.trim()) { setError("Nom de la catégorie requis."); return; }
+    if (isScol && !existing && !classKeyVal) { setError("Choisissez une classe."); return; }
     if (!(parsedTotal > 0)) { setError("Montant total invalide."); return; }
     if (rows.length > 0 && Math.abs(trancheSum - parsedTotal) > 0.5) {
       if (!confirm(`La somme des tranches (${money(trancheSum, currency)}) diffère du total (${money(parsedTotal, currency)}). Continuer ?`)) return;
@@ -173,26 +182,31 @@ function FeeFormModal({ existing, classes, year, onClose, onDone }: { existing: 
 
     start(async () => {
       const r = existing
-        ? await updateFee({ id: existing.id, label, className: className || null, option: option || null, totalAmount: parsedTotal, currency, installments })
-        : await createFee({ kind: "scolaire", label, className: className || null, option: option || null, schoolYear: year, totalAmount: parsedTotal, currency, installments });
+        ? await updateFee({ id: existing.id, label: effLabel, category: isScol ? null : category.trim(), className: className || null, option: option || null, totalAmount: parsedTotal, currency, installments })
+        : await createFee({ kind, label: effLabel, category: isScol ? null : category.trim(), className: className || null, option: option || null, schoolYear: year, totalAmount: parsedTotal, currency, installments });
       if (r.ok) onDone(); else setError(r.message);
     });
   };
 
   return (
-    <Modal title={existing ? "Modifier le frais" : "Créer un frais scolaire"} onClose={onClose} wide>
+    <Modal title={existing ? (isScol ? "Modifier le frais" : "Modifier la catégorie") : (isScol ? "Créer un frais scolaire" : "Créer une catégorie / un frais")} onClose={onClose} wide>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <Labeled label="Année scolaire" style={{ flex: 1, minWidth: 140 }}>
           <input value={year} disabled style={{ ...modalInp, opacity: 0.7 }} />
         </Labeled>
-        <Labeled label="Niveau / classe" style={{ flex: 1, minWidth: 180 }}>
+        <Labeled label={isScol ? "Niveau / classe" : "Cible"} style={{ flex: 1, minWidth: 180 }}>
           <select value={classKeyVal} onChange={(e) => setClassKeyVal(e.target.value)} style={modalInp} disabled={!!existing && existing.hasPayments}>
-            {classes.length === 0 && <option value="">— aucune classe —</option>}
+            {!isScol && <option value="">École entière</option>}
+            {isScol && classes.length === 0 && <option value="">— aucune classe —</option>}
             {classes.map((cl) => { const ck = classKey(cl.className, cl.option); return <option key={ck} value={ck}>{cl.display}</option>; })}
           </select>
         </Labeled>
       </div>
-      <Labeled label="Libellé du frais"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Minerval, Frais d’examen…" style={modalInp} /></Labeled>
+      {isScol ? (
+        <Labeled label="Libellé du frais"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Minerval, Frais d’examen…" style={modalInp} /></Labeled>
+      ) : (
+        <Labeled label="Nom de la catégorie"><input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Uniforme, Transport, Cantine…" style={modalInp} /></Labeled>
+      )}
       <div style={{ display: "flex", gap: 10 }}>
         <Labeled label="Montant total" style={{ flex: 1 }}><input value={totalAmount} onChange={(e) => setTotalAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="250000" style={modalInp} /></Labeled>
         <Labeled label="Devise" style={{ width: 110 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
@@ -493,15 +507,15 @@ function localDateTime(): string {
 }
 
 // ── Exports ──────────────────────────────────────────────────────────
-function exportFeesCsv(fees: Fee[]) {
-  const lines: (string | number)[][] = [["Frais scolaires"], [], ["Frais", "Classe", "Montant total", "Élèves", "Attendu", "Encaissé", "Restant", "Recouvrement %"]];
-  for (const f of fees) lines.push([f.label, f.classDisplay ?? "", Math.round(f.totalAmount), f.studentCount, Math.round(f.expected), Math.round(f.collected), Math.round(f.remaining), f.recoveryPct.toFixed(0)]);
-  downloadCsv(lines, "frais-scolaires.csv");
+function exportFeesCsv(fees: Fee[], title: string) {
+  const lines: (string | number)[][] = [[title], [], ["Frais", "Classe", "Montant total", "Élèves", "Attendu", "Encaissé", "Restant", "Recouvrement %"]];
+  for (const f of fees) lines.push([f.label, f.classDisplay ?? "École entière", Math.round(f.totalAmount), f.studentCount, Math.round(f.expected), Math.round(f.collected), Math.round(f.remaining), f.recoveryPct.toFixed(0)]);
+  downloadCsv(lines, `${title.toLowerCase().replace(/\s+/g, "-")}.csv`);
 }
-function exportFeesPdf(fees: Fee[], c: string, school: SchoolBranding, year: string) {
-  const body = fees.map((f) => `<tr><td>${escHtml(f.label)}</td><td>${escHtml(f.classDisplay ?? "")}</td><td class="r">${money(f.expected, c)}</td><td class="r" style="color:#16A34A">${money(f.collected, c)}</td><td class="r" style="color:#E11D48">${money(f.remaining, c)}</td><td class="r">${f.recoveryPct.toFixed(0)} %</td></tr>`).join("");
+function exportFeesPdf(fees: Fee[], c: string, school: SchoolBranding, year: string, title: string) {
+  const body = fees.map((f) => `<tr><td>${escHtml(f.label)}</td><td>${escHtml(f.classDisplay ?? "École entière")}</td><td class="r">${money(f.expected, c)}</td><td class="r" style="color:#16A34A">${money(f.collected, c)}</td><td class="r" style="color:#E11D48">${money(f.remaining, c)}</td><td class="r">${f.recoveryPct.toFixed(0)} %</td></tr>`).join("");
   const exp = fees.reduce((a, f) => a + f.expected, 0), col = fees.reduce((a, f) => a + f.collected, 0);
-  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Frais scolaires</title><style>${REPORT_CSS}</style></head><body>${reportHead(school)}<h1>Frais scolaires — ${escHtml(year)}</h1><table><thead><tr><th>Frais</th><th>Classe</th><th class="r">Attendu</th><th class="r">Encaissé</th><th class="r">Restant</th><th class="r">Recouvrement</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td colspan="2">Total</td><td class="r">${money(exp, c)}</td><td class="r">${money(col, c)}</td><td class="r">${money(Math.max(0, exp - col), c)}</td><td class="r">${exp > 0 ? ((col / exp) * 100).toFixed(0) : 0} %</td></tr></tfoot></table><div class="foot">E-KELASI</div><script>window.onload=function(){window.print()}</script></body></html>`;
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escHtml(title)}</title><style>${REPORT_CSS}</style></head><body>${reportHead(school)}<h1>${escHtml(title)} — ${escHtml(year)}</h1><table><thead><tr><th>Frais</th><th>Classe</th><th class="r">Attendu</th><th class="r">Encaissé</th><th class="r">Restant</th><th class="r">Recouvrement</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td colspan="2">Total</td><td class="r">${money(exp, c)}</td><td class="r">${money(col, c)}</td><td class="r">${money(Math.max(0, exp - col), c)}</td><td class="r">${exp > 0 ? ((col / exp) * 100).toFixed(0) : 0} %</td></tr></tfoot></table><div class="foot">E-KELASI</div><script>window.onload=function(){window.print()}</script></body></html>`;
   openPrint(html);
 }
 function exportFeeStudentsCsv(fee: Fee, rows: FeeStudentRow[]) {
