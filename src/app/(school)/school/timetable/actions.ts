@@ -38,6 +38,34 @@ export type TimetableRowInput = {
   room?: string;
 };
 
+// Valide une grille de créneaux ; renvoie un message d'erreur ou null si OK.
+function validateRows(rows: TimetableRowInput[]): string | null {
+  if (rows.length === 0) return "Ajoutez au moins une ligne.";
+  for (const r of rows) {
+    if (!(r.day >= 1 && r.day <= 7)) return "Jour invalide.";
+    if (!r.startTime || !r.endTime) return "Heures de début et de fin requises.";
+    if (r.endTime <= r.startTime) return "L'heure de fin doit être après l'heure de début.";
+    if (!r.subject?.trim()) return "Matière requise pour chaque ligne.";
+  }
+  return null;
+}
+
+// Construit les lignes à insérer pour une classe donnée.
+function rowsToPayload(schoolId: string, className: string, option: string | undefined, rows: TimetableRowInput[], published: boolean) {
+  return rows.map((r) => ({
+    school_id: schoolId,
+    class_name: className,
+    option: option?.trim() || null,
+    day: r.day,
+    start_time: r.startTime,
+    end_time: r.endTime,
+    subject: r.subject.trim(),
+    teacher: r.teacher?.trim() || null,
+    room: r.room?.trim() || null,
+    published,
+  }));
+}
+
 // Enregistre (ou publie) l'emploi du temps complet d'une classe en une seule
 // opération : on remplace tous les créneaux stockés de la classe par la grille
 // fournie. `publish=false` → brouillon ; `publish=true` → visible aux parents.
@@ -50,13 +78,8 @@ export async function saveClassTimetable(input: {
   const className = input.className?.trim();
   if (!className) return { ok: false, message: "Classe requise." };
   const rows = input.rows ?? [];
-  if (rows.length === 0) return { ok: false, message: "Ajoutez au moins une ligne." };
-  for (const r of rows) {
-    if (!(r.day >= 1 && r.day <= 7)) return { ok: false, message: "Jour invalide." };
-    if (!r.startTime || !r.endTime) return { ok: false, message: "Heures de début et de fin requises." };
-    if (r.endTime <= r.startTime) return { ok: false, message: "L'heure de fin doit être après l'heure de début." };
-    if (!r.subject?.trim()) return { ok: false, message: "Matière requise pour chaque ligne." };
-  }
+  const invalid = validateRows(rows);
+  if (invalid) return { ok: false, message: invalid };
   if (!isLiveMode()) return { ok: true };
 
   const c = await caller();
@@ -70,20 +93,45 @@ export async function saveClassTimetable(input: {
     .eq("class_name", className);
   if (delErr) return { ok: false, message: "Enregistrement impossible." };
 
-  const payload = rows.map((r) => ({
-    school_id: c.schoolId,
-    class_name: className,
-    option: input.option?.trim() || null,
-    day: r.day,
-    start_time: r.startTime,
-    end_time: r.endTime,
-    subject: r.subject.trim(),
-    teacher: r.teacher?.trim() || null,
-    room: r.room?.trim() || null,
-    published: input.publish,
-  }));
-  const { error: insErr } = await svc.from("timetable_slots").insert(payload);
+  const { error: insErr } = await svc
+    .from("timetable_slots")
+    .insert(rowsToPayload(c.schoolId, className, input.option, rows, input.publish));
   if (insErr) return { ok: false, message: "Enregistrement impossible." };
+  revalidatePath("/school/timetable");
+  return { ok: true };
+}
+
+// Duplique une grille de créneaux vers une ou plusieurs autres classes : chaque
+// classe cible voit son emploi du temps remplacé par la grille fournie.
+export async function duplicateClassTimetable(input: {
+  targetClasses: string[];
+  option?: string;
+  rows: TimetableRowInput[];
+  publish: boolean;
+}): Promise<Result> {
+  const targets = [...new Set((input.targetClasses ?? []).map((c) => c.trim()).filter(Boolean))];
+  if (targets.length === 0) return { ok: false, message: "Sélectionnez au moins une classe cible." };
+  const rows = input.rows ?? [];
+  const invalid = validateRows(rows);
+  if (invalid) return { ok: false, message: invalid };
+  if (!isLiveMode()) return { ok: true };
+
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+
+  const svc = service();
+  for (const cls of targets) {
+    const { error: delErr } = await svc
+      .from("timetable_slots")
+      .delete()
+      .eq("school_id", c.schoolId)
+      .eq("class_name", cls);
+    if (delErr) return { ok: false, message: `Duplication impossible pour ${cls}.` };
+    const { error: insErr } = await svc
+      .from("timetable_slots")
+      .insert(rowsToPayload(c.schoolId, cls, input.option, rows, input.publish));
+    if (insErr) return { ok: false, message: `Duplication impossible pour ${cls}.` };
+  }
   revalidatePath("/school/timetable");
   return { ok: true };
 }
