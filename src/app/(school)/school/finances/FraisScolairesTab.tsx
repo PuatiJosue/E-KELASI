@@ -13,7 +13,7 @@ import {
 import { money, escHtml, openPrint, downloadCsv, buildInvoiceHtml, reportHead, REPORT_CSS } from "./finance-export";
 import {
   createFee, updateFee, deleteFee, archiveFee, recordFeePayment, cancelFeePayment,
-  setFeeOverride, removeFeeOverride, loadFeeDetail, loadFeePayments, type InstallmentInput,
+  setFeeOverride, removeFeeOverride, loadFeeDetail, loadFeePayments, sendInvoiceToParent, type InstallmentInput,
 } from "./actions-v2";
 import type { FeesOverview, Fee, FeeDetail, FeeStudentRow, FeeKind } from "@/lib/finance/fees";
 import type { FeePayment } from "@/lib/finance/payments";
@@ -353,6 +353,7 @@ function PaymentModal({ fee, student, school, year, onClose, onDone }: { fee: Fe
   const [cashier, setCashier] = useState(school.directorName ?? "");
   const [dateTime, setDateTime] = useState(localDateTime());
   const [printAfter, setPrintAfter] = useState(true);
+  const [sendParent, setSendParent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const inst = fee.installments.find((i) => i.id === installmentId) ?? null;
@@ -379,6 +380,10 @@ function PaymentModal({ fee, student, school, year, onClose, onDone }: { fee: Fe
           currency: fee.currency, cashierName: cashier,
         }));
       }
+      if (sendParent) {
+        const sr = await sendInvoiceToParent({ studentId: student.studentId, feeLabel: fee.label, amount: amt, currency: fee.currency, invoiceNo });
+        if (!sr.ok) alert(`Facture enregistrée, mais envoi au parent impossible : ${sr.message}`);
+      }
       onDone();
     });
   };
@@ -404,6 +409,9 @@ function PaymentModal({ fee, student, school, year, onClose, onDone }: { fee: Fe
       <Labeled label="Caissier / utilisateur"><input value={cashier} onChange={(e) => setCashier(e.target.value)} placeholder="Nom du caissier" style={modalInp} /></Labeled>
       <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--ink-2)" }}>
         <input type="checkbox" checked={printAfter} onChange={(e) => setPrintAfter(e.target.checked)} /> Générer et imprimer la facture
+      </label>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--ink-2)" }}>
+        <input type="checkbox" checked={sendParent} onChange={(e) => setSendParent(e.target.checked)} /> Envoyer la facture au parent (notification)
       </label>
       {error && <div style={errBox}>{error}</div>}
       <ModalActions onClose={onClose} onSubmit={submit} pending={pending} submitLabel="Encaisser" />

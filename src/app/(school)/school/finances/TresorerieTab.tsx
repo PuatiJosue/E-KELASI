@@ -8,13 +8,13 @@ import {
   selStyle, modalInp, iconBtn, errBox, type SchoolBranding,
 } from "./finance-ui";
 import { money, escHtml, openPrint, downloadCsv, reportHead, REPORT_CSS } from "./finance-export";
-import { addTreasuryEntry, updateTreasuryEntry, cancelTreasuryEntry } from "./actions-v2";
-import type { TreasuryOverview, TreasuryEntry, TreasuryKind } from "@/lib/finance/treasury";
+import { addTreasuryEntry, updateTreasuryEntry, cancelTreasuryEntry, openCashSession, closeCashSession, reopenCashSession } from "./actions-v2";
+import type { TreasuryOverview, TreasuryEntry, TreasuryKind, CashState, CashSession } from "@/lib/finance/treasury";
 
 const KIND_LABEL: Record<TreasuryKind, string> = { depense: "Dépense", recette_exceptionnelle: "Recette exceptionnelle" };
 const EXC_CATEGORIES = ["Don", "Subvention", "Location d’infrastructure", "Intérêts bancaires", "Autre"];
 
-export function TresorerieTab({ overview, year, school }: { overview: TreasuryOverview; year: string; school: SchoolBranding }) {
+export function TresorerieTab({ overview, cashState, year, school }: { overview: TreasuryOverview; cashState: CashState; year: string; school: SchoolBranding }) {
   const router = useRouter();
   const c = overview.currency;
   const k = overview.kpis;
@@ -61,6 +61,9 @@ export function TresorerieTab({ overview, year, school }: { overview: TreasuryOv
           <EvolutionChart data={overview.evolution} currency={c} />
         </div>
       </div>
+
+      {/* Clôture quotidienne de caisse */}
+      <CashClosure state={cashState} school={school} />
 
       {/* Barre d’outils */}
       <Toolbar>
@@ -240,6 +243,134 @@ function CancelEntryModal({ entry, onClose, onDone }: { entry: TreasuryEntry; on
       <ModalActions onClose={onClose} onSubmit={submit} pending={pending} submitLabel="Confirmer l’annulation" />
     </Modal>
   );
+}
+
+// ── Clôture quotidienne de caisse ────────────────────────────────────
+function CashClosure({ state, school }: { state: CashState; school: SchoolBranding }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [viewSession, setViewSession] = useState<CashSession | null>(null);
+  const today = state.today;
+
+  const open = () => start(async () => { const r = await openCashSession(); if (!r.ok) alert(r.message); else router.refresh(); });
+  const close = () => { if (!today) return; if (!confirm("Clôturer la caisse du jour ? Les totaux seront figés.")) return; start(async () => { const r = await closeCashSession(today.id); if (!r.ok) alert(r.message); else router.refresh(); }); };
+
+  return (
+    <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13.5, fontWeight: 700, flex: 1 }}>Caisse du jour — {new Date().toLocaleDateString("fr-FR")}</span>
+        {!today && <button onClick={open} disabled={pending} className="ek-btn ek-btn-primary" style={{ height: 34, fontSize: 12.5 }}><Icon name="login" size={14} /> Ouvrir la caisse</button>}
+        {today?.status === "open" && <>
+          <span style={{ fontSize: 11.5, color: COLORS.collected, fontWeight: 700 }}>Ouverte</span>
+          <button onClick={close} disabled={pending} className="ek-btn ek-btn-primary" style={{ height: 34, fontSize: 12.5 }}><Icon name="lock" size={14} /> Clôturer la caisse</button>
+        </>}
+        {today?.status === "closed" && <>
+          <span style={{ fontSize: 11.5, color: "var(--ink-3)", fontWeight: 700 }}>Clôturée</span>
+          <button onClick={() => setViewSession(today)} className="ek-btn ek-btn-outline" style={{ height: 34, fontSize: 12.5 }}><Icon name="file" size={14} /> Rapport</button>
+        </>}
+      </div>
+
+      {state.recent.length > 0 && (
+        <div>
+          <div style={{ padding: "8px 16px", fontSize: 11, color: "var(--ink-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Clôtures récentes</div>
+          {state.recent.map((s, i) => (
+            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderTop: "1px solid var(--divider)", fontSize: 12.5 }}>
+              <span style={{ flex: 1 }}>{new Date(s.sessionDate).toLocaleDateString("fr-FR")}{s.closedBy ? ` · ${s.closedBy}` : ""}</span>
+              <span style={{ fontWeight: 700, color: (s.totals?.solde ?? 0) >= 0 ? COLORS.collected : COLORS.remaining }}>{money(s.totals?.solde ?? 0, s.totals?.currency ?? "CDF")}</span>
+              <button onClick={() => setViewSession(s)} title="Rapport de clôture" style={iconBtn}><Icon name="file" size={14} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {viewSession && <ClosureModal session={viewSession} school={school} onClose={() => setViewSession(null)} onChanged={() => router.refresh()} />}
+    </div>
+  );
+}
+
+function ClosureModal({ session, school, onClose, onChanged }: { session: CashSession; school: SchoolBranding; onClose: () => void; onChanged: () => void }) {
+  const [pending, start] = useTransition();
+  const t = session.totals;
+  const c = t?.currency ?? "CDF";
+  const reopen = () => {
+    const reason = prompt("Motif de la réouverture (tracé dans l’historique) :");
+    if (!reason?.trim()) return;
+    start(async () => { const r = await reopenCashSession(session.id, reason); if (!r.ok) alert(r.message); else { onChanged(); onClose(); } });
+  };
+  return (
+    <Modal title={`Rapport de clôture — ${new Date(session.sessionDate).toLocaleDateString("fr-FR")}`} onClose={onClose} wide>
+      <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
+        Ouverte le {new Date(session.openedAt).toLocaleString("fr-FR")}{session.openedBy ? ` par ${session.openedBy}` : ""}
+        {session.closedAt ? ` · Clôturée le ${new Date(session.closedAt).toLocaleString("fr-FR")}${session.closedBy ? ` par ${session.closedBy}` : ""}` : ""}
+      </div>
+      {t ? (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 1, background: "var(--border)", borderRadius: 10, overflow: "hidden" }}>
+            <Cs label="Frais scolaires" value={money(t.recettesScolaires, c)} color={COLORS.collected} />
+            <Cs label="Autres frais" value={money(t.recettesAutres, c)} color={COLORS.accent} />
+            <Cs label="Exceptionnelles" value={money(t.recettesExceptionnelles, c)} color={COLORS.partial} />
+            <Cs label="Total recettes" value={money(t.totalRecettes, c)} color="var(--ink)" />
+            <Cs label="Total dépenses" value={money(t.totalDepenses, c)} color={COLORS.remaining} />
+            <Cs label="Solde" value={money(t.solde, c)} color={t.solde >= 0 ? COLORS.collected : COLORS.remaining} />
+          </div>
+          {t.depenses.length > 0 && (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Détail des dépenses</div>
+              {t.depenses.map((d, i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: "1px solid var(--divider)" }}><span>{d.label}{d.category ? ` · ${d.category}` : ""}</span><span style={{ color: COLORS.remaining }}>{money(d.amount, c)}</span></div>)}
+            </div>
+          )}
+          {t.recettes.length > 0 && (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Recettes exceptionnelles</div>
+              {t.recettes.map((d, i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: "1px solid var(--divider)" }}><span>{d.label}{d.category ? ` · ${d.category}` : ""}</span><span style={{ color: COLORS.collected }}>{money(d.amount, c)}</span></div>)}
+            </div>
+          )}
+        </>
+      ) : (
+        <div style={{ color: "var(--ink-3)", fontSize: 12.5 }}>Caisse encore ouverte — clôturez-la pour figer les totaux.</div>
+      )}
+      <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+        {session.status === "closed" && <button onClick={reopen} disabled={pending} className="ek-btn ek-btn-outline" style={{ flex: 1 }}>Rouvrir (motivé)</button>}
+        {t && <button onClick={() => exportClosurePdf(session, school)} className="ek-btn ek-btn-outline" style={{ flex: 1 }}><Icon name="file" size={14} /> PDF</button>}
+        {t && <button onClick={() => exportClosureCsv(session)} className="ek-btn ek-btn-outline" style={{ flex: 1 }}><Icon name="download" size={14} /> Excel</button>}
+        <button onClick={onClose} className="ek-btn ek-btn-primary" style={{ flex: 1 }}>Fermer</button>
+      </div>
+    </Modal>
+  );
+}
+function Cs({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div style={{ padding: "10px 12px", background: "var(--surface)" }}>
+      <div style={{ fontSize: 9.5, color: "var(--ink-3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 800, color, marginTop: 3, fontFamily: "var(--font-display)" }}>{value}</div>
+    </div>
+  );
+}
+function exportClosureCsv(s: CashSession) {
+  const t = s.totals; if (!t) return;
+  const lines: (string | number)[][] = [["Rapport de clôture de caisse", new Date(s.sessionDate).toLocaleDateString("fr-FR")], ["Clôturée le", s.closedAt ? new Date(s.closedAt).toLocaleString("fr-FR") : "", "par", s.closedBy ?? ""], [],
+    ["Recettes frais scolaires", Math.round(t.recettesScolaires)], ["Recettes autres frais", Math.round(t.recettesAutres)], ["Recettes exceptionnelles", Math.round(t.recettesExceptionnelles)],
+    ["Total recettes", Math.round(t.totalRecettes)], ["Total dépenses", Math.round(t.totalDepenses)], ["Solde", Math.round(t.solde)]];
+  downloadCsv(lines, `cloture-caisse-${s.sessionDate}.csv`);
+}
+function exportClosurePdf(s: CashSession, school: SchoolBranding) {
+  const t = s.totals; if (!t) return;
+  const c = t.currency;
+  const depRows = t.depenses.map((d) => `<tr><td>${escHtml(d.label)}</td><td>${escHtml(d.category ?? "")}</td><td class="r" style="color:#E11D48">${money(d.amount, c)}</td></tr>`).join("") || '<tr><td colspan="3">—</td></tr>';
+  const recRows = t.recettes.map((d) => `<tr><td>${escHtml(d.label)}</td><td>${escHtml(d.category ?? "")}</td><td class="r" style="color:#16A34A">${money(d.amount, c)}</td></tr>`).join("") || '<tr><td colspan="3">—</td></tr>';
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Clôture de caisse</title><style>${REPORT_CSS}</style></head><body>${reportHead(school)}<h1>Rapport de clôture de caisse</h1>
+<div class="sub">Journée du ${escHtml(new Date(s.sessionDate).toLocaleDateString("fr-FR"))} · Clôturée le ${escHtml(s.closedAt ? new Date(s.closedAt).toLocaleString("fr-FR") : "—")}${s.closedBy ? ` par ${escHtml(s.closedBy)}` : ""}</div>
+<h2>Synthèse</h2><table><tbody>
+<tr><td>Recettes frais scolaires</td><td class="r">${money(t.recettesScolaires, c)}</td></tr>
+<tr><td>Recettes autres frais</td><td class="r">${money(t.recettesAutres, c)}</td></tr>
+<tr><td>Recettes exceptionnelles</td><td class="r">${money(t.recettesExceptionnelles, c)}</td></tr>
+<tr><td><strong>Total des recettes</strong></td><td class="r"><strong>${money(t.totalRecettes, c)}</strong></td></tr>
+<tr><td><strong>Total des dépenses</strong></td><td class="r"><strong>${money(t.totalDepenses, c)}</strong></td></tr>
+</tbody><tfoot><tr><td>Solde final</td><td class="r">${money(t.solde, c)}</td></tr></tfoot></table>
+<h2>Détail des dépenses</h2><table><thead><tr><th>Libellé</th><th>Catégorie</th><th class="r">Montant</th></tr></thead><tbody>${depRows}</tbody></table>
+<h2>Recettes exceptionnelles</h2><table><thead><tr><th>Libellé</th><th>Catégorie</th><th class="r">Montant</th></tr></thead><tbody>${recRows}</tbody></table>
+<div class="foot">E-KELASI · rapport de clôture</div><script>window.onload=function(){window.print()}</script></body></html>`;
+  openPrint(html);
 }
 
 // ── Exports ──────────────────────────────────────────────────────────

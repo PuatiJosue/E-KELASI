@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
 import { getFeeDetail, type FeeDetail, type FeeKind } from "@/lib/finance/fees";
 import { listFeePayments, type FeePayment } from "@/lib/finance/payments";
-import type { TreasuryKind } from "@/lib/finance/treasury";
+import { computeDayTotals, getCashState, type TreasuryKind, type CashState } from "@/lib/finance/treasury";
+import { getClassReport, getStudentReport, type ClassReport, type StudentReport } from "@/lib/finance/reports";
 
 type Result = { ok: true } | { ok: false; message: string };
 
@@ -49,6 +50,16 @@ export async function loadFeeDetail(feeId: string): Promise<FeeDetail | null> {
 export async function loadFeePayments(feeId: string, studentId?: string): Promise<FeePayment[]> {
   if (!feeId) return [];
   return listFeePayments(feeId, studentId);
+}
+export async function loadClassReport(className: string, option: string | null, year?: string): Promise<ClassReport> {
+  return getClassReport(className, option, year);
+}
+export async function loadStudentReport(studentId: string, year?: string): Promise<StudentReport | null> {
+  if (!studentId) return null;
+  return getStudentReport(studentId, year);
+}
+export async function loadCashState(): Promise<CashState> {
+  return getCashState();
 }
 
 // ── Frais : création (avec tranches) ─────────────────────────────────
@@ -320,4 +331,85 @@ export async function cancelTreasuryEntry(id: string, reason: string): Promise<R
   });
   revalidatePath("/school/finances");
   return { ok: true };
+}
+
+// ── Clôture quotidienne de caisse ────────────────────────────────────
+export async function openCashSession(): Promise<Result> {
+  if (!isLiveMode()) return { ok: true };
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: existing } = await svc.from("cash_sessions").select("id, status").eq("school_id", c.schoolId).eq("session_date", today).maybeSingle();
+  if (existing) return { ok: false, message: (existing as any).status === "closed" ? "La caisse du jour est déjà clôturée." : "Une caisse est déjà ouverte." };
+  const { error } = await (svc.from("cash_sessions").insert as any)({
+    school_id: c.schoolId, session_date: today, opened_by: c.userId, status: "open",
+  });
+  if (error) return { ok: false, message: "Ouverture impossible." };
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+export async function closeCashSession(sessionId: string): Promise<Result> {
+  if (!sessionId) return { ok: false, message: "Session invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { data: sess } = await svc.from("cash_sessions").select("id, session_date, status").eq("id", sessionId).eq("school_id", c.schoolId).maybeSingle();
+  if (!sess) return { ok: false, message: "Session introuvable." };
+  if ((sess as any).status === "closed") return { ok: false, message: "Caisse déjà clôturée." };
+  const totals = await computeDayTotals(svc, c.schoolId, (sess as any).session_date);
+  const { error } = await (svc.from("cash_sessions").update as any)({
+    status: "closed", closed_by: c.userId, closed_at: new Date().toISOString(), totals,
+  }).eq("id", sessionId).eq("school_id", c.schoolId);
+  if (error) return { ok: false, message: "Clôture impossible." };
+  await (svc.from("finance_audit").insert as any)({
+    school_id: c.schoolId, entity_type: "cash_session", entity_id: sessionId, action: "close", actor: c.userId,
+  });
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+export async function reopenCashSession(sessionId: string, reason: string): Promise<Result> {
+  if (!sessionId) return { ok: false, message: "Session invalide." };
+  if (!reason?.trim()) return { ok: false, message: "Motif requis." };
+  if (!isLiveMode()) return { ok: true };
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  const { error } = await (svc.from("cash_sessions").update as any)({
+    status: "open", closed_by: null, closed_at: null,
+  }).eq("id", sessionId).eq("school_id", c.schoolId).eq("status", "closed");
+  if (error) return { ok: false, message: "Réouverture impossible." };
+  await (svc.from("finance_audit").insert as any)({
+    school_id: c.schoolId, entity_type: "cash_session", entity_id: sessionId, action: "reopen", actor: c.userId, reason: reason.trim(),
+  });
+  revalidatePath("/school/finances");
+  return { ok: true };
+}
+
+// ── Facture : envoi au parent (best-effort via notifications) ────────
+export async function sendInvoiceToParent(input: { studentId: string; feeLabel: string; amount: number; currency: string; invoiceNo?: string }): Promise<Result> {
+  if (!input.studentId) return { ok: false, message: "Élève invalide." };
+  if (!isLiveMode()) return { ok: true };
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+  const svc = service();
+  try {
+    const { data: links } = await svc.from("parent_links").select("parent_id").eq("student_id", input.studentId);
+    const parentIds = [...new Set((links ?? []).map((l: any) => l.parent_id).filter(Boolean))];
+    if (parentIds.length === 0) return { ok: false, message: "Aucun parent lié à cet élève." };
+    const amountTxt = `${Math.round(input.amount).toLocaleString("fr-FR")} ${input.currency === "CDF" ? "FC" : input.currency}`;
+    const rows = parentIds.map((pid) => ({
+      user_id: pid,
+      kind: "school",
+      body: `🧾 Paiement enregistré : ${input.feeLabel} — ${amountTxt}${input.invoiceNo ? ` (facture n° ${input.invoiceNo})` : ""}.`,
+    }));
+    const { error } = await (svc.from("notifications").insert as any)(rows);
+    if (error) return { ok: false, message: "Envoi impossible (notifications indisponibles)." };
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Envoi impossible." };
+  }
 }

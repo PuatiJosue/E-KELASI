@@ -4,9 +4,12 @@ import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { RubriqueFraisTab, type ClassOption } from "./FraisScolairesTab";
 import { TresorerieTab } from "./TresorerieTab";
+import { AlertsBell } from "./AlertsBell";
+import { ReportsPanel } from "./ReportsPanel";
 import type { SchoolBranding } from "./finance-ui";
 import type { FeesOverview } from "@/lib/finance/fees";
-import type { TreasuryOverview } from "@/lib/finance/treasury";
+import type { TreasuryOverview, CashState } from "@/lib/finance/treasury";
+import type { FinanceAlert } from "@/lib/finance/alerts";
 
 const TABS = [
   { key: "scolaires", label: "Frais scolaires", icon: "creditcard" },
@@ -16,17 +19,20 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 export function FinanceModule({
-  feesScolaire, feesAutre, treasury, year, school, classes, years,
+  feesScolaire, feesAutre, treasury, cashState, alerts, year, school, classes, years,
 }: {
   feesScolaire: FeesOverview;
   feesAutre: FeesOverview;
   treasury: TreasuryOverview;
+  cashState: CashState;
+  alerts: FinanceAlert[];
   year: string;
   school: SchoolBranding;
   classes: ClassOption[];
   years: string[];
 }) {
   const [tab, setTab] = useState<TabKey>("scolaires");
+  const [reports, setReports] = useState(false);
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
@@ -38,11 +44,15 @@ export function FinanceModule({
             Frais scolaires, autres frais et trésorerie — synchronisés automatiquement.
           </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <span style={{ fontSize: 9.5, color: "var(--ink-3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Année scolaire</span>
-          <select defaultValue={year} style={{ padding: "0 10px", height: 40, borderRadius: 9, border: "1px solid var(--border-strong)", background: "var(--surface)", fontSize: 13, color: "var(--ink)" }}>
-            {(years.length ? years : [year]).map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
+          <button onClick={() => setReports(true)} className="ek-btn ek-btn-outline" style={{ height: 40, fontSize: 12.5 }}><Icon name="file" size={15} /> Rapports</button>
+          <AlertsBell alerts={alerts} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <span style={{ fontSize: 9.5, color: "var(--ink-3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Année scolaire</span>
+            <select defaultValue={year} style={{ padding: "0 10px", height: 40, borderRadius: 9, border: "1px solid var(--border-strong)", background: "var(--surface)", fontSize: 13, color: "var(--ink)" }}>
+              {(years.length ? years : [year]).map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -63,7 +73,9 @@ export function FinanceModule({
 
       {tab === "scolaires" && <RubriqueFraisTab kind="scolaire" overview={feesScolaire} year={year} school={school} classes={classes} />}
       {tab === "autres" && <RubriqueFraisTab kind="autre" overview={feesAutre} year={year} school={school} classes={classes} />}
-      {tab === "tresorerie" && <TresorerieTab overview={treasury} year={year} school={school} />}
+      {tab === "tresorerie" && <TresorerieTab overview={treasury} cashState={cashState} year={year} school={school} />}
+
+      {reports && <ReportsPanel classes={classes} year={year} school={school} onClose={() => setReports(false)} />}
     </div>
   );
 }

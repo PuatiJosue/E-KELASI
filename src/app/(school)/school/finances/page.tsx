@@ -1,5 +1,6 @@
 import { getFeesOverview } from "@/lib/finance/fees";
-import { getTreasuryOverview } from "@/lib/finance/treasury";
+import { getTreasuryOverview, getCashState } from "@/lib/finance/treasury";
+import { getFinanceAlerts } from "@/lib/finance/alerts";
 import { getMySchool, listSchoolStudents } from "@/lib/school-db";
 import { classLabel, normOption, classKey } from "@/lib/classes";
 import { schoolYearLabel } from "@/lib/trimester";
@@ -8,13 +9,15 @@ import type { SchoolBranding } from "./finance-ui";
 import type { ClassOption } from "./FraisScolairesTab";
 
 export default async function SchoolFinances() {
-  const [school, students, feesScolaire, feesAutre, treasury] = await Promise.all([
+  const [school, students, feesScolaire, feesAutre, treasury, cashState] = await Promise.all([
     getMySchool(),
     listSchoolStudents(),
     getFeesOverview("scolaire"),
     getFeesOverview("autre"),
     getTreasuryOverview(),
+    getCashState(),
   ]);
+  const alerts = await getFinanceAlerts(feesScolaire, feesAutre, treasury);
 
   const year = school?.currentYear || schoolYearLabel();
 
@@ -52,6 +55,8 @@ export default async function SchoolFinances() {
       feesScolaire={feesScolaire}
       feesAutre={feesAutre}
       treasury={treasury}
+      cashState={cashState}
+      alerts={alerts}
       year={year}
       school={branding}
       classes={classes}

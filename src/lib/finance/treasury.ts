@@ -136,6 +136,97 @@ export async function getTreasuryOverview(year?: string): Promise<TreasuryOvervi
   }
 }
 
+// ── Clôture quotidienne de caisse ────────────────────────────────────
+export type CashLine = { label: string; amount: number; category: string | null };
+export type CashTotals = {
+  currency: string;
+  recettesScolaires: number;
+  recettesAutres: number;
+  recettesExceptionnelles: number;
+  totalRecettes: number;
+  totalDepenses: number;
+  solde: number;
+  recettes: CashLine[];   // détail des recettes exceptionnelles
+  depenses: CashLine[];   // détail des dépenses
+};
+export type CashSession = {
+  id: string;
+  sessionDate: string;
+  status: "open" | "closed";
+  openedBy: string | null;
+  openedAt: string;
+  closedBy: string | null;
+  closedAt: string | null;
+  totals: CashTotals | null;
+};
+
+function mapSession(s: any): CashSession {
+  return {
+    id: s.id, sessionDate: s.session_date, status: s.status,
+    openedBy: s.opener?.full_name ?? null, openedAt: s.opened_at,
+    closedBy: s.closer?.full_name ?? null, closedAt: s.closed_at ?? null,
+    totals: (s.totals as CashTotals) ?? null,
+  };
+}
+const SESSION_SELECT = "id, session_date, status, opened_at, closed_at, totals, opener:opened_by(full_name), closer:closed_by(full_name)";
+
+export type CashState = { today: CashSession | null; recent: CashSession[] };
+
+export async function getCashState(): Promise<CashState> {
+  if (!isLiveMode()) return mockCashState();
+  try {
+    const school = await getMySchool();
+    if (!school) return { today: null, recent: [] };
+    const svc = service();
+    const today = new Date().toISOString().slice(0, 10);
+    const [{ data: todayRows }, { data: recent }] = await Promise.all([
+      svc.from("cash_sessions").select(SESSION_SELECT).eq("school_id", school.id).eq("session_date", today).order("opened_at", { ascending: false }).limit(1),
+      svc.from("cash_sessions").select(SESSION_SELECT).eq("school_id", school.id).eq("status", "closed").order("session_date", { ascending: false }).limit(12),
+    ]);
+    return { today: todayRows?.[0] ? mapSession(todayRows[0]) : null, recent: (recent ?? []).map(mapSession) };
+  } catch {
+    return { today: null, recent: [] };
+  }
+}
+
+// Totaux d'une journée (utilisé à la clôture). Calculés depuis la source unique.
+export async function computeDayTotals(svc: ReturnType<typeof service>, schoolId: string, date: string): Promise<CashTotals> {
+  const start = `${date}T00:00:00`;
+  const end = `${date}T23:59:59.999`;
+  const [{ data: pays }, { data: entries }] = await Promise.all([
+    svc.from("fee_payments").select("amount, currency, fees(kind)").eq("school_id", schoolId).is("cancelled_at", null).gte("paid_at", start).lte("paid_at", end),
+    svc.from("treasury_entries").select("kind, amount, currency, label, category").eq("school_id", schoolId).is("cancelled_at", null).eq("entry_date", date),
+  ]);
+  let recettesScolaires = 0, recettesAutres = 0, currency = "CDF";
+  for (const p of (pays ?? []) as any[]) {
+    currency = p.currency ?? currency;
+    if (p.fees?.kind === "autre") recettesAutres += Number(p.amount); else recettesScolaires += Number(p.amount);
+  }
+  const recettes: CashLine[] = [], depenses: CashLine[] = [];
+  let recettesExceptionnelles = 0, totalDepenses = 0;
+  for (const e of (entries ?? []) as any[]) {
+    currency = e.currency ?? currency;
+    if (e.kind === "recette_exceptionnelle") { recettesExceptionnelles += Number(e.amount); recettes.push({ label: e.label, amount: Number(e.amount), category: e.category ?? null }); }
+    else { totalDepenses += Number(e.amount); depenses.push({ label: e.label, amount: Number(e.amount), category: e.category ?? null }); }
+  }
+  const totalRecettes = recettesScolaires + recettesAutres + recettesExceptionnelles;
+  return { currency, recettesScolaires, recettesAutres, recettesExceptionnelles, totalRecettes, totalDepenses, solde: totalRecettes - totalDepenses, recettes, depenses };
+}
+
+function mockCashState(): CashState {
+  const totals: CashTotals = {
+    currency: "CDF", recettesScolaires: 320000, recettesAutres: 45000, recettesExceptionnelles: 0,
+    totalRecettes: 365000, totalDepenses: 95000, solde: 270000,
+    recettes: [], depenses: [{ label: "Achat de craies", amount: 95000, category: "Fournitures" }],
+  };
+  return {
+    today: null,
+    recent: [
+      { id: "cs1", sessionDate: "2026-10-12", status: "closed", openedBy: "La direction", openedAt: "2026-10-12T07:30:00", closedBy: "La direction", closedAt: "2026-10-12T16:10:00", totals },
+    ],
+  };
+}
+
 function emptyTreasury(year?: string): TreasuryOverview {
   return {
     currency: "CDF", year: year || schoolYearLabel(),
