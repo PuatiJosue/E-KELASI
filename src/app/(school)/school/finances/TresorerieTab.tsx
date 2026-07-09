@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import {
-  Kpi, Modal, Labeled, ModalActions, Toolbar, SearchInput, COLORS, RecoveryBar,
+  Kpi, MoneyLines, Modal, Labeled, ModalActions, Toolbar, SearchInput, COLORS, RecoveryBar,
   selStyle, modalInp, iconBtn, errBox, type SchoolBranding,
 } from "./finance-ui";
 import { money, escHtml, openPrint, downloadCsv, reportHead, REPORT_CSS } from "./finance-export";
@@ -18,6 +18,8 @@ export function TresorerieTab({ overview, cashState, year, school }: { overview:
   const router = useRouter();
   const c = overview.currency;
   const k = overview.kpis;
+  const curList = overview.currencies.length ? overview.currencies : [c];
+  const bc = (cur: string) => overview.byCurrency[cur] ?? overview.kpis;
   const [query, setQuery] = useState("");
   const [kindF, setKindF] = useState("");
   const [form, setForm] = useState<null | { kind: TreasuryKind; entry?: TreasuryEntry }>(null);
@@ -32,33 +34,44 @@ export function TresorerieTab({ overview, cashState, year, school }: { overview:
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Cartes de stats */}
+      {/* Cartes de stats — séparées par devise */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-        <Kpi icon="download" tint={COLORS.collected} label="Total des recettes" value={money(k.totalRecettes, c)} sub="Frais + exceptionnelles" />
-        <Kpi icon="upload" tint={COLORS.remaining} label="Total des dépenses" value={money(k.totalDepenses, c)} />
-        <Kpi icon="dollar" tint={k.solde >= 0 ? COLORS.collected : COLORS.remaining} label="Solde de trésorerie" value={money(k.solde, c)} sub="Recettes − Dépenses" />
-        <Kpi icon="flag" tint={COLORS.remaining} label="Total des impayés" value={money(k.impayes, c)} />
-        <Kpi icon="pieChart" tint={COLORS.brand} label="Taux de recouvrement" value={`${k.tauxRecouvrement.toFixed(0)} %`} />
+        <Kpi icon="download" tint={COLORS.collected} label="Total des recettes" value={<MoneyLines entries={curList.map((cc) => [cc, bc(cc).totalRecettes])} />} sub="Frais + exceptionnelles" />
+        <Kpi icon="upload" tint={COLORS.remaining} label="Total des dépenses" value={<MoneyLines entries={curList.map((cc) => [cc, bc(cc).totalDepenses])} />} />
+        <Kpi icon="dollar" tint={k.solde >= 0 ? COLORS.collected : COLORS.remaining} label="Solde de trésorerie" value={<MoneyLines entries={curList.map((cc) => [cc, bc(cc).solde])} />} sub="Recettes − Dépenses" />
+        <Kpi icon="flag" tint={COLORS.remaining} label="Total des impayés" value={<MoneyLines entries={curList.map((cc) => [cc, bc(cc).impayes])} />} />
+        <Kpi icon="pieChart" tint={COLORS.brand} label="Taux de recouvrement" value={<>{curList.map((cc) => <div key={cc}>{cc} {bc(cc).tauxRecouvrement.toFixed(0)} %</div>)}</>} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 320px", gap: 16, alignItems: "start" }} className="ek-fin-grid">
-        {/* Détail des recettes */}
+        {/* Détail des recettes (par devise) */}
         <div className="ek-card" style={{ padding: 16 }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 12 }}>Détail des recettes</div>
-          <RecetteLine label="Frais scolaires" value={money(k.recettesScolaires, c)} color={COLORS.collected} />
-          <RecetteLine label="Autres frais" value={money(k.recettesAutres, c)} color={COLORS.accent} />
-          <RecetteLine label="Recettes exceptionnelles" value={money(k.recettesExceptionnelles, c)} color={COLORS.partial} />
+          <RecetteLine label="Frais scolaires" value={<MoneyLines entries={curList.map((cc) => [cc, bc(cc).recettesScolaires])} />} color={COLORS.collected} />
+          <RecetteLine label="Autres frais" value={<MoneyLines entries={curList.map((cc) => [cc, bc(cc).recettesAutres])} />} color={COLORS.accent} />
+          <RecetteLine label="Recettes exceptionnelles" value={<MoneyLines entries={curList.map((cc) => [cc, bc(cc).recettesExceptionnelles])} />} color={COLORS.partial} />
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--divider)", fontSize: 13 }}>
             <span style={{ color: "var(--ink-2)", fontWeight: 600 }}>Total</span>
-            <span style={{ color: "var(--ink)", fontWeight: 800 }}>{money(k.totalRecettes, c)}</span>
+            <span style={{ color: "var(--ink)", fontWeight: 800 }}><MoneyLines entries={curList.map((cc) => [cc, bc(cc).totalRecettes])} /></span>
           </div>
-          <div style={{ marginTop: 12 }}><RecoveryBar pct={k.tauxRecouvrement} /></div>
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+            {curList.map((cc) => (
+              <div key={cc} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, color: "var(--ink-3)", width: 34 }}>{cc}</span>
+                <div style={{ flex: 1 }}><RecoveryBar pct={bc(cc).tauxRecouvrement} /></div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Évolution */}
-        <div className="ek-card" style={{ padding: 16 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 12 }}>Évolution (6 mois)</div>
-          <EvolutionChart data={overview.evolution} currency={c} />
+        {/* Évolution (par devise) */}
+        <div className="ek-card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+          {curList.map((cc) => (
+            <div key={cc}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 12 }}>Évolution 6 mois — {cc}</div>
+              <EvolutionChart data={overview.evolutionByCurrency[cc] ?? overview.evolution} currency={cc} />
+            </div>
+          ))}
         </div>
       </div>
 
@@ -127,7 +140,7 @@ export function TresorerieTab({ overview, cashState, year, school }: { overview:
 
 const TR_GRID = "0.9fr 0.9fr 1fr 1.8fr 1fr 0.8fr";
 
-function RecetteLine({ label, value, color }: { label: string; value: string; color: string }) {
+function RecetteLine({ label, value, color }: { label: string; value: React.ReactNode; color: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, padding: "5px 0" }}>
       <span style={{ width: 9, height: 9, borderRadius: 3, background: color }} />
@@ -217,7 +230,7 @@ function EntryModal({ kind, entry, year, onClose, onDone }: { kind: TreasuryKind
       </Labeled>
       <div style={{ display: "flex", gap: 10 }}>
         <Labeled label="Montant" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="50000" style={modalInp} /></Labeled>
-        <Labeled label="Devise" style={{ width: 100 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
+        <Labeled label="Devise" style={{ width: 100 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">CDF</option><option value="USD">USD</option></select></Labeled>
       </div>
       <Labeled label="Date"><input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} style={modalInp} /></Labeled>
       <Labeled label="Note (facultatif)"><input value={note} onChange={(e) => setNote(e.target.value)} style={modalInp} /></Labeled>
@@ -375,35 +388,34 @@ function exportClosurePdf(s: CashSession, school: SchoolBranding) {
 
 // ── Exports ──────────────────────────────────────────────────────────
 function exportTreasuryCsv(entries: TreasuryEntry[], overview: TreasuryOverview) {
-  const k = overview.kpis;
-  const lines: (string | number)[][] = [["Journal de trésorerie"], [], ["Date", "Type", "Catégorie", "Libellé", "Montant", "Statut"]];
-  for (const e of entries) lines.push([e.entryDate, KIND_LABEL[e.kind], e.category ?? "", e.label, Math.round(e.amount), e.cancelledAt ? `Annulée : ${e.cancelReason ?? ""}` : "Validée"]);
-  lines.push([]);
-  lines.push(["Recettes frais scolaires", "", "", "", Math.round(k.recettesScolaires), ""]);
-  lines.push(["Recettes autres frais", "", "", "", Math.round(k.recettesAutres), ""]);
-  lines.push(["Recettes exceptionnelles", "", "", "", Math.round(k.recettesExceptionnelles), ""]);
-  lines.push(["Total recettes", "", "", "", Math.round(k.totalRecettes), ""]);
-  lines.push(["Total dépenses", "", "", "", Math.round(k.totalDepenses), ""]);
-  lines.push(["Solde", "", "", "", Math.round(k.solde), ""]);
+  const curList = overview.currencies.length ? overview.currencies : [overview.currency];
+  const lines: (string | number)[][] = [["Journal de trésorerie"], [], ["Date", "Type", "Catégorie", "Libellé", "Montant", "Devise", "Statut"]];
+  for (const e of entries) lines.push([e.entryDate, KIND_LABEL[e.kind], e.category ?? "", e.label, Math.round(e.amount), e.currency, e.cancelledAt ? `Annulée : ${e.cancelReason ?? ""}` : "Validée"]);
+  for (const cur of curList) {
+    const k = overview.byCurrency[cur] ?? overview.kpis;
+    lines.push([]);
+    lines.push([`Synthèse ${cur}`]);
+    lines.push(["Recettes frais scolaires", Math.round(k.recettesScolaires)]);
+    lines.push(["Recettes autres frais", Math.round(k.recettesAutres)]);
+    lines.push(["Recettes exceptionnelles", Math.round(k.recettesExceptionnelles)]);
+    lines.push(["Total recettes", Math.round(k.totalRecettes)]);
+    lines.push(["Total dépenses", Math.round(k.totalDepenses)]);
+    lines.push(["Solde", Math.round(k.solde)]);
+  }
   downloadCsv(lines, "tresorerie.csv");
 }
 
 function exportTreasuryPdf(entries: TreasuryEntry[], overview: TreasuryOverview, school: SchoolBranding, year: string) {
-  const c = overview.currency, k = overview.kpis;
+  const curList = overview.currencies.length ? overview.currencies : [overview.currency];
+  const kc = (cur: string) => overview.byCurrency[cur] ?? overview.kpis;
+  const synth = curList.map((cur) => { const k = kc(cur); return `<h2>Synthèse — ${escHtml(cur)}</h2><table><tbody><tr><td>Recettes frais scolaires</td><td class="r">${money(k.recettesScolaires, cur)}</td></tr><tr><td>Recettes autres frais</td><td class="r">${money(k.recettesAutres, cur)}</td></tr><tr><td>Recettes exceptionnelles</td><td class="r">${money(k.recettesExceptionnelles, cur)}</td></tr><tr><td><strong>Total des recettes</strong></td><td class="r"><strong>${money(k.totalRecettes, cur)}</strong></td></tr><tr><td><strong>Total des dépenses</strong></td><td class="r"><strong>${money(k.totalDepenses, cur)}</strong></td></tr><tr><td>Total des impayés</td><td class="r">${money(k.impayes, cur)}</td></tr></tbody><tfoot><tr><td>Solde de trésorerie</td><td class="r">${money(k.solde, cur)}</td></tr></tfoot></table>`; }).join("");
   const body = entries.map((e) => {
     const isRec = e.kind === "recette_exceptionnelle";
     return `<tr${e.cancelledAt ? ' style="opacity:.5"' : ""}><td>${escHtml(new Date(e.entryDate).toLocaleDateString("fr-FR"))}</td><td>${isRec ? "Recette" : "Dépense"}</td><td>${escHtml(e.category ?? "")}</td><td>${escHtml(e.label)}</td><td class="r" style="color:${isRec ? "#16A34A" : "#E11D48"}">${isRec ? "+" : "−"}${money(e.amount, e.currency)}</td></tr>`;
   }).join("");
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Trésorerie</title><style>${REPORT_CSS}</style></head><body>${reportHead(school)}<h1>Trésorerie — ${escHtml(year)}</h1>
 <table><thead><tr><th>Date</th><th>Type</th><th>Catégorie</th><th>Libellé</th><th class="r">Montant</th></tr></thead><tbody>${body}</tbody></table>
-<h2>Synthèse</h2><table><tbody>
-<tr><td>Recettes frais scolaires</td><td class="r">${money(k.recettesScolaires, c)}</td></tr>
-<tr><td>Recettes autres frais</td><td class="r">${money(k.recettesAutres, c)}</td></tr>
-<tr><td>Recettes exceptionnelles</td><td class="r">${money(k.recettesExceptionnelles, c)}</td></tr>
-<tr><td><strong>Total des recettes</strong></td><td class="r"><strong>${money(k.totalRecettes, c)}</strong></td></tr>
-<tr><td><strong>Total des dépenses</strong></td><td class="r"><strong>${money(k.totalDepenses, c)}</strong></td></tr>
-<tr><td>Total des impayés</td><td class="r">${money(k.impayes, c)}</td></tr>
-</tbody><tfoot><tr><td>Solde de trésorerie</td><td class="r">${money(k.solde, c)}</td></tr></tfoot></table>
+${synth}
 <div class="foot">E-KELASI</div><script>window.onload=function(){window.print()}</script></body></html>`;
   openPrint(html);
 }

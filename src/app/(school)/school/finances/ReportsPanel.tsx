@@ -4,12 +4,15 @@ import { useState, useMemo, useEffect } from "react";
 import { Icon } from "@/components/Icon";
 import { Avatar } from "@/components/Avatar";
 import { SexBadge } from "@/components/SexBadge";
-import { Modal, Labeled, Chip, SearchInput, Toolbar, STUDENT_STATUS, COLORS, selStyle, modalInp, iconBtn, type SchoolBranding } from "./finance-ui";
+import { Modal, Labeled, Chip, MoneyLines, SearchInput, Toolbar, STUDENT_STATUS, COLORS, modalInp, iconBtn, type SchoolBranding } from "./finance-ui";
 import { money, escHtml, openPrint, downloadCsv, buildInvoiceHtml, reportHead, REPORT_CSS } from "./finance-export";
 import { loadClassReport, loadStudentReport } from "./actions-v2";
 import { classKey } from "@/lib/classes";
 import type { ClassOption } from "./FraisScolairesTab";
-import type { ClassReport, StudentReport } from "@/lib/finance/reports";
+import type { ClassReport, StudentReport, CurAmounts } from "@/lib/finance/reports";
+
+type Key = keyof CurAmounts;
+const entriesOf = (m: Record<string, CurAmounts>, k: Key): [string, number][] => Object.entries(m).map(([c, v]) => [c, v[k]]);
 
 export function ReportsPanel({ classes, year, school, onClose }: { classes: ClassOption[]; year: string; school: SchoolBranding; onClose: () => void }) {
   const [ckey, setCkey] = useState(classes[0] ? classKey(classes[0].className, classes[0].option) : "");
@@ -60,9 +63,9 @@ export function ReportsPanel({ classes, year, school, onClose }: { classes: Clas
             <>
               {report && (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: "var(--border)", borderRadius: 10, overflow: "hidden" }}>
-                  <Mini label="Attendu" value={money(report.totals.expected, report.currency)} color="var(--ink)" />
-                  <Mini label="Payé" value={money(report.totals.paid, report.currency)} color={COLORS.collected} />
-                  <Mini label="Solde" value={money(report.totals.remaining, report.currency)} color={COLORS.remaining} />
+                  <Mini label="Attendu" value={<MoneyLines entries={entriesOf(report.totalsByCurrency, "expected")} empty="—" />} color="var(--ink)" />
+                  <Mini label="Payé" value={<MoneyLines entries={entriesOf(report.totalsByCurrency, "paid")} empty="—" />} color={COLORS.collected} />
+                  <Mini label="Solde" value={<MoneyLines entries={entriesOf(report.totalsByCurrency, "remaining")} empty="—" />} color={COLORS.remaining} />
                 </div>
               )}
               <div className="ek-tablewrap" style={{ maxHeight: "44vh", overflowY: "auto" }}>
@@ -79,9 +82,9 @@ export function ReportsPanel({ classes, year, school, onClose }: { classes: Clas
                         <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.fullName}</span>
                         <SexBadge sex={r.sex} size={12} />
                       </div>
-                      <div style={{ textAlign: "right", fontWeight: 600 }}>{money(r.expected, report!.currency)}</div>
-                      <div style={{ textAlign: "right", color: COLORS.collected, fontWeight: 600 }}>{money(r.paid, report!.currency)}</div>
-                      <div style={{ textAlign: "right", color: r.remaining > 0 ? COLORS.remaining : "var(--ink-3)", fontWeight: 600 }}>{money(r.remaining, report!.currency)}</div>
+                      <div style={{ textAlign: "right", fontWeight: 600 }}><MoneyLines entries={entriesOf(r.byCurrency, "expected")} empty="—" /></div>
+                      <div style={{ textAlign: "right", color: COLORS.collected, fontWeight: 600 }}><MoneyLines entries={entriesOf(r.byCurrency, "paid")} empty="—" /></div>
+                      <div style={{ textAlign: "right", color: COLORS.remaining, fontWeight: 600 }}><MoneyLines entries={entriesOf(r.byCurrency, "remaining")} empty="—" /></div>
                       <div><Chip {...STUDENT_STATUS[r.status]} /></div>
                     </div>
                   ))}
@@ -97,7 +100,7 @@ export function ReportsPanel({ classes, year, school, onClose }: { classes: Clas
 
 const R_GRID = "2fr 1fr 1fr 1fr 1.2fr";
 
-function Mini({ label, value, color }: { label: string; value: string; color: string }) {
+function Mini({ label, value, color }: { label: string; value: React.ReactNode; color: string }) {
   return (
     <div style={{ padding: "10px 12px", background: "var(--surface)" }}>
       <div style={{ fontSize: 9.5, color: "var(--ink-3)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
@@ -114,7 +117,6 @@ function StudentReportView({ studentId, year, school, onBack }: { studentId: str
 
   if (loading) return <div style={{ padding: 20, color: "var(--ink-3)", fontSize: 13 }}>Chargement…</div>;
   if (!rep) return <div style={{ padding: 20, color: "var(--ink-3)", fontSize: 13 }}>Élève introuvable. <button onClick={onBack} className="ek-btn ek-btn-outline" style={{ height: 30 }}>Retour</button></div>;
-  const c = rep.currency;
 
   const reprint = (p: StudentReport["payments"][number]) => {
     const line = rep.fees.find((f) => f.label === p.feeLabel);
@@ -138,18 +140,18 @@ function StudentReportView({ studentId, year, school, onBack }: { studentId: str
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: "var(--border)", borderRadius: 10, overflow: "hidden" }}>
-        <Mini label="Attendu" value={money(rep.totals.expected, c)} color="var(--ink)" />
-        <Mini label="Payé" value={money(rep.totals.paid, c)} color={COLORS.collected} />
-        <Mini label="Impayés" value={money(rep.totals.remaining, c)} color={COLORS.remaining} />
+        <Mini label="Attendu" value={<MoneyLines entries={entriesOf(rep.totalsByCurrency, "expected")} empty="—" />} color="var(--ink)" />
+        <Mini label="Payé" value={<MoneyLines entries={entriesOf(rep.totalsByCurrency, "paid")} empty="—" />} color={COLORS.collected} />
+        <Mini label="Impayés" value={<MoneyLines entries={entriesOf(rep.totalsByCurrency, "remaining")} empty="—" />} color={COLORS.remaining} />
       </div>
 
       <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)" }}>Frais</div>
       {rep.fees.map((f) => (
         <div key={f.feeId} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, borderBottom: "1px solid var(--divider)", padding: "6px 0" }}>
           <span style={{ flex: 1, fontWeight: 600 }}>{f.label}</span>
-          <span style={{ color: "var(--ink-3)" }}>{money(f.expected, c)}</span>
-          <span style={{ color: COLORS.collected }}>{money(f.paid, c)}</span>
-          <span style={{ color: f.remaining > 0 ? COLORS.remaining : "var(--ink-3)" }}>{money(f.remaining, c)}</span>
+          <span style={{ color: "var(--ink-3)" }}>{money(f.expected, f.currency)}</span>
+          <span style={{ color: COLORS.collected }}>{money(f.paid, f.currency)}</span>
+          <span style={{ color: f.remaining > 0 ? COLORS.remaining : "var(--ink-3)" }}>{money(f.remaining, f.currency)}</span>
           <Chip {...STUDENT_STATUS[f.status]} />
         </div>
       ))}
@@ -174,33 +176,37 @@ function StudentReportView({ studentId, year, school, onBack }: { studentId: str
 }
 
 // ── Exports ──────────────────────────────────────────────────────────
+const amt = (m: Record<string, CurAmounts>, k: Key) => Object.entries(m).map(([c, v]) => `${Math.round(v[k]).toLocaleString("fr-FR")} ${c}`).join(" + ") || "—";
+
 function exportClassCsv(r: ClassReport) {
   const lines: (string | number)[][] = [["Rapport de classe", r.classDisplay, r.year], [], ["Élève", "Attendu", "Payé", "Solde", "Statut"]];
-  for (const s of r.rows) lines.push([s.fullName, Math.round(s.expected), Math.round(s.paid), Math.round(s.remaining), STUDENT_STATUS[s.status].label]);
+  for (const s of r.rows) lines.push([s.fullName, amt(s.byCurrency, "expected"), amt(s.byCurrency, "paid"), amt(s.byCurrency, "remaining"), STUDENT_STATUS[s.status].label]);
   lines.push([]);
-  lines.push(["Total", Math.round(r.totals.expected), Math.round(r.totals.paid), Math.round(r.totals.remaining), ""]);
+  lines.push(["Total", amt(r.totalsByCurrency, "expected"), amt(r.totalsByCurrency, "paid"), amt(r.totalsByCurrency, "remaining"), ""]);
   downloadCsv(lines, `rapport-${r.classDisplay}.csv`);
 }
 function exportClassPdf(r: ClassReport, school: SchoolBranding) {
-  const c = r.currency;
-  const body = r.rows.map((s) => `<tr><td>${escHtml(s.fullName)}</td><td class="r">${money(s.expected, c)}</td><td class="r" style="color:#16A34A">${money(s.paid, c)}</td><td class="r" style="color:#E11D48">${money(s.remaining, c)}</td><td>${STUDENT_STATUS[s.status].label}</td></tr>`).join("");
-  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport ${escHtml(r.classDisplay)}</title><style>${REPORT_CSS}</style></head><body>${reportHead(school)}<h1>Rapport de classe — ${escHtml(r.classDisplay)}</h1><div class="sub">Année ${escHtml(r.year)} · ${r.rows.length} élève(s)</div><table><thead><tr><th>Élève</th><th class="r">Attendu</th><th class="r">Payé</th><th class="r">Solde</th><th>Statut</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>Total</td><td class="r">${money(r.totals.expected, c)}</td><td class="r">${money(r.totals.paid, c)}</td><td class="r">${money(r.totals.remaining, c)}</td><td></td></tr></tfoot></table><div class="foot">E-KELASI</div><script>window.onload=function(){window.print()}</script></body></html>`;
+  const body = r.rows.map((s) => `<tr><td>${escHtml(s.fullName)}</td><td class="r">${escHtml(amt(s.byCurrency, "expected"))}</td><td class="r" style="color:#16A34A">${escHtml(amt(s.byCurrency, "paid"))}</td><td class="r" style="color:#E11D48">${escHtml(amt(s.byCurrency, "remaining"))}</td><td>${STUDENT_STATUS[s.status].label}</td></tr>`).join("");
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport ${escHtml(r.classDisplay)}</title><style>${REPORT_CSS}</style></head><body>${reportHead(school)}<h1>Rapport de classe — ${escHtml(r.classDisplay)}</h1><div class="sub">Année ${escHtml(r.year)} · ${r.rows.length} élève(s)</div><table><thead><tr><th>Élève</th><th class="r">Attendu</th><th class="r">Payé</th><th class="r">Solde</th><th>Statut</th></tr></thead><tbody>${body}</tbody><tfoot><tr><td>Total</td><td class="r">${escHtml(amt(r.totalsByCurrency, "expected"))}</td><td class="r">${escHtml(amt(r.totalsByCurrency, "paid"))}</td><td class="r">${escHtml(amt(r.totalsByCurrency, "remaining"))}</td><td></td></tr></tfoot></table><div class="foot">E-KELASI</div><script>window.onload=function(){window.print()}</script></body></html>`;
   openPrint(html);
 }
 function exportStudentCsv(r: StudentReport) {
-  const lines: (string | number)[][] = [["Situation de", r.fullName, r.classDisplay, r.year], [], ["Frais", "Attendu", "Payé", "Solde", "Statut"]];
-  for (const f of r.fees) lines.push([f.label, Math.round(f.expected), Math.round(f.paid), Math.round(f.remaining), STUDENT_STATUS[f.status].label]);
+  const lines: (string | number)[][] = [["Situation de", r.fullName, r.classDisplay, r.year], [], ["Frais", "Devise", "Attendu", "Payé", "Solde", "Statut"]];
+  for (const f of r.fees) lines.push([f.label, f.currency, Math.round(f.expected), Math.round(f.paid), Math.round(f.remaining), STUDENT_STATUS[f.status].label]);
   lines.push([]);
-  lines.push(["Paiement", "Montant", "Date", "N° facture", "Statut"]);
-  for (const p of r.payments) lines.push([p.feeLabel, Math.round(p.amount), new Date(p.paidAt).toLocaleString("fr-FR"), p.invoiceNo ?? "", p.cancelledAt ? "Annulé" : "Validé"]);
+  lines.push(["Total attendu", amt(r.totalsByCurrency, "expected")]);
+  lines.push(["Total payé", amt(r.totalsByCurrency, "paid")]);
+  lines.push(["Total solde", amt(r.totalsByCurrency, "remaining")]);
+  lines.push([]);
+  lines.push(["Paiement", "Devise", "Montant", "Date", "N° facture", "Statut"]);
+  for (const p of r.payments) lines.push([p.feeLabel, p.currency, Math.round(p.amount), new Date(p.paidAt).toLocaleString("fr-FR"), p.invoiceNo ?? "", p.cancelledAt ? "Annulé" : "Validé"]);
   downloadCsv(lines, `situation-${r.fullName}.csv`);
 }
 function exportStudentPdf(r: StudentReport, school: SchoolBranding) {
-  const c = r.currency;
-  const feeBody = r.fees.map((f) => `<tr><td>${escHtml(f.label)}</td><td class="r">${money(f.expected, c)}</td><td class="r" style="color:#16A34A">${money(f.paid, c)}</td><td class="r" style="color:#E11D48">${money(f.remaining, c)}</td><td>${STUDENT_STATUS[f.status].label}</td></tr>`).join("");
+  const feeBody = r.fees.map((f) => `<tr><td>${escHtml(f.label)}</td><td class="r">${money(f.expected, f.currency)}</td><td class="r" style="color:#16A34A">${money(f.paid, f.currency)}</td><td class="r" style="color:#E11D48">${money(f.remaining, f.currency)}</td><td>${STUDENT_STATUS[f.status].label}</td></tr>`).join("");
   const payBody = r.payments.map((p) => `<tr${p.cancelledAt ? ' style="opacity:.5"' : ""}><td>${escHtml(new Date(p.paidAt).toLocaleString("fr-FR"))}</td><td>${escHtml(p.feeLabel)}</td><td>${escHtml(p.invoiceNo ?? "")}</td><td class="r">${money(p.amount, p.currency)}</td></tr>`).join("");
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escHtml(r.fullName)}</title><style>${REPORT_CSS}</style></head><body>${reportHead(school)}<h1>Situation financière — ${escHtml(r.fullName)}</h1><div class="sub">${escHtml(r.classDisplay)} · ${escHtml(r.matricule)} · Année ${escHtml(r.year)}</div>
-<h2>Frais</h2><table><thead><tr><th>Frais</th><th class="r">Attendu</th><th class="r">Payé</th><th class="r">Solde</th><th>Statut</th></tr></thead><tbody>${feeBody}</tbody><tfoot><tr><td>Total</td><td class="r">${money(r.totals.expected, c)}</td><td class="r">${money(r.totals.paid, c)}</td><td class="r">${money(r.totals.remaining, c)}</td><td></td></tr></tfoot></table>
+<h2>Frais</h2><table><thead><tr><th>Frais</th><th class="r">Attendu</th><th class="r">Payé</th><th class="r">Solde</th><th>Statut</th></tr></thead><tbody>${feeBody}</tbody><tfoot><tr><td>Total</td><td class="r">${escHtml(amt(r.totalsByCurrency, "expected"))}</td><td class="r">${escHtml(amt(r.totalsByCurrency, "paid"))}</td><td class="r">${escHtml(amt(r.totalsByCurrency, "remaining"))}</td><td></td></tr></tfoot></table>
 <h2>Paiements & factures</h2><table><thead><tr><th>Date</th><th>Frais</th><th>N° facture</th><th class="r">Montant</th></tr></thead><tbody>${payBody || '<tr><td colspan="4">Aucun paiement.</td></tr>'}</tbody></table>
 <div class="foot">E-KELASI</div><script>window.onload=function(){window.print()}</script></body></html>`;
   openPrint(html);

@@ -400,7 +400,7 @@ export async function sendInvoiceToParent(input: { studentId: string; feeLabel: 
     const { data: links } = await svc.from("parent_links").select("parent_id").eq("student_id", input.studentId);
     const parentIds = [...new Set((links ?? []).map((l: any) => l.parent_id).filter(Boolean))];
     if (parentIds.length === 0) return { ok: false, message: "Aucun parent lié à cet élève." };
-    const amountTxt = `${Math.round(input.amount).toLocaleString("fr-FR")} ${input.currency === "CDF" ? "FC" : input.currency}`;
+    const amountTxt = `${Math.round(input.amount).toLocaleString("fr-FR")} ${input.currency}`;
     const rows = parentIds.map((pid) => ({
       user_id: pid,
       kind: "school",

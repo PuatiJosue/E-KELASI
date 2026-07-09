@@ -28,7 +28,7 @@ export const COLORS = {
 };
 
 // ── Carte KPI ────────────────────────────────────────────────────────
-export function Kpi({ icon, tint, label, value, sub }: { icon: string; tint: string; label: string; value: string; sub?: string }) {
+export function Kpi({ icon, tint, label, value, sub }: { icon: string; tint: string; label: string; value: React.ReactNode; sub?: string }) {
   return (
     <div className="ek-card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -80,9 +80,17 @@ export function Donut({ segments, size = 84 }: { segments: { label: string; valu
   );
 }
 
+// Affiche un montant par devise (sépare USD / CDF).
+export function MoneyLines({ entries, empty = "0" }: { entries: [string, number][]; empty?: string }) {
+  const nonZero = entries.filter(([, v]) => Math.abs(v) > 0.001);
+  const list = nonZero.length ? nonZero : entries.slice(0, 1);
+  if (list.length === 0) return <>{empty}</>;
+  return <>{list.map(([c, v]) => <div key={c}>{money(v, c)}</div>)}</>;
+}
+
 // ── Graphique en barres empilées (encaissé / restant = attendu) ──────
 // Une seule échelle monétaire ; vert = encaissé, rouge = restant. Légende + total.
-export function StackedBars({ data, currency }: { data: { label: string; collected: number; remaining: number }[]; currency: string }) {
+export function StackedBars({ data, currency }: { data: { label: string; collected: number; remaining: number; currency?: string }[]; currency: string }) {
   const max = Math.max(1, ...data.map((d) => d.collected + d.remaining));
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -93,17 +101,18 @@ export function StackedBars({ data, currency }: { data: { label: string; collect
       {data.length === 0 ? (
         <div style={{ color: "var(--ink-3)", fontSize: 12.5, padding: "12px 0" }}>Aucune donnée à afficher.</div>
       ) : data.map((d, i) => {
+        const cc = d.currency ?? currency;
         const total = d.collected + d.remaining;
         const cw = (d.collected / max) * 100, rw = (d.remaining / max) * 100;
         return (
           <div key={i} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5 }}>
               <span style={{ color: "var(--ink-2)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "60%" }}>{d.label}</span>
-              <span style={{ color: "var(--ink-3)" }}>{money(d.collected, currency)} / {money(total, currency)}</span>
+              <span style={{ color: "var(--ink-3)" }}>{money(d.collected, cc)} / {money(total, cc)}</span>
             </div>
             <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden", background: "var(--surface-2)", gap: 2 }}>
-              {cw > 0 && <div title={`Encaissé : ${money(d.collected, currency)}`} style={{ width: `${cw}%`, background: COLORS.collected, borderRadius: 6 }} />}
-              {rw > 0 && <div title={`Restant : ${money(d.remaining, currency)}`} style={{ width: `${rw}%`, background: COLORS.remaining, borderRadius: 6 }} />}
+              {cw > 0 && <div title={`Encaissé : ${money(d.collected, cc)}`} style={{ width: `${cw}%`, background: COLORS.collected, borderRadius: 6 }} />}
+              {rw > 0 && <div title={`Restant : ${money(d.remaining, cc)}`} style={{ width: `${rw}%`, background: COLORS.remaining, borderRadius: 6 }} />}
             </div>
           </div>
         );

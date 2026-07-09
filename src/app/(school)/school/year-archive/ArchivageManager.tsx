@@ -10,7 +10,7 @@ import {
 } from "./actions";
 import type { ArchiveClass, ArchiveStudentLite, StudentArchive } from "@/lib/year-archive-db";
 
-const money = (n: number, c = "CDF") => `${Math.round(n).toLocaleString("fr-FR")} ${c === "CDF" ? "FC" : c}`;
+const money = (n: number, c = "CDF") => `${Math.round(n).toLocaleString("fr-FR")} ${c}`;
 const DECISION: Record<string, { label: string; color: string }> = {
   promotion: { label: "Passe", color: "#16A34A" },
   redoublant: { label: "Redouble", color: "#D97706" },

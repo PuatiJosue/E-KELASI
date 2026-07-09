@@ -7,7 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { SexBadge } from "@/components/SexBadge";
 import { classKey } from "@/lib/classes";
 import {
-  Kpi, Chip, Modal, Labeled, ModalActions, Toolbar, SearchInput, StackedBars, RecoveryBar,
+  Kpi, MoneyLines, Chip, Modal, Labeled, ModalActions, Toolbar, SearchInput, StackedBars, RecoveryBar,
   STUDENT_STATUS, COLORS, selStyle, modalInp, iconBtn, errBox, type SchoolBranding,
 } from "./finance-ui";
 import { money, escHtml, openPrint, downloadCsv, buildInvoiceHtml, reportHead, REPORT_CSS } from "./finance-export";
@@ -32,9 +32,8 @@ export function RubriqueFraisTab({
   const router = useRouter();
   const isScol = kind === "scolaire";
   const rubTitle = isScol ? "Frais scolaires" : "Autres frais";
-  const createLabel = isScol ? "Créer un frais" : "Créer une catégorie";
+  const createLabel = "Ajouter une rubrique";
   const c = overview.currency;
-  const k = overview.kpis;
   const [query, setQuery] = useState("");
   const [classF, setClassF] = useState("");
   const [feeModal, setFeeModal] = useState<null | "new" | Fee>(null);
@@ -47,16 +46,27 @@ export function RubriqueFraisTab({
     return true;
   }), [overview.fees, classF, q]);
 
+  // Agrégats séparés par devise (USD / CDF).
+  const byCur = useMemo(() => {
+    const m = new Map<string, { expected: number; collected: number; remaining: number }>();
+    for (const f of fees) {
+      const e = m.get(f.currency) ?? { expected: 0, collected: 0, remaining: 0 };
+      e.expected += f.expected; e.collected += f.collected; e.remaining += f.remaining;
+      m.set(f.currency, e);
+    }
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [fees]);
+
   const classList = [...new Set(overview.fees.map((f) => f.classDisplay).filter(Boolean))] as string[];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Cartes de stats */}
+      {/* Cartes de stats — séparées par devise */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
-        <Kpi icon="creditcard" tint={COLORS.accent} label="Montant attendu" value={money(k.expected, c)} sub={`${overview.fees.length} frais`} />
-        <Kpi icon="check" tint={COLORS.collected} label="Montant encaissé" value={money(k.collected, c)} sub="Envoyé en trésorerie" />
-        <Kpi icon="flag" tint={COLORS.remaining} label="Impayés / restant" value={money(k.remaining, c)} />
-        <Kpi icon="pieChart" tint={COLORS.brand} label="Taux de recouvrement" value={`${k.recoveryPct.toFixed(0)} %`} />
+        <Kpi icon="creditcard" tint={COLORS.accent} label="Montant attendu" value={<MoneyLines entries={byCur.map(([cc, v]) => [cc, v.expected])} />} sub={`${fees.length} frais`} />
+        <Kpi icon="check" tint={COLORS.collected} label="Montant encaissé" value={<MoneyLines entries={byCur.map(([cc, v]) => [cc, v.collected])} />} sub="Envoyé en trésorerie" />
+        <Kpi icon="flag" tint={COLORS.remaining} label="Impayés / restant" value={<MoneyLines entries={byCur.map(([cc, v]) => [cc, v.remaining])} />} />
+        <Kpi icon="pieChart" tint={COLORS.brand} label="Taux de recouvrement" value={byCur.length ? <>{byCur.map(([cc, v]) => <div key={cc}>{cc} {(v.expected > 0 ? (v.collected / v.expected) * 100 : 0).toFixed(0)} %</div>)}</> : "—"} />
       </div>
 
       {/* Barre d’outils */}
@@ -91,7 +101,7 @@ export function RubriqueFraisTab({
         {/* Graphique */}
         <div className="ek-card" style={{ padding: 16 }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 12 }}>Attendu · Encaissé · Impayés</div>
-          <StackedBars data={overview.chart.map((d) => ({ label: d.label, collected: d.collected, remaining: d.remaining }))} currency={c} />
+          <StackedBars data={fees.map((f) => ({ label: f.label, collected: f.collected, remaining: f.remaining, currency: f.currency }))} currency={c} />
         </div>
       </div>
 
@@ -138,7 +148,7 @@ function FeeRow({ fee, first, onOpen, onEdit, onChanged }: { fee: Fee; first: bo
       <button onClick={onOpen} className="ek-btn ek-btn-outline" style={{ height: 32, fontSize: 12 }}>Paiements</button>
       {!fee.hasPayments && <button onClick={onEdit} title="Modifier" style={iconBtn}><Icon name="edit" size={15} /></button>}
       <button onClick={arch} disabled={pending} title={fee.archived ? "Réactiver" : "Archiver"} style={iconBtn}><Icon name={fee.archived ? "refresh" : "eyeOff"} size={15} /></button>
-      {!fee.hasPayments && <button onClick={del} disabled={pending} title="Supprimer" style={iconBtn}><Icon name="trash" size={15} /></button>}
+      <button onClick={del} disabled={pending} title="Supprimer" style={iconBtn}><Icon name="trash" size={15} /></button>
     </div>
   );
 }
@@ -150,6 +160,10 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
   const [label, setLabel] = useState(existing?.label ?? "");
   const [category, setCategory] = useState(existing?.category ?? existing?.label ?? "");
   const [classKeyVal, setClassKeyVal] = useState(existing ? classKey(existing.className, existing.option) : (classes[0] ? classKey(classes[0].className, classes[0].option) : ""));
+  // Cible (frais scolaire à la création) : toutes les classes ou une sélection.
+  const [scope, setScope] = useState<"all" | "specific">("specific");
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(existing || !classes[0] ? [] : [classKey(classes[0].className, classes[0].option)]));
+  const togglePick = (ck: string) => setPicked((p) => { const n = new Set(p); n.has(ck) ? n.delete(ck) : n.add(ck); return n; });
   const [totalAmount, setTotalAmount] = useState(existing ? String(existing.totalAmount) : "");
   const [currency, setCurrency] = useState(existing?.currency ?? "CDF");
   const [rows, setRows] = useState<{ name: string; amount: string; dueDate: string }[]>(
@@ -169,7 +183,6 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
     const effLabel = (isScol ? label : (label.trim() || category)).trim();
     if (isScol && !label.trim()) { setError("Libellé requis."); return; }
     if (!isScol && !category.trim()) { setError("Nom de la catégorie requis."); return; }
-    if (isScol && !existing && !classKeyVal) { setError("Choisissez une classe."); return; }
     if (!(parsedTotal > 0)) { setError("Montant total invalide."); return; }
     if (rows.length > 0 && Math.abs(trancheSum - parsedTotal) > 0.5) {
       if (!confirm(`La somme des tranches (${money(trancheSum, currency)}) diffère du total (${money(parsedTotal, currency)}). Continuer ?`)) return;
@@ -181,6 +194,20 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
       .filter((r) => r.name.trim() && (parseFloat(r.amount.replace(",", ".")) || 0) > 0)
       .map((r) => ({ name: r.name.trim(), amount: parseFloat(r.amount.replace(",", ".")) || 0, dueDate: r.dueDate || null }));
 
+    // Frais scolaire à la création : toutes les classes (class_name null) ou N classes choisies.
+    if (isScol && !existing) {
+      const targets = scope === "all" ? [null] : classes.filter((cl) => picked.has(classKey(cl.className, cl.option)));
+      if (scope === "specific" && targets.length === 0) { setError("Sélectionnez au moins une classe."); return; }
+      start(async () => {
+        for (const t of targets as (ClassOption | null)[]) {
+          const r = await createFee({ kind, label: effLabel, className: t ? t.className : null, option: t ? t.option : null, schoolYear: year, totalAmount: parsedTotal, currency, installments });
+          if (!r.ok) { setError(r.message); return; }
+        }
+        onDone();
+      });
+      return;
+    }
+
     start(async () => {
       const r = existing
         ? await updateFee({ id: existing.id, label: effLabel, category: isScol ? null : category.trim(), className: className || null, option: option || null, totalAmount: parsedTotal, currency, installments })
@@ -190,19 +217,40 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
   };
 
   return (
-    <Modal title={existing ? (isScol ? "Modifier le frais" : "Modifier la catégorie") : (isScol ? "Créer un frais scolaire" : "Créer une catégorie / un frais")} onClose={onClose} wide>
+    <Modal title={existing ? (isScol ? "Modifier le frais" : "Modifier la catégorie") : "Ajouter une rubrique"} onClose={onClose} wide>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <Labeled label="Année scolaire" style={{ flex: 1, minWidth: 140 }}>
           <input value={year} disabled style={{ ...modalInp, opacity: 0.7 }} />
         </Labeled>
-        <Labeled label={isScol ? "Niveau / classe" : "Cible"} style={{ flex: 1, minWidth: 180 }}>
-          <select value={classKeyVal} onChange={(e) => setClassKeyVal(e.target.value)} style={modalInp} disabled={!!existing && existing.hasPayments}>
-            {!isScol && <option value="">École entière</option>}
-            {isScol && classes.length === 0 && <option value="">— aucune classe —</option>}
-            {classes.map((cl) => { const ck = classKey(cl.className, cl.option); return <option key={ck} value={ck}>{cl.display}</option>; })}
-          </select>
-        </Labeled>
+        {isScol && !existing ? (
+          <Labeled label="Cible" style={{ flex: 1, minWidth: 180 }}>
+            <select value={scope} onChange={(e) => setScope(e.target.value as "all" | "specific")} style={modalInp}>
+              <option value="all">Toutes les classes</option>
+              <option value="specific">Classes spécifiques…</option>
+            </select>
+          </Labeled>
+        ) : (
+          <Labeled label={isScol ? "Niveau / classe" : "Cible"} style={{ flex: 1, minWidth: 180 }}>
+            <select value={classKeyVal} onChange={(e) => setClassKeyVal(e.target.value)} style={modalInp} disabled={!!existing && existing.hasPayments}>
+              {!isScol && <option value="">École entière</option>}
+              {isScol && classes.length === 0 && <option value="">— aucune classe —</option>}
+              {classes.map((cl) => { const ck = classKey(cl.className, cl.option); return <option key={ck} value={ck}>{cl.display}</option>; })}
+            </select>
+          </Labeled>
+        )}
       </div>
+      {isScol && !existing && scope === "specific" && (
+        <div style={{ border: "1px solid var(--border-strong)", borderRadius: 9, padding: 8, maxHeight: 170, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+          {classes.length === 0 ? (
+            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>Aucune classe active.</div>
+          ) : classes.map((cl) => { const ck = classKey(cl.className, cl.option); return (
+            <label key={ck} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--ink-2)", cursor: "pointer" }}>
+              <input type="checkbox" checked={picked.has(ck)} onChange={() => togglePick(ck)} /> {cl.display}
+            </label>
+          ); })}
+          <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>Un frais identique sera créé pour chaque classe cochée.</div>
+        </div>
+      )}
       {isScol ? (
         <Labeled label="Libellé du frais"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Minerval, Frais d’examen…" style={modalInp} /></Labeled>
       ) : (
@@ -210,7 +258,7 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
       )}
       <div style={{ display: "flex", gap: 10 }}>
         <Labeled label="Montant total" style={{ flex: 1 }}><input value={totalAmount} onChange={(e) => setTotalAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="250000" style={modalInp} /></Labeled>
-        <Labeled label="Devise" style={{ width: 110 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
+        <Labeled label="Devise" style={{ width: 110 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">CDF</option><option value="USD">USD</option></select></Labeled>
       </div>
 
       {/* Tranches */}
@@ -353,6 +401,7 @@ function PaymentModal({ fee, student, school, year, onClose, onDone }: { fee: Fe
   const [invoiceNo, setInvoiceNo] = useState("");
   const [cashier, setCashier] = useState(school.directorName ?? "");
   const [dateTime, setDateTime] = useState(localDateTime());
+  const [libelle, setLibelle] = useState("");
   const [printAfter, setPrintAfter] = useState(true);
   const [sendParent, setSendParent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -371,7 +420,7 @@ function PaymentModal({ fee, student, school, year, onClose, onDone }: { fee: Fe
       const r = await recordFeePayment({
         feeId: fee.id, studentId: student.studentId, installmentId: installmentId || null,
         amount: amt, currency: fee.currency, paidAt: new Date(dateTime).toISOString(),
-        invoiceNo, cashierName: cashier,
+        invoiceNo, cashierName: cashier, note: libelle,
       });
       if (!r.ok) { setError(r.message); return; }
       if (printAfter) {
@@ -408,6 +457,10 @@ function PaymentModal({ fee, student, school, year, onClose, onDone }: { fee: Fe
         <Labeled label="Date & heure" style={{ flex: 1 }}><input type="datetime-local" value={dateTime} onChange={(e) => setDateTime(e.target.value)} style={modalInp} /></Labeled>
       </div>
       <Labeled label="Caissier / utilisateur"><input value={cashier} onChange={(e) => setCashier(e.target.value)} placeholder="Nom du caissier" style={modalInp} /></Labeled>
+      <Labeled label="Libellé (facultatif)">
+        <textarea value={libelle} onChange={(e) => setLibelle(e.target.value)} placeholder="Motif, précision sur ce paiement…"
+          style={{ ...modalInp, minHeight: 56, resize: "vertical", fontFamily: "inherit", lineHeight: 1.4 }} />
+      </Labeled>
       <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--ink-2)" }}>
         <input type="checkbox" checked={printAfter} onChange={(e) => setPrintAfter(e.target.checked)} /> Générer et imprimer la facture
       </label>
@@ -474,6 +527,7 @@ function StudentHistoryModal({ fee, student, school, year, onClose, onChanged }:
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, borderBottom: "1px solid var(--divider)", padding: "8px 0", opacity: cancelled ? 0.55 : 1 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div><span style={{ fontWeight: 700, textDecoration: cancelled ? "line-through" : "none" }}>{money(p.amount, p.currency)}</span>{p.installmentName ? ` · ${p.installmentName}` : ""}{p.invoiceNo ? ` · N° ${p.invoiceNo}` : ""}</div>
+                  {p.note && <div style={{ fontSize: 11, color: "var(--ink-2)" }}>{p.note}</div>}
                   <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>{new Date(p.paidAt).toLocaleString("fr-FR")}{p.cashierName ? ` · ${p.cashierName}` : ""}{cancelled ? ` · Annulé : ${p.cancelReason ?? ""}` : ""}</div>
                 </div>
                 {!cancelled && <>

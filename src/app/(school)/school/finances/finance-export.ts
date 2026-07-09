@@ -1,7 +1,7 @@
 // Helpers partagés du module Finance : formatage monétaire, impression HTML→PDF,
 // export CSV (Excel). Utilitaires purs (client) — repris du module Finance v1.
 
-export const cur = (c: string) => (c === "CDF" ? "FC" : c === "USD" ? "USD" : c);
+export const cur = (c: string) => c;
 export const money = (n: number, c = "CDF") => `${Math.round(n).toLocaleString("fr-FR")} ${cur(c)}`;
 
 export const escHtml = (s: string) =>

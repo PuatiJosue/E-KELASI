@@ -35,21 +35,27 @@ export type TreasuryEntry = {
   cancelReason: string | null;
 };
 
+export type TreasuryKpis = {
+  recettesScolaires: number;
+  recettesAutres: number;
+  recettesExceptionnelles: number;
+  totalRecettes: number;
+  totalDepenses: number;
+  solde: number;
+  impayes: number;
+  tauxRecouvrement: number;
+};
+export type EvolutionPoint = { label: string; recettes: number; depenses: number; solde: number };
+
 export type TreasuryOverview = {
   currency: string;
   year: string;
-  kpis: {
-    recettesScolaires: number;
-    recettesAutres: number;
-    recettesExceptionnelles: number;
-    totalRecettes: number;
-    totalDepenses: number;
-    solde: number;
-    impayes: number;
-    tauxRecouvrement: number;
-  };
+  kpis: TreasuryKpis;                                  // agrégé (usage interne / alertes)
+  currencies: string[];                                // devises présentes (USD / CDF…)
+  byCurrency: Record<string, TreasuryKpis>;            // montants séparés par devise
   entries: TreasuryEntry[];
-  evolution: { label: string; recettes: number; depenses: number; solde: number }[];
+  evolution: EvolutionPoint[];
+  evolutionByCurrency: Record<string, EvolutionPoint[]>;
 };
 
 function monthKey(d: Date): string {
@@ -79,7 +85,7 @@ export async function getTreasuryOverview(year?: string): Promise<TreasuryOvervi
       svc.from("treasury_entries")
         .select("id, kind, category, amount, currency, label, entry_date, note, cancelled_at, cancel_reason, profiles:recorded_by(full_name)")
         .eq("school_id", school.id).order("entry_date", { ascending: false }),
-      svc.from("fee_payments").select("amount, paid_at, fees(kind)").eq("school_id", school.id).is("cancelled_at", null),
+      svc.from("fee_payments").select("amount, paid_at, currency, fees(kind)").eq("school_id", school.id).is("cancelled_at", null),
     ]);
 
     const entries: TreasuryEntry[] = (entriesRaw ?? []).map((e: any) => ({
@@ -104,32 +110,40 @@ export async function getTreasuryOverview(year?: string): Promise<TreasuryOvervi
     const collected = feesScol.kpis.collected + feesAutre.kpis.collected; // plafonné, pour le taux
     const currency = feesScol.currency || feesAutre.currency || entries[0]?.currency || "CDF";
 
-    // Évolution mensuelle (6 mois) : recettes (paiements + exceptionnelles) vs dépenses ; solde cumulé.
+    // ── Séparation par devise (USD / CDF…) ─────────────────────────
+    type Acc = { recS: number; recA: number; recE: number; dep: number; expected: number; collected: number; remaining: number };
+    const accs = new Map<string, Acc>();
+    const acc = (cur: string): Acc => { let a = accs.get(cur); if (!a) { a = { recS: 0, recA: 0, recE: 0, dep: 0, expected: 0, collected: 0, remaining: 0 }; accs.set(cur, a); } return a; };
+    for (const p of (paysRaw ?? []) as any[]) { const a = acc(p.currency ?? "CDF"); if (p.fees?.kind === "autre") a.recA += Number(p.amount); else a.recS += Number(p.amount); }
+    for (const e of active) { const a = acc(e.currency); if (e.kind === "recette_exceptionnelle") a.recE += e.amount; else a.dep += e.amount; }
+    for (const f of [...feesScol.fees, ...feesAutre.fees]) { const a = acc(f.currency); a.expected += f.expected; a.collected += f.collected; a.remaining += f.remaining; }
+    const byCurrency: Record<string, TreasuryKpis> = {};
+    for (const [cur, a] of accs) {
+      const tr = a.recS + a.recA + a.recE;
+      byCurrency[cur] = { recettesScolaires: a.recS, recettesAutres: a.recA, recettesExceptionnelles: a.recE, totalRecettes: tr, totalDepenses: a.dep, solde: tr - a.dep, impayes: a.remaining, tauxRecouvrement: a.expected > 0 ? (a.collected / a.expected) * 100 : 0 };
+    }
+    const currencies = [...accs.keys()].sort();
+
+    // Évolution mensuelle (6 mois), globale et par devise (recettes − dépenses, solde cumulé).
     const months = lastMonths(6);
     const recByMonth = new Map<string, number>();
     const depByMonth = new Map<string, number>();
-    for (const p of (paysRaw ?? []) as any[]) {
-      const k = monthKey(new Date(p.paid_at));
-      recByMonth.set(k, (recByMonth.get(k) ?? 0) + Number(p.amount));
-    }
-    for (const e of active) {
-      const k = monthKey(new Date(e.entryDate));
-      if (e.kind === "recette_exceptionnelle") recByMonth.set(k, (recByMonth.get(k) ?? 0) + e.amount);
-      else depByMonth.set(k, (depByMonth.get(k) ?? 0) + e.amount);
-    }
-    let running = 0;
-    const evolution = months.map((m) => {
-      const rec = recByMonth.get(m.key) ?? 0;
-      const dep = depByMonth.get(m.key) ?? 0;
-      running += rec - dep;
-      return { label: m.label, recettes: rec, depenses: dep, solde: running };
-    });
+    const recByCurMonth = new Map<string, Map<string, number>>();
+    const depByCurMonth = new Map<string, Map<string, number>>();
+    const bump = (map: Map<string, Map<string, number>>, cur: string, key: string, amt: number) => { let mm = map.get(cur); if (!mm) { mm = new Map(); map.set(cur, mm); } mm.set(key, (mm.get(key) ?? 0) + amt); };
+    for (const p of (paysRaw ?? []) as any[]) { const k = monthKey(new Date(p.paid_at)); recByMonth.set(k, (recByMonth.get(k) ?? 0) + Number(p.amount)); bump(recByCurMonth, p.currency ?? "CDF", k, Number(p.amount)); }
+    for (const e of active) { const k = monthKey(new Date(e.entryDate)); if (e.kind === "recette_exceptionnelle") { recByMonth.set(k, (recByMonth.get(k) ?? 0) + e.amount); bump(recByCurMonth, e.currency, k, e.amount); } else { depByMonth.set(k, (depByMonth.get(k) ?? 0) + e.amount); bump(depByCurMonth, e.currency, k, e.amount); } }
+    const series = (rm: Map<string, number>, dm: Map<string, number>): EvolutionPoint[] => { let run = 0; return months.map((m) => { const rec = rm.get(m.key) ?? 0, dep = dm.get(m.key) ?? 0; run += rec - dep; return { label: m.label, recettes: rec, depenses: dep, solde: run }; }); };
+    const evolution = series(recByMonth, depByMonth);
+    const evolutionByCurrency: Record<string, EvolutionPoint[]> = {};
+    for (const cur of currencies) evolutionByCurrency[cur] = series(recByCurMonth.get(cur) ?? new Map(), depByCurMonth.get(cur) ?? new Map());
 
     return {
       currency, year: yr,
       kpis: { recettesScolaires, recettesAutres, recettesExceptionnelles, totalRecettes, totalDepenses, solde, impayes,
         tauxRecouvrement: expected > 0 ? (collected / expected) * 100 : 0 },
-      entries, evolution,
+      currencies, byCurrency,
+      entries, evolution, evolutionByCurrency,
     };
   } catch {
     return emptyTreasury(year);
@@ -231,7 +245,8 @@ function emptyTreasury(year?: string): TreasuryOverview {
   return {
     currency: "CDF", year: year || schoolYearLabel(),
     kpis: { recettesScolaires: 0, recettesAutres: 0, recettesExceptionnelles: 0, totalRecettes: 0, totalDepenses: 0, solde: 0, impayes: 0, tauxRecouvrement: 0 },
-    entries: [], evolution: lastMonths(6).map((m) => ({ label: m.label, recettes: 0, depenses: 0, solde: 0 })),
+    currencies: [], byCurrency: {},
+    entries: [], evolution: lastMonths(6).map((m) => ({ label: m.label, recettes: 0, depenses: 0, solde: 0 })), evolutionByCurrency: {},
   };
 }
 
@@ -250,9 +265,11 @@ function mockTreasury(year?: string): TreasuryOverview {
     return { label: m.label, recettes: rec, depenses: dep, solde: 0 };
   });
   let run = 0; for (const e of evolution) { run += e.recettes - e.depenses; e.solde = run; }
+  const kpis = { recettesScolaires, recettesAutres, recettesExceptionnelles, totalRecettes, totalDepenses, solde: totalRecettes - totalDepenses, impayes: 900000, tauxRecouvrement: 72 };
+  const usd: TreasuryKpis = { recettesScolaires: 400, recettesAutres: 0, recettesExceptionnelles: 0, totalRecettes: 400, totalDepenses: 50, solde: 350, impayes: 150, tauxRecouvrement: 68 };
   return {
     currency: "CDF", year: year || schoolYearLabel(),
-    kpis: { recettesScolaires, recettesAutres, recettesExceptionnelles, totalRecettes, totalDepenses, solde: totalRecettes - totalDepenses, impayes: 900000, tauxRecouvrement: 72 },
-    entries, evolution,
+    kpis, currencies: ["CDF", "USD"], byCurrency: { CDF: kpis, USD: usd },
+    entries, evolution, evolutionByCurrency: { CDF: evolution, USD: evolution.map((e) => ({ ...e, recettes: Math.round(e.recettes / 2500), depenses: Math.round(e.depenses / 2500), solde: Math.round(e.solde / 2500) })) },
   };
 }

@@ -40,7 +40,7 @@ export async function getFinanceAlerts(
   if (!isLiveMode()) return mockAlerts();
   const alerts: FinanceAlert[] = [];
   const c = treasury.currency;
-  const fmt = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} ${c === "CDF" ? "FC" : c}`;
+  const fmt = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} ${c}`;
 
   // Impayés (agrégats déjà calculés).
   const impayes = feesScolaire.kpis.remaining + feesAutre.kpis.remaining;
@@ -89,9 +89,9 @@ export async function getFinanceAlerts(
 
 function mockAlerts(): FinanceAlert[] {
   return [
-    { id: "solde", type: "solde", severity: "warning", title: "Solde de trésorerie faible", detail: "Solde actuel : 45 000 FC." },
-    { id: "impaye", type: "impaye", severity: "warning", title: "Impayés en cours", detail: "900 000 FC restant sur 3 frais." },
+    { id: "solde", type: "solde", severity: "warning", title: "Solde de trésorerie faible", detail: "Solde actuel : 45 000 CDF." },
+    { id: "impaye", type: "impaye", severity: "warning", title: "Impayés en cours", detail: "900 000 CDF restant sur 3 frais." },
     { id: "ech-1", type: "echeance", severity: "warning", title: "Échéance proche", detail: "Minerval · 5ème A — 2ème tranche, échéance le 15/01/2027.", date: "2027-01-15" },
-    { id: "rec-1", type: "recette", severity: "info", title: "Recette exceptionnelle", detail: "Don d’un partenaire — 500 000 FC.", date: "2026-10-03" },
+    { id: "rec-1", type: "recette", severity: "info", title: "Recette exceptionnelle", detail: "Don d’un partenaire — 500 000 CDF.", date: "2026-10-03" },
   ];
 }

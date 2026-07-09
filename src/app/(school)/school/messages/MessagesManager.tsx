@@ -12,7 +12,7 @@ function initials(name: string) {
   return name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 }
 
-const money = (n: number, c = "CDF") => `${Math.round(n).toLocaleString("fr-FR")} ${c === "CDF" ? "FC" : c}`;
+const money = (n: number, c = "CDF") => `${Math.round(n).toLocaleString("fr-FR")} ${c}`;
 
 const DEFAULT_REMINDER =
   "Bonjour, nous vous rappelons que des frais scolaires restent à régler pour votre enfant. " +
