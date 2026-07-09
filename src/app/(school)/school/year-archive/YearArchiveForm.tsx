@@ -64,13 +64,16 @@ export function YearArchiveForm({
           <Icon name="refresh" size={18} style={{ color: "var(--brand-600)" }} />
           <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>Commencer une nouvelle année</div>
         </div>
-        <p style={{ fontSize: 12.5, color: "var(--ink-2)", lineHeight: 1.55, marginBottom: 12 }}>
-          Toutes les <strong>notes</strong> et tous les <strong>devoirs</strong> enregistrés par votre école
-          durant l&apos;année qui vient de se terminer sont <strong>archivés</strong>. L&apos;appli des parents,
-          les bulletins et la saisie des profs repartent d&apos;une page blanche pour la nouvelle année.
-          <br />
-          <strong>Rien n&apos;est supprimé</strong> : l&apos;historique reste conservé et consultable.
+        <p style={{ fontSize: 12.5, color: "var(--ink-2)", lineHeight: 1.55, marginBottom: 10 }}>
+          Les <strong>notes</strong> et <strong>devoirs</strong> de l&apos;année sont <strong>archivés</strong>
+          {" "}(conservés et consultables dans l&apos;historique). Tout le reste de l&apos;année scolaire est
+          {" "}<strong>remis à zéro</strong> pour repartir d&apos;une page blanche.
         </p>
+        <div style={{ fontSize: 12, color: "var(--ink-2)", lineHeight: 1.6, marginBottom: 12, display: "flex", flexDirection: "column", gap: 4 }}>
+          <div><strong style={{ color: "var(--danger)" }}>Remis à zéro :</strong> présences, bulletins, finances (frais, paiements, caisse), emploi du temps, journal de classe, messagerie, notifications, demandes d&apos;inscription et de réinscription, annonces et activités de l&apos;école.</div>
+          <div><strong style={{ color: "var(--accent)" }}>Conservés :</strong> vidéos de cours, élèves (à faire passer avant), personnel, matières et bibliothèque.</div>
+          <div style={{ color: "var(--ink-3)" }}>Cette remise à zéro est <strong>définitive</strong> (hors notes/devoirs archivés).</div>
+        </div>
         <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.55, marginBottom: 14 }}>
           Pensez d&apos;abord à faire passer vos élèves dans la classe supérieure depuis{" "}
           <Link href="/school/promotion" style={{ color: "var(--brand-600)", fontWeight: 600 }}>Passage de classe</Link>.

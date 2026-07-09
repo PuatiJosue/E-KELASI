@@ -176,8 +176,25 @@ export async function archiveSchoolYearAction(args: { confirm: string }): Promis
   const gradesArchived = (row as any)?.grades_count ?? 0;
   const homeworkArchived = (row as any)?.homework_count ?? 0;
 
-  // 2) Remise à zéro (les données sont conservées dans l'archive Option 1).
+  // Utilisateurs de l'école (personnel + parents) pour cibler leurs notifications,
+  // qui ne portent pas de school_id.
+  const [{ data: staffRows }, { data: studentRows }] = await Promise.all([
+    svc.from("school_staff").select("user_id").eq("school_id", c.schoolId),
+    svc.from("students").select("id").eq("school_id", c.schoolId),
+  ]);
+  const studentIds = (studentRows ?? []).map((s: any) => s.id);
+  let parentIds: string[] = [];
+  if (studentIds.length > 0) {
+    const { data: linkRows } = await svc.from("parent_links").select("parent_id").in("student_id", studentIds);
+    parentIds = (linkRows ?? []).map((l: any) => l.parent_id);
+  }
+  const userIds = [...new Set([...((staffRows ?? []) as any[]).map((s) => s.user_id), ...parentIds])].filter(Boolean);
+
+  // 2) Remise à zéro complète : tout repart de zéro SAUF les vidéos de cours
+  //    (course_videos). Les notes/devoirs restent archivés (Option 1) ; le reste
+  //    est définitivement supprimé — y compris annonces et activités de l'école.
   await Promise.all([
+    // Scolarité & finances (données conservées dans l'archive Option 1).
     svc.from("student_attendance").delete().eq("school_id", c.schoolId),
     svc.from("staff_attendance").delete().eq("school_id", c.schoolId),
     svc.from("bulletin_drafts").delete().eq("school_id", c.schoolId),
@@ -186,7 +203,23 @@ export async function archiveSchoolYearAction(args: { confirm: string }): Promis
     svc.from("student_installments").delete().eq("school_id", c.schoolId),
     svc.from("student_fees").delete().eq("school_id", c.schoolId),
     svc.from("cash_entries").delete().eq("school_id", c.schoolId),
+    // Remise à zéro élargie (nouvelle année vierge).
+    svc.from("timetable_slots").delete().eq("school_id", c.schoolId),
+    svc.from("teacher_journal").delete().eq("school_id", c.schoolId),
+    svc.from("inscriptions").delete().eq("school_id", c.schoolId),
+    svc.from("reenrollments").delete().eq("school_id", c.schoolId),
+    // Annonces & activités de l'école.
+    svc.from("announcements").delete().eq("school_id", c.schoolId),
+    svc.from("school_events").delete().eq("school_id", c.schoolId),
+    // Supprime les conversations de l'école (cascade → messages + participants).
+    svc.from("conversations").delete().eq("school_id", c.schoolId),
   ]);
+
+  // Notifications des membres de l'école (par lots, pas de school_id sur la table).
+  for (let i = 0; i < userIds.length; i += 200) {
+    const batch = userIds.slice(i, i + 200);
+    if (batch.length) await svc.from("notifications").delete().in("user_id", batch);
+  }
 
   revalidatePath("/school/year-archive");
   revalidatePath("/school/overview");
