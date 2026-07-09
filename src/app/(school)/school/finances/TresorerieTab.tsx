@@ -289,7 +289,7 @@ function CashClosure({ state, school }: { state: CashState; school: SchoolBrandi
           {state.recent.map((s, i) => (
             <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderTop: "1px solid var(--divider)", fontSize: 12.5 }}>
               <span style={{ flex: 1 }}>{new Date(s.sessionDate).toLocaleDateString("fr-FR")}{s.closedBy ? ` · ${s.closedBy}` : ""}</span>
-              <span style={{ fontWeight: 700, color: (s.totals?.solde ?? 0) >= 0 ? COLORS.collected : COLORS.remaining }}>{money(s.totals?.solde ?? 0, s.totals?.currency ?? "CDF")}</span>
+              <span style={{ fontWeight: 700, textAlign: "right" }}>{s.totals && Object.keys(s.totals.byCurrency).length ? Object.entries(s.totals.byCurrency).map(([cur, tt]) => <div key={cur} style={{ color: tt.solde >= 0 ? COLORS.collected : COLORS.remaining }}>{money(tt.solde, cur)}</div>) : <span style={{ color: "var(--ink-3)" }}>—</span>}</span>
               <button onClick={() => setViewSession(s)} title="Rapport de clôture" style={iconBtn}><Icon name="file" size={14} /></button>
             </div>
           ))}
@@ -304,7 +304,7 @@ function CashClosure({ state, school }: { state: CashState; school: SchoolBrandi
 function ClosureModal({ session, school, onClose, onChanged }: { session: CashSession; school: SchoolBranding; onClose: () => void; onChanged: () => void }) {
   const [pending, start] = useTransition();
   const t = session.totals;
-  const c = t?.currency ?? "CDF";
+  const curList = t ? (t.currencies.length ? t.currencies : ["CDF"]) : [];
   const reopen = () => {
     const reason = prompt("Motif de la réouverture (tracé dans l’historique) :");
     if (!reason?.trim()) return;
@@ -318,24 +318,29 @@ function ClosureModal({ session, school, onClose, onChanged }: { session: CashSe
       </div>
       {t ? (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 1, background: "var(--border)", borderRadius: 10, overflow: "hidden" }}>
-            <Cs label="Frais scolaires" value={money(t.recettesScolaires, c)} color={COLORS.collected} />
-            <Cs label="Autres frais" value={money(t.recettesAutres, c)} color={COLORS.accent} />
-            <Cs label="Exceptionnelles" value={money(t.recettesExceptionnelles, c)} color={COLORS.partial} />
-            <Cs label="Total recettes" value={money(t.totalRecettes, c)} color="var(--ink)" />
-            <Cs label="Total dépenses" value={money(t.totalDepenses, c)} color={COLORS.remaining} />
-            <Cs label="Solde" value={money(t.solde, c)} color={t.solde >= 0 ? COLORS.collected : COLORS.remaining} />
-          </div>
+          {curList.map((cc) => { const tt = t.byCurrency[cc]; if (!tt) return null; return (
+            <div key={cc}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--ink-2)", marginBottom: 6 }}>Devise {cc}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 1, background: "var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                <Cs label="Frais scolaires" value={money(tt.recettesScolaires, cc)} color={COLORS.collected} />
+                <Cs label="Autres frais" value={money(tt.recettesAutres, cc)} color={COLORS.accent} />
+                <Cs label="Exceptionnelles" value={money(tt.recettesExceptionnelles, cc)} color={COLORS.partial} />
+                <Cs label="Total recettes" value={money(tt.totalRecettes, cc)} color="var(--ink)" />
+                <Cs label="Total dépenses" value={money(tt.totalDepenses, cc)} color={COLORS.remaining} />
+                <Cs label="Solde" value={money(tt.solde, cc)} color={tt.solde >= 0 ? COLORS.collected : COLORS.remaining} />
+              </div>
+            </div>
+          ); })}
           {t.depenses.length > 0 && (
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Détail des dépenses</div>
-              {t.depenses.map((d, i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: "1px solid var(--divider)" }}><span>{d.label}{d.category ? ` · ${d.category}` : ""}</span><span style={{ color: COLORS.remaining }}>{money(d.amount, c)}</span></div>)}
+              {t.depenses.map((d, i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: "1px solid var(--divider)" }}><span>{d.label}{d.category ? ` · ${d.category}` : ""}</span><span style={{ color: COLORS.remaining }}>{money(d.amount, d.currency)}</span></div>)}
             </div>
           )}
           {t.recettes.length > 0 && (
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Recettes exceptionnelles</div>
-              {t.recettes.map((d, i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: "1px solid var(--divider)" }}><span>{d.label}{d.category ? ` · ${d.category}` : ""}</span><span style={{ color: COLORS.collected }}>{money(d.amount, c)}</span></div>)}
+              {t.recettes.map((d, i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: "1px solid var(--divider)" }}><span>{d.label}{d.category ? ` · ${d.category}` : ""}</span><span style={{ color: COLORS.collected }}>{money(d.amount, d.currency)}</span></div>)}
             </div>
           )}
         </>
@@ -361,25 +366,30 @@ function Cs({ label, value, color }: { label: string; value: string; color: stri
 }
 function exportClosureCsv(s: CashSession) {
   const t = s.totals; if (!t) return;
-  const lines: (string | number)[][] = [["Rapport de clôture de caisse", new Date(s.sessionDate).toLocaleDateString("fr-FR")], ["Clôturée le", s.closedAt ? new Date(s.closedAt).toLocaleString("fr-FR") : "", "par", s.closedBy ?? ""], [],
-    ["Recettes frais scolaires", Math.round(t.recettesScolaires)], ["Recettes autres frais", Math.round(t.recettesAutres)], ["Recettes exceptionnelles", Math.round(t.recettesExceptionnelles)],
-    ["Total recettes", Math.round(t.totalRecettes)], ["Total dépenses", Math.round(t.totalDepenses)], ["Solde", Math.round(t.solde)]];
+  const curList = t.currencies.length ? t.currencies : ["CDF"];
+  const lines: (string | number)[][] = [["Rapport de clôture de caisse", new Date(s.sessionDate).toLocaleDateString("fr-FR")], ["Clôturée le", s.closedAt ? new Date(s.closedAt).toLocaleString("fr-FR") : "", "par", s.closedBy ?? ""]];
+  for (const cur of curList) {
+    const tt = t.byCurrency[cur]; if (!tt) continue;
+    lines.push([]);
+    lines.push([`Synthèse ${cur}`]);
+    lines.push(["Recettes frais scolaires", Math.round(tt.recettesScolaires)]);
+    lines.push(["Recettes autres frais", Math.round(tt.recettesAutres)]);
+    lines.push(["Recettes exceptionnelles", Math.round(tt.recettesExceptionnelles)]);
+    lines.push(["Total recettes", Math.round(tt.totalRecettes)]);
+    lines.push(["Total dépenses", Math.round(tt.totalDepenses)]);
+    lines.push(["Solde", Math.round(tt.solde)]);
+  }
   downloadCsv(lines, `cloture-caisse-${s.sessionDate}.csv`);
 }
 function exportClosurePdf(s: CashSession, school: SchoolBranding) {
   const t = s.totals; if (!t) return;
-  const c = t.currency;
-  const depRows = t.depenses.map((d) => `<tr><td>${escHtml(d.label)}</td><td>${escHtml(d.category ?? "")}</td><td class="r" style="color:#E11D48">${money(d.amount, c)}</td></tr>`).join("") || '<tr><td colspan="3">—</td></tr>';
-  const recRows = t.recettes.map((d) => `<tr><td>${escHtml(d.label)}</td><td>${escHtml(d.category ?? "")}</td><td class="r" style="color:#16A34A">${money(d.amount, c)}</td></tr>`).join("") || '<tr><td colspan="3">—</td></tr>';
+  const curList = t.currencies.length ? t.currencies : ["CDF"];
+  const synth = curList.map((cur) => { const tt = t.byCurrency[cur]; if (!tt) return ""; return `<h2>Synthèse — ${escHtml(cur)}</h2><table><tbody><tr><td>Recettes frais scolaires</td><td class="r">${money(tt.recettesScolaires, cur)}</td></tr><tr><td>Recettes autres frais</td><td class="r">${money(tt.recettesAutres, cur)}</td></tr><tr><td>Recettes exceptionnelles</td><td class="r">${money(tt.recettesExceptionnelles, cur)}</td></tr><tr><td><strong>Total des recettes</strong></td><td class="r"><strong>${money(tt.totalRecettes, cur)}</strong></td></tr><tr><td><strong>Total des dépenses</strong></td><td class="r"><strong>${money(tt.totalDepenses, cur)}</strong></td></tr></tbody><tfoot><tr><td>Solde final</td><td class="r">${money(tt.solde, cur)}</td></tr></tfoot></table>`; }).join("");
+  const depRows = t.depenses.map((d) => `<tr><td>${escHtml(d.label)}</td><td>${escHtml(d.category ?? "")}</td><td class="r" style="color:#E11D48">${money(d.amount, d.currency)}</td></tr>`).join("") || '<tr><td colspan="3">—</td></tr>';
+  const recRows = t.recettes.map((d) => `<tr><td>${escHtml(d.label)}</td><td>${escHtml(d.category ?? "")}</td><td class="r" style="color:#16A34A">${money(d.amount, d.currency)}</td></tr>`).join("") || '<tr><td colspan="3">—</td></tr>';
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Clôture de caisse</title><style>${REPORT_CSS}</style></head><body>${reportHead(school)}<h1>Rapport de clôture de caisse</h1>
 <div class="sub">Journée du ${escHtml(new Date(s.sessionDate).toLocaleDateString("fr-FR"))} · Clôturée le ${escHtml(s.closedAt ? new Date(s.closedAt).toLocaleString("fr-FR") : "—")}${s.closedBy ? ` par ${escHtml(s.closedBy)}` : ""}</div>
-<h2>Synthèse</h2><table><tbody>
-<tr><td>Recettes frais scolaires</td><td class="r">${money(t.recettesScolaires, c)}</td></tr>
-<tr><td>Recettes autres frais</td><td class="r">${money(t.recettesAutres, c)}</td></tr>
-<tr><td>Recettes exceptionnelles</td><td class="r">${money(t.recettesExceptionnelles, c)}</td></tr>
-<tr><td><strong>Total des recettes</strong></td><td class="r"><strong>${money(t.totalRecettes, c)}</strong></td></tr>
-<tr><td><strong>Total des dépenses</strong></td><td class="r"><strong>${money(t.totalDepenses, c)}</strong></td></tr>
-</tbody><tfoot><tr><td>Solde final</td><td class="r">${money(t.solde, c)}</td></tr></tfoot></table>
+${synth}
 <h2>Détail des dépenses</h2><table><thead><tr><th>Libellé</th><th>Catégorie</th><th class="r">Montant</th></tr></thead><tbody>${depRows}</tbody></table>
 <h2>Recettes exceptionnelles</h2><table><thead><tr><th>Libellé</th><th>Catégorie</th><th class="r">Montant</th></tr></thead><tbody>${recRows}</tbody></table>
 <div class="foot">E-KELASI · rapport de clôture</div><script>window.onload=function(){window.print()}</script></body></html>`;

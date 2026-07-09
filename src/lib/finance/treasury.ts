@@ -150,18 +150,21 @@ export async function getTreasuryOverview(year?: string): Promise<TreasuryOvervi
   }
 }
 
-// ── Clôture quotidienne de caisse ────────────────────────────────────
-export type CashLine = { label: string; amount: number; category: string | null };
-export type CashTotals = {
-  currency: string;
+// ── Clôture quotidienne de caisse (séparée par devise) ───────────────
+export type CashLine = { label: string; amount: number; currency: string; category: string | null };
+export type CashCurrencyTotals = {
   recettesScolaires: number;
   recettesAutres: number;
   recettesExceptionnelles: number;
   totalRecettes: number;
   totalDepenses: number;
   solde: number;
-  recettes: CashLine[];   // détail des recettes exceptionnelles
-  depenses: CashLine[];   // détail des dépenses
+};
+export type CashTotals = {
+  currencies: string[];
+  byCurrency: Record<string, CashCurrencyTotals>;
+  recettes: CashLine[];   // détail des recettes exceptionnelles (avec devise)
+  depenses: CashLine[];   // détail des dépenses (avec devise)
 };
 export type CashSession = {
   id: string;
@@ -203,7 +206,8 @@ export async function getCashState(): Promise<CashState> {
   }
 }
 
-// Totaux d'une journée (utilisé à la clôture). Calculés depuis la source unique.
+// Totaux d'une journée (utilisé à la clôture). Calculés depuis la source unique,
+// séparés par devise (USD / CDF…).
 export async function computeDayTotals(svc: ReturnType<typeof service>, schoolId: string, date: string): Promise<CashTotals> {
   const start = `${date}T00:00:00`;
   const end = `${date}T23:59:59.999`;
@@ -211,27 +215,28 @@ export async function computeDayTotals(svc: ReturnType<typeof service>, schoolId
     svc.from("fee_payments").select("amount, currency, fees(kind)").eq("school_id", schoolId).is("cancelled_at", null).gte("paid_at", start).lte("paid_at", end),
     svc.from("treasury_entries").select("kind, amount, currency, label, category").eq("school_id", schoolId).is("cancelled_at", null).eq("entry_date", date),
   ]);
-  let recettesScolaires = 0, recettesAutres = 0, currency = "CDF";
+  const by: Record<string, CashCurrencyTotals> = {};
+  const ens = (cur: string): CashCurrencyTotals => { if (!by[cur]) by[cur] = { recettesScolaires: 0, recettesAutres: 0, recettesExceptionnelles: 0, totalRecettes: 0, totalDepenses: 0, solde: 0 }; return by[cur]; };
   for (const p of (pays ?? []) as any[]) {
-    currency = p.currency ?? currency;
-    if (p.fees?.kind === "autre") recettesAutres += Number(p.amount); else recettesScolaires += Number(p.amount);
+    const t = ens(p.currency ?? "CDF");
+    if (p.fees?.kind === "autre") t.recettesAutres += Number(p.amount); else t.recettesScolaires += Number(p.amount);
   }
   const recettes: CashLine[] = [], depenses: CashLine[] = [];
-  let recettesExceptionnelles = 0, totalDepenses = 0;
   for (const e of (entries ?? []) as any[]) {
-    currency = e.currency ?? currency;
-    if (e.kind === "recette_exceptionnelle") { recettesExceptionnelles += Number(e.amount); recettes.push({ label: e.label, amount: Number(e.amount), category: e.category ?? null }); }
-    else { totalDepenses += Number(e.amount); depenses.push({ label: e.label, amount: Number(e.amount), category: e.category ?? null }); }
+    const cur = e.currency ?? "CDF";
+    const t = ens(cur);
+    if (e.kind === "recette_exceptionnelle") { t.recettesExceptionnelles += Number(e.amount); recettes.push({ label: e.label, amount: Number(e.amount), currency: cur, category: e.category ?? null }); }
+    else { t.totalDepenses += Number(e.amount); depenses.push({ label: e.label, amount: Number(e.amount), currency: cur, category: e.category ?? null }); }
   }
-  const totalRecettes = recettesScolaires + recettesAutres + recettesExceptionnelles;
-  return { currency, recettesScolaires, recettesAutres, recettesExceptionnelles, totalRecettes, totalDepenses, solde: totalRecettes - totalDepenses, recettes, depenses };
+  for (const cur of Object.keys(by)) { const t = by[cur]; t.totalRecettes = t.recettesScolaires + t.recettesAutres + t.recettesExceptionnelles; t.solde = t.totalRecettes - t.totalDepenses; }
+  return { currencies: Object.keys(by).sort(), byCurrency: by, recettes, depenses };
 }
 
 function mockCashState(): CashState {
   const totals: CashTotals = {
-    currency: "CDF", recettesScolaires: 320000, recettesAutres: 45000, recettesExceptionnelles: 0,
-    totalRecettes: 365000, totalDepenses: 95000, solde: 270000,
-    recettes: [], depenses: [{ label: "Achat de craies", amount: 95000, category: "Fournitures" }],
+    currencies: ["CDF"],
+    byCurrency: { CDF: { recettesScolaires: 320000, recettesAutres: 45000, recettesExceptionnelles: 0, totalRecettes: 365000, totalDepenses: 95000, solde: 270000 } },
+    recettes: [], depenses: [{ label: "Achat de craies", amount: 95000, currency: "CDF", category: "Fournitures" }],
   };
   return {
     today: null,
