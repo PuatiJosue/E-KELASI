@@ -80,7 +80,7 @@ export function RubriqueFraisTab({
           </select>
         </label>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          {isScol && <button onClick={() => router.push("/school/messages?compose=reminder")} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5 }}><Icon name="bell" size={14} /> Rappel</button>}
+          <button onClick={() => router.push("/school/messages?compose=reminder")} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5 }}><Icon name="bell" size={14} /> Rappel</button>
           <button onClick={() => exportFeesPdf(fees, c, school, year, rubTitle)} disabled={fees.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: fees.length === 0 ? 0.5 : 1 }}><Icon name="file" size={14} /> PDF</button>
           <button onClick={() => exportFeesCsv(fees, rubTitle)} disabled={fees.length === 0} className="ek-btn ek-btn-outline" style={{ height: 38, fontSize: 12.5, opacity: fees.length === 0 ? 0.5 : 1 }}><Icon name="download" size={14} /> Excel</button>
           <button onClick={() => setFeeModal("new")} className="ek-btn ek-btn-primary" style={{ height: 38, fontSize: 12.5 }}><Icon name="plus" size={14} stroke={2.5} /> {createLabel}</button>
