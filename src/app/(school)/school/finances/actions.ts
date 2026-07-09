@@ -238,7 +238,7 @@ export async function addInstallment(input: { studentId: string; categoryId?: st
 }
 
 // ── Barème des tranches (échéancier réutilisable) ────────────────────
-export async function addInstallmentTemplate(input: { name: string; period?: string; amount: number; currency?: string }): Promise<Result> {
+export async function addInstallmentTemplate(input: { name: string; period?: string; dateFrom?: string; dateTo?: string; amount: number; currency?: string }): Promise<Result> {
   const name = input.name?.trim();
   if (!name) return { ok: false, message: "Nom de la tranche requis." };
   if (!isLiveMode()) return { ok: true };
@@ -247,21 +247,25 @@ export async function addInstallmentTemplate(input: { name: string; period?: str
   const svc = service();
   const { count } = await svc.from("installment_templates").select("id", { count: "exact", head: true }).eq("school_id", schoolId);
   const { error } = await (svc.from("installment_templates").insert as any)({
-    school_id: schoolId, name, period: input.period?.trim() || null, amount: input.amount || 0, currency: input.currency || "CDF", position: count ?? 0,
+    school_id: schoolId, name, period: input.period?.trim() || null,
+    date_from: input.dateFrom?.trim() || null, date_to: input.dateTo?.trim() || null,
+    amount: input.amount || 0, currency: input.currency || "CDF", position: count ?? 0,
   });
   if (error) return { ok: false, message: "Création impossible." };
   revalidatePath("/school/finances");
   return { ok: true };
 }
 
-export async function updateInstallmentTemplate(input: { id: string; name: string; period?: string; amount: number; currency?: string }): Promise<Result> {
+export async function updateInstallmentTemplate(input: { id: string; name: string; period?: string; dateFrom?: string; dateTo?: string; amount: number; currency?: string }): Promise<Result> {
   if (!input.id) return { ok: false, message: "Tranche invalide." };
   if (!isLiveMode()) return { ok: true };
   const schoolId = await callerSchoolId();
   if (!schoolId) return { ok: false, message: "Réservé à la direction." };
   const svc = service();
   const { error } = await (svc.from("installment_templates").update as any)({
-    name: input.name?.trim() || "Tranche", period: input.period?.trim() || null, amount: input.amount || 0, currency: input.currency || "CDF",
+    name: input.name?.trim() || "Tranche", period: input.period?.trim() || null,
+    date_from: input.dateFrom?.trim() || null, date_to: input.dateTo?.trim() || null,
+    amount: input.amount || 0, currency: input.currency || "CDF",
   }).eq("id", input.id).eq("school_id", schoolId);
   if (error) return { ok: false, message: "Mise à jour impossible." };
   revalidatePath("/school/finances");
@@ -285,6 +289,7 @@ export async function deleteInstallmentTemplate(id: string): Promise<Result> {
 export async function applyInstallmentToClass(input: {
   name: string;
   period?: string;
+  dueDate?: string;
   currency?: string;
   entries: { studentId: string; amount: number }[];
 }): Promise<Result> {
@@ -303,7 +308,7 @@ export async function applyInstallmentToClass(input: {
   const rows = entries.map((e) => ({
     school_id: schoolId, student_id: e.studentId, category_id: categoryId,
     label: name, period: input.period?.trim() || null, amount: e.amount, currency: input.currency || "CDF",
-    due_date: null, paid_at: null,
+    due_date: input.dueDate?.trim() || null, paid_at: null,
   }));
   const { error } = await (svc.from("student_installments").insert as any)(rows);
   if (error) return { ok: false, message: "Application impossible." };
@@ -392,9 +397,10 @@ async function resolveCategory(
 export async function createInvoice(input: {
   studentId: string;
   type: InvoiceType;
-  label: string;
   categoryName?: string;   // requis si type === "autre"
-  trancheLabel?: string;   // requis si type === "tranche"
+  trancheLabel?: string;   // nom de la tranche (barème) si type === "tranche"
+  period?: string;         // période affichée de la tranche
+  dueDate?: string;        // date de fin d'échéance (tranche)
   amount: number;
   currency: string;
   date?: string;
@@ -419,24 +425,25 @@ export async function createInvoice(input: {
   if (!categoryId) return { ok: false, message: "Rubrique impossible à créer." };
 
   const date = input.date?.trim() || new Date().toISOString().slice(0, 10);
-  const label = input.label?.trim() || null;
 
   let error: any = null;
   if (input.type === "acompte") {
     ({ error } = await (svc.from("student_advances").insert as any)({
       school_id: schoolId, student_id: input.studentId, category_id: categoryId,
-      amount: input.amount, currency, note: label,
+      amount: input.amount, currency, note: "Acompte",
     }));
   } else if (input.type === "tranche") {
+    // Synchronisé avec le barème : nom de la tranche, période et date de fin.
     ({ error } = await (svc.from("student_installments").insert as any)({
       school_id: schoolId, student_id: input.studentId, category_id: categoryId,
-      label: input.trancheLabel?.trim() || label || "Tranche", amount: input.amount, currency,
-      due_date: date, paid_at: date,
+      label: input.trancheLabel?.trim() || "Tranche", period: input.period?.trim() || null,
+      amount: input.amount, currency,
+      due_date: input.dueDate?.trim() || date, paid_at: date,
     }));
   } else {
     ({ error } = await (svc.from("student_fee_payments").insert as any)({
       school_id: schoolId, student_id: input.studentId, category_id: categoryId,
-      amount: input.amount, currency, label, paid_at: date, recorded_by: user.id,
+      amount: input.amount, currency, label: input.categoryName?.trim() || null, paid_at: date, recorded_by: user.id,
     }));
   }
   if (error) return { ok: false, message: "Enregistrement impossible." };

@@ -8,7 +8,7 @@ import { SexBadge } from "@/components/SexBadge";
 import { ClassPicker } from "@/components/school/ClassPicker";
 import {
   createFeeCategory, updateFeeCategory, deleteFeeCategory, applyCategoryToStudents,
-  upsertStudentFee, deleteStudentFee, setStudentFinanceStatus, recordStudentPayment, loadStudentFinance,
+  upsertStudentFee, deleteStudentFee, recordStudentPayment, loadStudentFinance,
   addAdvance, deleteAdvance, addInstallment, toggleInstallmentPaid, deleteInstallment,
   createInvoice, addCashEntry, deleteCashEntry, type InvoiceType,
   addInstallmentTemplate, updateInstallmentTemplate, deleteInstallmentTemplate, applyInstallmentToClass,
@@ -36,18 +36,17 @@ const PAY: Record<PaymentStatus, { label: string; bg: string; fg: string }> = {
   partiel:  { label: "Partiel",  bg: "rgba(217,119,6,0.12)",  fg: "#B45309" },
   non_paye: { label: "Non payé", bg: "rgba(225,29,72,0.12)",  fg: "#E11D48" },
 };
+// Statut AUTOMATIQUE (lecture seule) — calculé côté serveur.
 const STA: Record<FinanceStatus, { label: string; bg: string; fg: string }> = {
-  en_ordre:   { label: "En ordre",   bg: "rgba(22,163,74,0.12)",  fg: "#16A34A" },
-  non_paye:   { label: "Non payé",   bg: "rgba(225,29,72,0.12)",  fg: "#E11D48" },
-  avance:     { label: "Avance",     bg: "rgba(79,102,232,0.12)", fg: "#4F66E8" },
-  insolvable: { label: "Insolvable", bg: "rgba(120,53,15,0.12)",  fg: "#92400E" },
+  en_ordre:   { label: "À jour",         bg: "rgba(22,163,74,0.12)",  fg: "#16A34A" },
+  non_paye:   { label: "Reste à payer",  bg: "rgba(217,119,6,0.12)",  fg: "#B45309" },
+  insolvable: { label: "En retard",      bg: "rgba(225,29,72,0.12)",  fg: "#E11D48" },
 };
 
 const STATUS_OPTIONS: { v: FinanceStatus; l: string }[] = [
-  { v: "en_ordre", l: "En ordre" },
-  { v: "non_paye", l: "Non payé" },
-  { v: "avance", l: "Avance" },
-  { v: "insolvable", l: "Insolvable" },
+  { v: "en_ordre", l: "À jour" },
+  { v: "non_paye", l: "Reste à payer" },
+  { v: "insolvable", l: "En retard" },
 ];
 
 const TABS = [
@@ -55,7 +54,7 @@ const TABS = [
   { key: "rubriques", label: "Rubriques des frais" },
   { key: "avances", label: "Avances & Acomptes" },
   { key: "echeances", label: "Tranches & Échéances" },
-  { key: "eleves", label: "Élèves" },
+  { key: "eleves", label: "Classes" },
   { key: "insolvabilite", label: "Insolvabilité" },
   { key: "caisse", label: "Caisse" },
   { key: "rapports", label: "Rapports" },
@@ -139,7 +138,7 @@ export function FinanceDashboard({
       {tab === "avances" && <AdvancesTab advances={advances} currency={c} />}
       {tab === "echeances" && <InstallmentsTab installments={installments} templates={templates} students={overview.students} currency={c} />}
 
-      {invoiceModal && <InvoiceModal students={overview.students} categories={categories} school={school} onClose={() => setInvoiceModal(false)} />}
+      {invoiceModal && <InvoiceModal students={overview.students} categories={categories} templates={templates} school={school} onClose={() => setInvoiceModal(false)} />}
     </div>
   );
 }
@@ -296,7 +295,7 @@ function ElevesTab({ overview, categories }: { overview: FinanceOverview; catego
         </div>
 
         {/* Colonne droite */}
-        <RightPanel overview={overview} selected={selected} />
+        <RightPanel overview={overview} />
       </div>
 
       {/* Panneau détail */}
@@ -329,9 +328,8 @@ function PgBtn({ children, active, disabled, onClick }: { children: React.ReactN
 }
 
 // ── Colonne droite (camembert + situation + actions) ─────────────────
-function RightPanel({ overview, selected }: { overview: FinanceOverview; selected: string | null }) {
+function RightPanel({ overview }: { overview: FinanceOverview }) {
   const router = useRouter();
-  const [pending, start] = useTransition();
   const d = overview.distribution;
   const total = Math.max(1, overview.total);
   const segs = [
@@ -341,19 +339,10 @@ function RightPanel({ overview, selected }: { overview: FinanceOverview; selecte
   ];
   const s = overview.situation;
   const sit = [
-    { label: "En ordre", value: s.enOrdre, color: "#16A34A" },
-    { label: "Non payés", value: s.nonPaye, color: "#E11D48" },
-    { label: "Avance", value: s.avance, color: "#4F66E8" },
-    { label: "Insolvables", value: s.insolvable, color: "#92400E" },
+    { label: "À jour", value: s.enOrdre, color: "#16A34A" },
+    { label: "Reste à payer", value: s.nonPaye, color: "#B45309" },
+    { label: "En retard", value: s.insolvable, color: "#E11D48" },
   ];
-
-  const act = (status: FinanceStatus) => {
-    if (!selected) { alert("Sélectionnez d'abord un élève dans la liste."); return; }
-    start(async () => {
-      const r = await setStudentFinanceStatus(selected, status);
-      if (r.ok) router.refresh(); else alert(r.message);
-    });
-  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -396,13 +385,9 @@ function RightPanel({ overview, selected }: { overview: FinanceOverview; selecte
       <div className="ek-card" style={{ padding: 16 }}>
         <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)", marginBottom: 10 }}>Actions rapides</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-          <QuickAction icon="check" label="Marquer « En ordre »" onClick={() => act("en_ordre")} disabled={pending} />
-          <QuickAction icon="clock" label="Marquer « Non payé »" onClick={() => act("non_paye")} disabled={pending} />
-          <QuickAction icon="creditcard" label="Marquer « Avance »" onClick={() => act("avance")} disabled={pending} />
-          <QuickAction icon="flag" label="Marquer en insolvabilité" onClick={() => act("insolvable")} disabled={pending} />
-          <QuickAction icon="bell" label="Envoyer un rappel de paiement" onClick={() => router.push("/school/messages?compose=reminder")} disabled={pending} />
+          <QuickAction icon="bell" label="Envoyer un rappel de paiement" onClick={() => router.push("/school/messages?compose=reminder")} />
         </div>
-        {!selected && <div style={{ fontSize: 10.5, color: "var(--ink-3)", marginTop: 8 }}>Sélectionnez un élève pour changer son statut. Le rappel ouvre la messagerie.</div>}
+        <div style={{ fontSize: 10.5, color: "var(--ink-3)", marginTop: 8 }}>Le statut (à jour / reste à payer / en retard) est calculé automatiquement d’après les paiements et les échéances.</div>
       </div>
     </div>
   );
@@ -472,9 +457,7 @@ function DetailPanel({ studentId, currency, categories }: { studentId: string; c
           </div>
           <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>Classe : {s.className} · Parent : {s.parentName}{s.parentPhone ? ` · ${s.parentPhone}` : ""}</div>
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <StatusSelect studentId={studentId} value={s.financeStatus} onChanged={() => { reload(); router.refresh(); }} />
-        </div>
+        <div style={{ marginLeft: "auto" }}><Chip meta={STA[s.financeStatus]} /></div>
       </div>
 
       {/* Résumé chiffres */}
@@ -601,21 +584,6 @@ function DetailPanel({ studentId, currency, categories }: { studentId: string; c
   );
 }
 
-// Sélecteur de statut financier de l'élève (En ordre / Non payé / Avance / Insolvable).
-function StatusSelect({ studentId, value, onChanged }: { studentId: string; value: FinanceStatus; onChanged: () => void }) {
-  const [pending, start] = useTransition();
-  const meta = STA[value];
-  return (
-    <select
-      value={value}
-      disabled={pending}
-      onChange={(e) => { const v = e.target.value as FinanceStatus; start(async () => { const r = await setStudentFinanceStatus(studentId, v); if (r.ok) onChanged(); else alert(r.message); }); }}
-      style={{ height: 30, padding: "0 8px", borderRadius: 999, border: `1px solid ${meta.fg}`, background: meta.bg, color: meta.fg, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-    >
-      {STATUS_OPTIONS.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
-    </select>
-  );
-}
 
 function MiniStat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
@@ -735,7 +703,7 @@ function BaremeTranches({ templates }: { templates: InstallmentTemplate[] }) {
           ) : templates.map((t, i) => (
             <div key={t.id} style={{ display: "grid", gridTemplateColumns: TR_GRID, padding: "10px 16px", alignItems: "center", fontSize: 12.5, borderTop: i > 0 ? "1px solid var(--divider)" : "none" }}>
               <div style={{ fontWeight: 600, color: "var(--ink)" }}>{t.name}</div>
-              <div style={{ color: "var(--ink-2)" }}>{t.period || "—"}</div>
+              <div style={{ color: "var(--ink-2)" }}>{tplPeriod(t)}</div>
               <div style={{ textAlign: "right", fontWeight: 700 }}>{money(t.amount, t.currency)}</div>
               <div style={{ display: "flex", justifyContent: "center", gap: 4 }}>
                 <button onClick={() => setModal(t)} title="Modifier" style={iconBtn}><Icon name="edit" size={14} /></button>
@@ -765,6 +733,8 @@ function TemplateModal({ existing, onClose }: { existing?: InstallmentTemplate; 
   const [pending, start] = useTransition();
   const [name, setName] = useState(existing?.name ?? "");
   const [period, setPeriod] = useState(existing?.period ?? "");
+  const [dateFrom, setDateFrom] = useState(existing?.dateFrom ?? "");
+  const [dateTo, setDateTo] = useState(existing?.dateTo ?? "");
   const [amount, setAmount] = useState(existing ? String(existing.amount) : "");
   const [currency, setCurrency] = useState(existing?.currency ?? "CDF");
   const [error, setError] = useState<string | null>(null);
@@ -773,15 +743,19 @@ function TemplateModal({ existing, onClose }: { existing?: InstallmentTemplate; 
     const amt = parseFloat(amount.replace(",", ".")) || 0;
     start(async () => {
       const r = existing
-        ? await updateInstallmentTemplate({ id: existing.id, name, period, amount: amt, currency })
-        : await addInstallmentTemplate({ name, period, amount: amt, currency });
+        ? await updateInstallmentTemplate({ id: existing.id, name, period, dateFrom, dateTo, amount: amt, currency })
+        : await addInstallmentTemplate({ name, period, dateFrom, dateTo, amount: amt, currency });
       if (r.ok) { onClose(); router.refresh(); } else setError(r.message);
     });
   };
   return (
     <Modal title={existing ? "Modifier la tranche" : "Nouvelle tranche"} onClose={onClose}>
       <Labeled label="Tranche"><input value={name} onChange={(e) => setName(e.target.value)} placeholder="2ème tranche" style={modalInp} /></Labeled>
-      <Labeled label="Période"><input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="Début janvier à fin février 2027 (durant 2 mois)" style={modalInp} /></Labeled>
+      <div style={{ display: "flex", gap: 10 }}>
+        <Labeled label="Échéance — du" style={{ flex: 1 }}><input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={modalInp} /></Labeled>
+        <Labeled label="au" style={{ flex: 1 }}><input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={modalInp} /></Labeled>
+      </div>
+      <Labeled label="Description période (optionnel)"><input value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="Début janvier à fin février 2027 (durant 2 mois)" style={modalInp} /></Labeled>
       <div style={{ display: "flex", gap: 10 }}>
         <Labeled label="Montant" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="100" style={modalInp} /></Labeled>
         <Labeled label="Devise" style={{ width: 100 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
@@ -790,6 +764,13 @@ function TemplateModal({ existing, onClose }: { existing?: InstallmentTemplate; 
       <ModalActions onClose={onClose} onSubmit={submit} pending={pending} />
     </Modal>
   );
+}
+
+// Affiche la période d'une tranche : « du X au Y » sinon le texte libre.
+function tplPeriod(t: { period: string | null; dateFrom: string | null; dateTo: string | null }): string {
+  const f = (d: string | null) => (d ? new Date(d).toLocaleDateString("fr-FR") : null);
+  if (t.dateFrom || t.dateTo) return `du ${f(t.dateFrom) ?? "…"} au ${f(t.dateTo) ?? "…"}`;
+  return t.period || "—";
 }
 
 // Application d'une tranche à une classe : montant par élève (nom, post-nom, sexe).
@@ -819,7 +800,7 @@ function ApplyInstallmentsByClass({ templates, students }: { templates: Installm
     if (!tpl) { setMsg({ ok: false, text: "Créez d'abord une tranche dans le barème." }); return; }
     const entries = classStudents.filter((s) => !skip.has(s.id)).map((s) => ({ studentId: s.id, amount: parseFloat(amountOf(s.id).replace(",", ".")) || 0 }));
     start(async () => {
-      const r = await applyInstallmentToClass({ name: tpl.name, period: tpl.period ?? undefined, currency: tpl.currency, entries });
+      const r = await applyInstallmentToClass({ name: tpl.name, period: tplPeriod(tpl), dueDate: tpl.dateTo ?? undefined, currency: tpl.currency, entries });
       if (r.ok) { setMsg({ ok: true, text: `Tranche « ${tpl.name} » appliquée à la classe.` }); setAmounts({}); setSkip(new Set()); router.refresh(); }
       else setMsg({ ok: false, text: r.message });
     });
@@ -842,7 +823,7 @@ function ApplyInstallmentsByClass({ templates, students }: { templates: Installm
                 {templates.map((t) => <option key={t.id} value={t.id}>{t.name} · {money(t.amount, t.currency)}</option>)}
               </select>
             </Labeled>
-            {tpl?.period && <div style={{ fontSize: 12, color: "var(--ink-3)", alignSelf: "flex-end", paddingBottom: 8 }}>Période : {tpl.period}</div>}
+            {tpl && <div style={{ fontSize: 12, color: "var(--ink-3)", alignSelf: "flex-end", paddingBottom: 8 }}>Période : {tplPeriod(tpl)}</div>}
           </div>
 
           <div className="ek-tablewrap">
@@ -1047,7 +1028,7 @@ function OverviewTab({ overview }: { overview: FinanceOverview }) {
           Reste attendu : <strong>{money(overview.kpis.pending, overview.currency)}</strong> dont <strong>{money(overview.kpis.late, overview.currency)}</strong> en retard.
         </p>
       </div>
-      <RightPanel overview={overview} selected={null} />
+      <RightPanel overview={overview} />
       <style>{`@media (max-width: 980px){ .ek-fin-grid{ grid-template-columns: 1fr !important; } }`}</style>
     </div>
   );
@@ -1096,7 +1077,6 @@ function InsolvabiliteTab({ overview }: { overview: FinanceOverview }) {
                   <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{s.parentName}{s.parentPhone ? ` · ${s.parentPhone}` : ""}</div>
                 </div>
                 <span style={{ color: "#E11D48", fontWeight: 700 }}>{money(s.remaining, c)}</span>
-                <InsolvableToggle studentId={s.id} />
               </div>
             ))}
           </div>
@@ -1110,16 +1090,6 @@ function InsolvabiliteTab({ overview }: { overview: FinanceOverview }) {
         </div>
       )}
     </div>
-  );
-}
-
-function InsolvableToggle({ studentId }: { studentId: string }) {
-  const router = useRouter();
-  const [pending, start] = useTransition();
-  return (
-    <button onClick={() => start(async () => { await setStudentFinanceStatus(studentId, "en_ordre"); router.refresh(); })} disabled={pending} className="ek-btn ek-btn-outline" style={{ height: 28, fontSize: 11.5 }}>
-      {"Retirer l'insolvabilité"}
-    </button>
   );
 }
 
@@ -1312,46 +1282,54 @@ const INVOICE_TYPES: { v: InvoiceType; l: string }[] = [
   { v: "autre", l: "Autre frais" },
 ];
 
-function InvoiceModal({ students, categories, school, onClose }: { students: FinanceStudentRow[]; categories: FeeCategory[]; school: SchoolBranding; onClose: () => void }) {
+function InvoiceModal({ students, categories, templates, school, onClose }: { students: FinanceStudentRow[]; categories: FeeCategory[]; templates: InstallmentTemplate[]; school: SchoolBranding; onClose: () => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [q, setQ] = useState("");
   const [studentId, setStudentId] = useState("");
   const [type, setType] = useState<InvoiceType>("acompte");
-  const [label, setLabel] = useState("");
+  const [factureNo, setFactureNo] = useState("");
   const [categoryName, setCategoryName] = useState("");
-  const [trancheLabel, setTrancheLabel] = useState("");
+  const [templateId, setTemplateId] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("CDF");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [error, setError] = useState<string | null>(null);
 
   const student = students.find((s) => s.id === studentId) ?? null;
+  const tpl = templates.find((t) => t.id === templateId) ?? (type === "tranche" ? templates[0] ?? null : null);
   const matches = useMemo(() => {
     const query = q.trim().toLowerCase();
     if (!query) return [];
     return students.filter((s) => s.fullName.toLowerCase().includes(query) || s.matricule.toLowerCase().includes(query) || s.className.toLowerCase().includes(query)).slice(0, 8);
   }, [students, q]);
 
-  // Préremplit le montant depuis la rubrique correspondant au type.
-  const prefillFor = (t: InvoiceType) => {
+  // Préremplit le montant : barème (tranche) ou rubrique par défaut (acompte).
+  const prefillFor = (t: InvoiceType, tid?: string) => {
+    if (t === "tranche") {
+      const chosen = templates.find((x) => x.id === (tid ?? templateId)) ?? templates[0];
+      if (chosen) { setAmount(String(chosen.amount)); setCurrency(chosen.currency); }
+      return;
+    }
     const cat = t === "acompte"
       ? categories.find((c) => (c as any).kind === "acompte") ?? categories.find((c) => c.name.toLowerCase().includes("acompte"))
-      : t === "tranche"
-        ? categories.find((c) => (c as any).kind === "scolarite") ?? categories.find((c) => c.name.toLowerCase().includes("scolar"))
-        : null;
+      : null;
     if (cat) { setAmount(String(cat.amount)); setCurrency(cat.currency); }
   };
 
   const submit = () => {
     if (!studentId) { setError("Sélectionnez un élève."); return; }
     if (type === "autre" && !categoryName.trim()) { setError("Nom de la rubrique requis."); return; }
+    if (type === "tranche" && !tpl) { setError("Créez d'abord une tranche dans le barème (onglet Tranches & Échéances)."); return; }
     const amt = parseFloat(amount.replace(",", ".")) || 0;
     if (!(amt > 0)) { setError("Montant invalide."); return; }
+    const trancheLabel = tpl?.name ?? "";
+    const period = tpl ? tplPeriod(tpl) : "";
+    const dueDate = tpl?.dateTo ?? undefined;
     start(async () => {
-      const r = await createInvoice({ studentId, type, label, categoryName, trancheLabel, amount: amt, currency, date });
+      const r = await createInvoice({ studentId, type, categoryName, trancheLabel, period, dueDate, amount: amt, currency, date });
       if (!r.ok) { setError(r.message); return; }
-      if (student) buildInvoiceHtml(student, { type, label, categoryName, trancheLabel, amount: amt, currency, date }, school);
+      if (student) buildInvoiceHtml(student, { type, factureNo, categoryName, trancheLabel, period, amount: amt, currency, date }, school);
       onClose();
       router.refresh();
     });
@@ -1396,10 +1374,18 @@ function InvoiceModal({ students, categories, school, onClose }: { students: Fin
         <Labeled label="Nom de la rubrique"><input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="Frais de transport…" style={modalInp} /></Labeled>
       )}
       {type === "tranche" && (
-        <Labeled label="Tranche (n° / libellé)"><input value={trancheLabel} onChange={(e) => setTrancheLabel(e.target.value)} placeholder="Tranche 1" style={modalInp} /></Labeled>
+        templates.length === 0 ? (
+          <div style={{ fontSize: 12, color: "var(--danger)", fontWeight: 600 }}>Aucune tranche dans le barème. Ajoutez-en dans « Tranches & Échéances ».</div>
+        ) : (
+          <Labeled label="Tranche (barème frais de scolarité)">
+            <select value={tpl?.id ?? ""} onChange={(e) => { setTemplateId(e.target.value); prefillFor("tranche", e.target.value); }} style={modalInp}>
+              {templates.map((t) => <option key={t.id} value={t.id}>{t.name} · {tplPeriod(t)} · {money(t.amount, t.currency)}</option>)}
+            </select>
+          </Labeled>
+        )
       )}
 
-      <Labeled label="Libellé"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Objet de la facture" style={modalInp} /></Labeled>
+      <Labeled label="Facture n° (optionnel)"><input value={factureNo} onChange={(e) => setFactureNo(e.target.value)} placeholder="Ex. 00125" style={modalInp} /></Labeled>
       <div style={{ display: "flex", gap: 10 }}>
         <Labeled label="Montant payé" style={{ flex: 1 }}><input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="50000" style={modalInp} /></Labeled>
         <Labeled label="Devise" style={{ width: 100 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">FC</option><option value="USD">USD</option></select></Labeled>
@@ -1412,23 +1398,23 @@ function InvoiceModal({ students, categories, school, onClose }: { students: Fin
 }
 
 // Construit une facture imprimable (fenêtre d'impression → PDF).
+// Pas d'image de signature : ligne vierge pour une signature au stylo.
 function buildInvoiceHtml(
   s: FinanceStudentRow,
-  inv: { type: InvoiceType; label: string; categoryName: string; trancheLabel: string; amount: number; currency: string; date: string },
+  inv: { type: InvoiceType; factureNo: string; categoryName: string; trancheLabel: string; period: string; amount: number; currency: string; date: string },
   school: SchoolBranding
 ) {
-  const rubrique = inv.type === "acompte" ? "Acompte / avance" : inv.type === "tranche" ? `Tranche${inv.trancheLabel ? ` — ${inv.trancheLabel}` : ""}` : (inv.categoryName || "Autre frais");
+  const rubrique = inv.type === "acompte" ? "Acompte / avance" : inv.type === "tranche" ? `Tranche — ${inv.trancheLabel || "scolarité"}` : (inv.categoryName || "Autre frais");
   const sexe = s.sex === "M" ? "Masculin" : s.sex === "F" ? "Féminin" : "—";
   const dateFr = inv.date ? new Date(inv.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "—";
   const sub = [school.commune, school.city].filter(Boolean).join(", ");
-  const num = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const num = inv.factureNo.trim() || "__________";
   const logo = school.logoUrl ? `<img src="${escHtml(school.logoUrl)}" style="height:54px;object-fit:contain" />` : "";
-  const sign = school.signatureUrl ? `<img src="${escHtml(school.signatureUrl)}" style="height:46px;object-fit:contain;display:block" />` : "";
-  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Facture ${num}</title><style>*{font-family:Arial,sans-serif;box-sizing:border-box}body{margin:32px;color:#1a1410}.head{display:flex;align-items:center;gap:16px;border-bottom:2px solid #1D6650;padding-bottom:14px;margin-bottom:18px}.head .n{font-size:20px;font-weight:800}.head .s{font-size:12px;color:#6b5f52}.title{margin-left:auto;text-align:right}.title .t{font-size:22px;font-weight:800;color:#1D6650;letter-spacing:.05em}.title .d{font-size:12px;color:#6b5f52}.stu{display:flex;justify-content:space-between;gap:16px;background:#F4EFE3;border-radius:10px;padding:14px 16px;margin-bottom:18px}.lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#8a7c6e;font-weight:600}.val{font-size:14px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}th{background:#1D6650;color:#fff;text-align:left;padding:9px 10px;font-size:11px;text-transform:uppercase}td{padding:9px 10px;border-bottom:1px solid #ECE3D2}.r{text-align:right}.amount{font-size:20px;font-weight:800;color:#1D6650}.sig{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:36px;padding-top:16px;border-top:1px solid #ECE3D2}.foot{margin-top:26px;font-size:10px;color:#b5a99a;text-align:center}</style></head><body>
-<div class="head">${logo}<div><div class="n">${escHtml(school.name)}</div><div class="s">${escHtml(sub)}</div></div><div class="title"><div class="t">FACTURE</div><div class="d">N° ${num} · ${escHtml(dateFr)}</div></div></div>
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Facture ${escHtml(num)}</title><style>*{font-family:Arial,sans-serif;box-sizing:border-box}body{margin:32px;color:#1a1410}.head{display:flex;align-items:center;gap:16px;border-bottom:2px solid #1D6650;padding-bottom:14px;margin-bottom:18px}.head .n{font-size:20px;font-weight:800}.head .s{font-size:12px;color:#6b5f52}.title{margin-left:auto;text-align:right}.title .t{font-size:22px;font-weight:800;color:#1D6650;letter-spacing:.05em}.title .d{font-size:12px;color:#6b5f52}.stu{display:flex;justify-content:space-between;gap:16px;background:#F4EFE3;border-radius:10px;padding:14px 16px;margin-bottom:18px}.lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#8a7c6e;font-weight:600}.val{font-size:14px;font-weight:700}table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px}th{background:#1D6650;color:#fff;text-align:left;padding:9px 10px;font-size:11px;text-transform:uppercase}td{padding:9px 10px;border-bottom:1px solid #ECE3D2}.r{text-align:right}.amount{font-size:20px;font-weight:800;color:#1D6650}.sig{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:44px;padding-top:16px;border-top:1px solid #ECE3D2}.foot{margin-top:26px;font-size:10px;color:#b5a99a;text-align:center}</style></head><body>
+<div class="head">${logo}<div><div class="n">${escHtml(school.name)}</div><div class="s">${escHtml(sub)}</div></div><div class="title"><div class="t">FACTURE</div><div class="d">N° ${escHtml(num)} · ${escHtml(dateFr)}</div></div></div>
 <div class="stu"><div><div class="lbl">Élève</div><div class="val">${escHtml(s.fullName)}</div><div class="s" style="font-size:12px;color:#6b5f52">Sexe : ${sexe} · Classe : ${escHtml(s.className)}</div></div><div style="text-align:right"><div class="lbl">Montant payé</div><div class="amount">${money(inv.amount, inv.currency)}</div></div></div>
-<table><thead><tr><th>Libellé</th><th>Rubrique</th><th class="r">Montant</th><th class="r">Date</th></tr></thead><tbody><tr><td>${escHtml(inv.label || rubrique)}</td><td>${escHtml(rubrique)}</td><td class="r">${money(inv.amount, inv.currency)}</td><td class="r">${escHtml(dateFr)}</td></tr></tbody></table>
-<div class="sig"><div><div class="lbl">Cachet &amp; signature</div>${sign}<div style="border-bottom:1px solid #1a1410;padding-bottom:4px;font-size:11.5px;font-weight:600;margin-top:4px">${escHtml(school.directorName || "La direction")}</div></div><div style="text-align:right"><div class="lbl">Reçu par le parent</div><div style="height:46px"></div><div style="border-bottom:1px solid #1a1410"></div></div></div>
+<table><thead><tr><th>Rubrique</th><th>Période</th><th class="r">Montant</th><th class="r">Date</th></tr></thead><tbody><tr><td>${escHtml(rubrique)}</td><td>${escHtml(inv.period || "—")}</td><td class="r">${money(inv.amount, inv.currency)}</td><td class="r">${escHtml(dateFr)}</td></tr></tbody></table>
+<div class="sig"><div><div class="lbl">Cachet &amp; signature (direction)</div><div style="height:50px"></div><div style="border-bottom:1px solid #1a1410;padding-bottom:4px;font-size:11.5px;font-weight:600">${escHtml(school.directorName || "La direction")}</div></div><div style="text-align:right"><div class="lbl">Reçu par le parent</div><div style="height:50px"></div><div style="border-bottom:1px solid #1a1410"></div></div></div>
 <div class="foot">Facture générée via E-KELASI · ${escHtml(new Date().toLocaleDateString("fr-FR"))}</div>
 <script>window.onload=function(){window.print()}</script></body></html>`;
   openPrint(html);

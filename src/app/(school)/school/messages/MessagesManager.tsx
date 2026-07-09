@@ -189,10 +189,16 @@ export function MessagesManager({
 // ── Composeur de rappel de paiement ──────────────────────────────────
 function ReminderComposer({ recipients, onSent }: { recipients: ReminderRecipient[]; onSent: () => void }) {
   const [pending, start] = useTransition();
-  // Pré-coche tous les élèves ayant un reste à payer.
-  const [checked, setChecked] = useState<Set<string>>(() => new Set(recipients.map((r) => r.studentId)));
+  // Pré-coche les élèves ayant un reste à payer (débiteurs).
+  const [checked, setChecked] = useState<Set<string>>(() => new Set(recipients.filter((r) => r.remaining > 0).map((r) => r.studentId)));
+  const [query, setQuery] = useState("");
   const [text, setText] = useState(DEFAULT_REMINDER);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const q = query.trim().toLowerCase();
+  const shown = q
+    ? recipients.filter((r) => r.studentName.toLowerCase().includes(q) || r.parentName.toLowerCase().includes(q) || r.className.toLowerCase().includes(q))
+    : recipients;
 
   const toggle = (id: string) =>
     setChecked((prev) => {
@@ -200,8 +206,13 @@ function ReminderComposer({ recipients, onSent }: { recipients: ReminderRecipien
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
-  const allOn = recipients.length > 0 && checked.size === recipients.length;
-  const toggleAll = () => setChecked(allOn ? new Set() : new Set(recipients.map((r) => r.studentId)));
+  const shownAllOn = shown.length > 0 && shown.every((r) => checked.has(r.studentId));
+  const toggleAll = () => setChecked((prev) => {
+    const next = new Set(prev);
+    if (shownAllOn) shown.forEach((r) => next.delete(r.studentId));
+    else shown.forEach((r) => next.add(r.studentId));
+    return next;
+  });
 
   // Parents uniques correspondant aux élèves cochés.
   const selectedParents = [...new Set(recipients.filter((r) => checked.has(r.studentId)).map((r) => r.parentId))];
@@ -219,25 +230,33 @@ function ReminderComposer({ recipients, onSent }: { recipients: ReminderRecipien
 
   return (
     <div className="ek-card" style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>
-          <T fr="Rappel de paiement" en="Payment reminder" /> — {recipients.length} <T fr="parent(s) concerné(s)" en="concerned parent(s)" />
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 160, fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>
+          <T fr="Rappel de paiement" en="Payment reminder" /> — {selectedParents.length} <T fr="parent(s) sélectionné(s)" en="parent(s) selected" />
         </div>
         {recipients.length > 0 && (
           <button onClick={toggleAll} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 11.5 }}>
-            {allOn ? <T fr="Tout décocher" en="Uncheck all" /> : <T fr="Tout cocher" en="Check all" />}
+            {shownAllOn ? <T fr="Tout décocher" en="Uncheck all" /> : <T fr="Tout cocher" en="Check all" />}
           </button>
         )}
       </div>
 
       {recipients.length === 0 ? (
         <div style={{ padding: 30, textAlign: "center", color: "var(--ink-3)", fontSize: 12.5 }}>
-          <T fr="Aucun élève avec un reste à payer." en="No student with an outstanding balance." />
+          <T fr="Aucun élève avec un parent enregistré." en="No student with a registered parent." />
         </div>
       ) : (
         <>
+          {/* Barre de recherche : sélectionner les parents par leur enfant */}
+          <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--divider)", position: "relative" }}>
+            <span style={{ position: "absolute", left: 26, top: "50%", transform: "translateY(-50%)", color: "var(--ink-3)", display: "flex" }}><Icon name="search" size={15} /></span>
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un enfant, un parent, une classe…"
+              style={{ width: "100%", padding: "9px 12px 9px 34px", borderRadius: 9, border: "1px solid var(--border-strong)", background: "var(--surface)", fontSize: 13, color: "var(--ink)" }} />
+          </div>
           <div style={{ maxHeight: 320, overflowY: "auto" }}>
-            {recipients.map((r, i) => (
+            {shown.length === 0 ? (
+              <div style={{ padding: 20, textAlign: "center", color: "var(--ink-3)", fontSize: 12.5 }}><T fr="Aucun résultat." en="No result." /></div>
+            ) : shown.map((r, i) => (
               <label key={r.studentId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderTop: i > 0 ? "1px solid var(--divider)" : "none", fontSize: 12.5, cursor: "pointer" }}>
                 <input type="checkbox" checked={checked.has(r.studentId)} onChange={() => toggle(r.studentId)} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -245,7 +264,9 @@ function ReminderComposer({ recipients, onSent }: { recipients: ReminderRecipien
                   <span style={{ color: "var(--ink-3)" }}> · {r.className}</span>
                   <div style={{ fontSize: 11, color: "var(--ink-3)" }}>Parent : {r.parentName}{r.parentPhone ? ` · ${r.parentPhone}` : ""}</div>
                 </div>
-                <span style={{ color: "#E11D48", fontWeight: 700 }}>{money(r.remaining, r.currency)}</span>
+                {r.remaining > 0
+                  ? <span style={{ color: "#E11D48", fontWeight: 700 }}>{money(r.remaining, r.currency)}</span>
+                  : <span style={{ color: "#16A34A", fontWeight: 600, fontSize: 11 }}>À jour</span>}
               </label>
             ))}
           </div>

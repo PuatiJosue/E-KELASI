@@ -153,7 +153,18 @@ export async function getSchoolFeeSummary(): Promise<FeeSummaryRow[]> {
 // ─────────────────────────────────────────────────────────────────────
 
 export type PaymentStatus = "paye" | "partiel" | "non_paye";
-export type FinanceStatus = "en_ordre" | "non_paye" | "avance" | "insolvable";
+// Statut financier AUTOMATIQUE (jamais saisi à la main) :
+//   en_ordre     → plus rien à payer
+//   non_paye     → reste à payer (sans échéance dépassée)
+//   insolvable   → au moins une échéance (tranche) dépassée non payée
+export type FinanceStatus = "en_ordre" | "non_paye" | "insolvable";
+
+// Calcule le statut à partir des montants et des échéances en retard.
+function autoFinanceStatus(totalDue: number, paid: number, overdue: boolean): FinanceStatus {
+  if (overdue) return "insolvable";
+  if (totalDue <= 0 || totalDue - paid <= 0.001) return "en_ordre";
+  return "non_paye";
+}
 
 export type FeeCategory = {
   id: string;
@@ -185,7 +196,7 @@ export type FinanceOverview = {
   kpis: { totalDue: number; totalPaid: number; pending: number; late: number };
   students: FinanceStudentRow[];
   distribution: { paid: number; partial: number; unpaid: number };
-  situation: { enOrdre: number; nonPaye: number; avance: number; insolvable: number };
+  situation: { enOrdre: number; nonPaye: number; insolvable: number };
   total: number;
 };
 
@@ -236,6 +247,8 @@ export type InstallmentTemplate = {
   id: string;
   name: string;
   period: string | null;
+  dateFrom: string | null;
+  dateTo: string | null;
   amount: number;
   currency: string;
   position: number;
@@ -292,12 +305,13 @@ export async function listInstallmentTemplates(): Promise<InstallmentTemplate[]>
     const svc = service();
     const { data } = await svc
       .from("installment_templates")
-      .select("id, name, period, amount, currency, position")
+      .select("id, name, period, date_from, date_to, amount, currency, position")
       .eq("school_id", school.id)
       .order("position")
       .order("created_at");
     return (data ?? []).map((t: any) => ({
       id: t.id, name: t.name, period: t.period ?? null,
+      dateFrom: t.date_from ?? null, dateTo: t.date_to ?? null,
       amount: Number(t.amount), currency: t.currency ?? "CDF", position: t.position ?? 0,
     }));
   } catch { return []; }
@@ -320,7 +334,7 @@ export async function getFinanceOverview(): Promise<FinanceOverview> {
       svc.from("student_fees").select("student_id, amount_due, currency").eq("school_id", school.id),
       svc.from("student_fee_payments").select("student_id, amount, currency").eq("school_id", school.id),
       svc.from("student_advances").select("student_id, amount").eq("school_id", school.id),
-      svc.from("student_installments").select("student_id, amount, paid_at").eq("school_id", school.id),
+      svc.from("student_installments").select("student_id, amount, paid_at, due_date").eq("school_id", school.id),
     ]);
 
     const ids = (students ?? []).map((s: any) => s.id);
@@ -350,8 +364,11 @@ export async function getFinanceOverview(): Promise<FinanceOverview> {
     for (const a of (advances ?? []) as any[]) {
       paidByStudent.set(a.student_id, (paidByStudent.get(a.student_id) ?? 0) + Number(a.amount));
     }
+    const today = new Date().toISOString().slice(0, 10);
+    const overdueByStudent = new Set<string>();
     for (const it of (installments ?? []) as any[]) {
       if (it.paid_at) paidByStudent.set(it.student_id, (paidByStudent.get(it.student_id) ?? 0) + Number(it.amount));
+      else if (it.due_date && it.due_date < today) overdueByStudent.add(it.student_id);
     }
 
     const rows: FinanceStudentRow[] = (students ?? []).map((s: any) => {
@@ -373,7 +390,7 @@ export async function getFinanceOverview(): Promise<FinanceOverview> {
         remaining,
         currency,
         paymentStatus: paymentStatusOf(totalDue, paid),
-        financeStatus: (s.finance_status ?? "en_ordre") as FinanceStatus,
+        financeStatus: autoFinanceStatus(totalDue, paid, overdueByStudent.has(s.id)),
       };
     });
 
@@ -452,6 +469,8 @@ export async function getStudentFinanceDetail(studentId: string): Promise<Studen
     const advTotal = advances.reduce((a, x) => a + x.amount, 0);
     const instPaid = installments.reduce((a, x) => a + (x.paidAt ? x.amount : 0), 0);
     const totalPaid = adhoc + advTotal + instPaid;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const overdue = installments.some((it) => !it.paidAt && it.dueDate && it.dueDate < todayStr);
 
     const parent = ((links ?? []) as any[]).sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))[0];
     const student: FinanceStudentRow = {
@@ -468,7 +487,7 @@ export async function getStudentFinanceDetail(studentId: string): Promise<Studen
       remaining: Math.max(0, totalDue - totalPaid),
       currency,
       paymentStatus: paymentStatusOf(totalDue, totalPaid),
-      financeStatus: ((s as any).finance_status ?? "en_ordre") as FinanceStatus,
+      financeStatus: autoFinanceStatus(totalDue, totalPaid, overdue),
     };
 
     return { student, fees, payments, advances, installments };
@@ -573,16 +592,16 @@ export type ReminderRecipient = {
   parentPhone: string | null;
 };
 
+// Tous les élèves actifs ayant un parent joignable (pour la barre de sélection
+// du rappel). Le reste à payer est joint : l'UI pré-coche les débiteurs.
 export async function getReminderRecipients(): Promise<ReminderRecipient[]> {
   if (!isLiveMode()) return [];
   try {
     const overview = await getFinanceOverview();
     const school = await getMySchool();
-    if (!school) return [];
-    const debtors = overview.students.filter((s) => s.remaining > 0);
-    if (debtors.length === 0) return [];
+    if (!school || overview.students.length === 0) return [];
     const svc = service();
-    const ids = debtors.map((s) => s.id);
+    const ids = overview.students.map((s) => s.id);
     const { data: links } = await svc
       .from("parent_links")
       .select("student_id, parent_id, is_primary, profiles!parent_links_parent_id_fkey(full_name, phone)")
@@ -597,7 +616,7 @@ export async function getReminderRecipients(): Promise<ReminderRecipient[]> {
     }
 
     const out: ReminderRecipient[] = [];
-    for (const s of debtors) {
+    for (const s of overview.students) {
       const p = parentByStudent.get(s.id);
       if (!p?.id) continue;
       out.push({
@@ -606,6 +625,8 @@ export async function getReminderRecipients(): Promise<ReminderRecipient[]> {
         parentId: p.id, parentName: p.name, parentPhone: p.phone,
       });
     }
+    // Débiteurs d'abord, puis par classe / nom.
+    out.sort((a, b) => (b.remaining > 0 ? 1 : 0) - (a.remaining > 0 ? 1 : 0) || a.className.localeCompare(b.className, "fr", { numeric: true }) || a.studentName.localeCompare(b.studentName));
     return out;
   } catch { return []; }
 }
@@ -618,19 +639,18 @@ function buildOverview(rows: FinanceStudentRow[], currency: string): FinanceOver
   const late = rows.filter((r) => r.financeStatus === "non_paye").reduce((a, r) => a + r.remaining, 0);
 
   const distribution = { paid: 0, partial: 0, unpaid: 0 };
-  const situation = { enOrdre: 0, nonPaye: 0, avance: 0, insolvable: 0 };
+  const situation = { enOrdre: 0, nonPaye: 0, insolvable: 0 };
   for (const r of rows) {
     distribution[donutBucket(r)]++;
     if (r.financeStatus === "insolvable") situation.insolvable++;
     else if (r.financeStatus === "non_paye") situation.nonPaye++;
-    else if (r.financeStatus === "avance") situation.avance++;
     else situation.enOrdre++;
   }
   return { currency, kpis: { totalDue, totalPaid, pending, late }, students: rows, distribution, situation, total: rows.length };
 }
 
 function emptyOverview(): FinanceOverview {
-  return { currency: "CDF", kpis: { totalDue: 0, totalPaid: 0, pending: 0, late: 0 }, students: [], distribution: { paid: 0, partial: 0, unpaid: 0 }, situation: { enOrdre: 0, nonPaye: 0, avance: 0, insolvable: 0 }, total: 0 };
+  return { currency: "CDF", kpis: { totalDue: 0, totalPaid: 0, pending: 0, late: 0 }, students: [], distribution: { paid: 0, partial: 0, unpaid: 0 }, situation: { enOrdre: 0, nonPaye: 0, insolvable: 0 }, total: 0 };
 }
 
 // ── Données de démonstration (mode non connecté) ─────────────────────
@@ -648,7 +668,7 @@ const MOCK_NAMES: [string, string, string][] = [
   ["Diabaté", "Jean", "M"], ["Cissé", "Awa", "F"], ["Bah", "Ousmane", "M"], ["Fofana", "Kadiatou", "F"],
 ];
 const MOCK_CLASSES = ["5ème A", "4ème B", "3ème A", "6ème A"];
-const MOCK_STATUSES: FinanceStatus[] = ["en_ordre", "non_paye", "insolvable", "en_ordre", "non_paye", "avance", "en_ordre", "en_ordre", "non_paye", "avance"];
+const MOCK_STATUSES: FinanceStatus[] = ["en_ordre", "non_paye", "insolvable", "en_ordre", "non_paye", "en_ordre", "en_ordre", "en_ordre", "non_paye", "insolvable"];
 
 function mockRows(): FinanceStudentRow[] {
   return MOCK_NAMES.map(([last, first, sex], i) => {
@@ -722,9 +742,9 @@ const MOCK_INSTALLMENTS: StudentInstallment[] = mockRows().slice(0, 5).map((r, i
 }));
 
 const MOCK_TEMPLATES: InstallmentTemplate[] = [
-  { id: "t1", name: "1ère tranche", period: "Début octobre à fin décembre 2026 (durant 3 mois)", amount: 100, currency: "USD", position: 0 },
-  { id: "t2", name: "2ème tranche", period: "Début janvier à fin février 2027 (durant 2 mois)", amount: 100, currency: "USD", position: 1 },
-  { id: "t3", name: "3ème tranche", period: "Début mars à début avril 2027 (durant 1 mois)", amount: 50, currency: "USD", position: 2 },
+  { id: "t1", name: "1ère tranche", period: null, dateFrom: "2026-10-01", dateTo: "2026-12-31", amount: 100, currency: "USD", position: 0 },
+  { id: "t2", name: "2ème tranche", period: null, dateFrom: "2027-01-01", dateTo: "2027-02-28", amount: 100, currency: "USD", position: 1 },
+  { id: "t3", name: "3ème tranche", period: null, dateFrom: "2027-03-01", dateTo: "2027-04-05", amount: 50, currency: "USD", position: 2 },
 ];
 
 const MOCK_CASH: CashEntry[] = [
