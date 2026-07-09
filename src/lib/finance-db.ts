@@ -4,7 +4,7 @@
 
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { getMySchool, listSchoolStudents } from "@/lib/school-db";
-import { classLabel } from "@/lib/classes";
+import { classLabel, normOption } from "@/lib/classes";
 import { isLiveMode } from "@/lib/db";
 
 function service() {
@@ -597,15 +597,33 @@ export type ReminderRecipient = {
 export async function getReminderRecipients(): Promise<ReminderRecipient[]> {
   if (!isLiveMode()) return [];
   try {
-    const overview = await getFinanceOverview();
     const school = await getMySchool();
-    if (!school || overview.students.length === 0) return [];
+    if (!school) return [];
     const svc = service();
-    const ids = overview.students.map((s) => s.id);
-    const { data: links } = await svc
-      .from("parent_links")
-      .select("student_id, parent_id, is_primary, profiles!parent_links_parent_id_fkey(full_name, phone)")
-      .in("student_id", ids);
+
+    // Reste à payer réel (module Finance v2 : fees + fee_payments + fee_overrides).
+    const [{ data: students }, { data: fees }] = await Promise.all([
+      svc.from("students").select("id, full_name, class_name, option").eq("school_id", school.id).eq("status", "active"),
+      svc.from("fees").select("id, class_name, option, total_amount, currency").eq("school_id", school.id).eq("archived", false),
+    ]);
+    const feeList = (fees ?? []) as any[];
+    const feeIds = feeList.map((f) => f.id);
+    const [{ data: overrides }, { data: pays }] = feeIds.length
+      ? await Promise.all([
+          svc.from("fee_overrides").select("fee_id, student_id, amount").in("fee_id", feeIds),
+          svc.from("fee_payments").select("fee_id, student_id, amount").in("fee_id", feeIds).is("cancelled_at", null),
+        ])
+      : [{ data: [] as any[] }, { data: [] as any[] }];
+
+    const ovr = new Map<string, number>();
+    for (const o of (overrides ?? []) as any[]) ovr.set(`${o.fee_id}|${o.student_id}`, Number(o.amount));
+    const paidBy = new Map<string, number>();
+    for (const p of (pays ?? []) as any[]) paidBy.set(p.student_id, (paidBy.get(p.student_id) ?? 0) + Number(p.amount));
+
+    const ids = (students ?? []).map((s: any) => s.id);
+    const { data: links } = ids.length
+      ? await svc.from("parent_links").select("student_id, parent_id, is_primary, profiles!parent_links_parent_id_fkey(full_name, phone)").in("student_id", ids)
+      : { data: [] as any[] };
 
     // Parent principal (ou premier) par élève.
     const parentByStudent = new Map<string, { id: string; name: string; phone: string | null }>();
@@ -615,13 +633,20 @@ export async function getReminderRecipients(): Promise<ReminderRecipient[]> {
       }
     }
 
+    const currency = feeList[0]?.currency ?? "CDF";
     const out: ReminderRecipient[] = [];
-    for (const s of overview.students) {
+    for (const s of (students ?? []) as any[]) {
       const p = parentByStudent.get(s.id);
       if (!p?.id) continue;
+      let expected = 0;
+      for (const f of feeList) {
+        const applies = !f.class_name || (f.class_name === s.class_name && normOption(f.option) === normOption(s.option));
+        if (applies) expected += ovr.has(`${f.id}|${s.id}`) ? ovr.get(`${f.id}|${s.id}`)! : Number(f.total_amount);
+      }
+      const remaining = Math.max(0, expected - (paidBy.get(s.id) ?? 0));
       out.push({
-        studentId: s.id, studentName: s.fullName, className: s.className,
-        remaining: s.remaining, currency: s.currency,
+        studentId: s.id, studentName: s.full_name, className: classLabel(s.class_name, s.option),
+        remaining, currency,
         parentId: p.id, parentName: p.name, parentPhone: p.phone,
       });
     }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { RubriqueFraisTab, type ClassOption } from "./FraisScolairesTab";
 import { TresorerieTab } from "./TresorerieTab";
@@ -31,6 +32,7 @@ export function FinanceModule({
   classes: ClassOption[];
   years: string[];
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<TabKey>("scolaires");
   const [reports, setReports] = useState(false);
 
@@ -45,6 +47,7 @@ export function FinanceModule({
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
+          <button onClick={() => router.push("/school/messages?compose=reminder")} className="ek-btn ek-btn-outline" style={{ height: 40, fontSize: 12.5 }}><Icon name="bell" size={15} /> Rappel de paiement</button>
           <button onClick={() => setReports(true)} className="ek-btn ek-btn-outline" style={{ height: 40, fontSize: 12.5 }}><Icon name="file" size={15} /> Rapports</button>
           <AlertsBell alerts={alerts} />
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
