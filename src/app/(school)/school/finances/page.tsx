@@ -1,46 +1,56 @@
-import { getFinanceOverview, listFeeCategories, getSchoolAdvances, getSchoolInstallments, getCashEntries, getCashSummary, listInstallmentTemplates } from "@/lib/finance-db";
-import { getMySchool } from "@/lib/school-db";
+import { getFeesOverview } from "@/lib/finance/fees";
+import { getMySchool, listSchoolStudents } from "@/lib/school-db";
+import { classLabel, normOption, classKey } from "@/lib/classes";
 import { schoolYearLabel } from "@/lib/trimester";
-import { FinanceDashboard, type SchoolBranding } from "./FinanceDashboard";
+import { FinanceModule } from "./FinanceModule";
+import type { SchoolBranding } from "./finance-ui";
+import type { ClassOption } from "./FraisScolairesTab";
 
 export default async function SchoolFinances() {
-  const [overview, categories, advances, installments, templates, cashEntries, cashSummary, school] = await Promise.all([
-    getFinanceOverview(),
-    listFeeCategories(),
-    getSchoolAdvances(),
-    getSchoolInstallments(),
-    listInstallmentTemplates(),
-    getCashEntries(),
-    getCashSummary(),
+  const [school, students, feesScolaire] = await Promise.all([
     getMySchool(),
+    listSchoolStudents(),
+    getFeesOverview("scolaire"),
   ]);
 
-  const classNames = [...new Set(overview.students.map((s) => s.className))].sort((a, b) =>
-    a.localeCompare(b, "fr", { numeric: true })
-  );
-  const year = (school as any)?.currentYear || schoolYearLabel();
+  const year = school?.currentYear || schoolYearLabel();
+
+  // Classes distinctes (couple class_name + option) pour la création de frais.
+  const seen = new Map<string, ClassOption>();
+  for (const s of students) {
+    if (!s.className || s.className === "—") continue;
+    const key = classKey(s.className, s.option);
+    if (!seen.has(key)) seen.set(key, { className: s.className, option: normOption(s.option), display: classLabel(s.className, s.option) });
+  }
+  // Repli (mode démo) : dériver les classes des frais existants.
+  if (seen.size === 0) {
+    for (const f of feesScolaire.fees) {
+      if (!f.className) continue;
+      const key = classKey(f.className, f.option);
+      if (!seen.has(key)) seen.set(key, { className: f.className, option: normOption(f.option), display: f.classDisplay ?? f.className });
+    }
+  }
+  const classes = [...seen.values()].sort((a, b) => a.display.localeCompare(b.display, "fr", { numeric: true }));
 
   const branding: SchoolBranding = {
     name: school?.name ?? "École",
     city: school?.city ?? null,
-    commune: (school as any)?.commune ?? null,
+    commune: school?.commune ?? null,
+    address: school?.address ?? null,
+    phone: school?.phone ?? null,
+    email: school?.email ?? null,
     logoUrl: school?.logoUrl ?? null,
     signatureUrl: school?.signatureUrl ?? null,
     directorName: school?.directorName ?? null,
   };
 
   return (
-    <FinanceDashboard
-      overview={overview}
-      categories={categories}
-      advances={advances}
-      installments={installments}
-      templates={templates}
+    <FinanceModule
+      feesScolaire={feesScolaire}
       year={year}
-      classNames={classNames}
-      cashEntries={cashEntries}
-      cashSummary={cashSummary}
       school={branding}
+      classes={classes}
+      years={[year]}
     />
   );
 }
