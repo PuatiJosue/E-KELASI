@@ -41,6 +41,7 @@ export type Fee = {
   schoolYear: string | null;
   totalAmount: number;
   currency: string;
+  dueDate: string | null;   // échéance globale du frais (facultative)
   position: number;
   archived: boolean;
   installments: FeeInstallment[];
@@ -121,6 +122,7 @@ function mapFeeRow(f: any): Omit<Fee, keyof FeeAggregates> {
     schoolYear: f.school_year ?? null,
     totalAmount: Number(f.total_amount ?? 0),
     currency: f.currency ?? "CDF",
+    dueDate: f.due_date ?? null,
     position: f.position ?? 0,
     archived: !!f.archived,
     installments: [],
@@ -143,7 +145,7 @@ export async function getFeesOverview(kind: FeeKind, year?: string): Promise<Fee
 
     const { data: feeRows } = await svc
       .from("fees")
-      .select("id, kind, label, category, class_name, option, school_year, total_amount, currency, position, archived")
+      .select("id, kind, label, category, class_name, option, school_year, total_amount, currency, due_date, position, archived")
       .eq("school_id", school.id)
       .eq("kind", kind)
       .order("position")
@@ -220,7 +222,7 @@ export async function getFeeDetail(feeId: string): Promise<FeeDetail | null> {
 
     const { data: f } = await svc
       .from("fees")
-      .select("id, kind, label, category, class_name, option, school_year, total_amount, currency, position, archived")
+      .select("id, kind, label, category, class_name, option, school_year, total_amount, currency, due_date, position, archived")
       .eq("id", feeId).eq("school_id", school.id).maybeSingle();
     if (!f) return null;
 
@@ -300,7 +302,7 @@ function mockFee(kind: FeeKind, i: number): Fee {
     id: `mock-fee-${kind}-${i}`, kind, label: kind === "scolaire" ? labelS : labelA,
     category: kind === "autre" ? labelA : null,
     className: MOCK_CLASSES[i % 3], option: null, classDisplay: MOCK_CLASSES[i % 3],
-    schoolYear: schoolYearLabel(), totalAmount, currency: "CDF", position: i, archived: false,
+    schoolYear: schoolYearLabel(), totalAmount, currency: "CDF", dueDate: null, position: i, archived: false,
     installments: kind === "scolaire" ? [
       { id: `mi-${i}-1`, name: "1ère tranche", position: 0, amount: Math.round(totalAmount / 2), dueDate: "2026-10-15" },
       { id: `mi-${i}-2`, name: "2ème tranche", position: 1, amount: Math.round(totalAmount / 2), dueDate: "2027-01-15" },

@@ -138,6 +138,7 @@ function FeeRow({ fee, first, onOpen, onEdit, onChanged }: { fee: Fee; first: bo
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>{fee.label}</span>
           <span style={{ fontSize: 11, color: "var(--ink-3)" }}>· {fee.classDisplay ?? "École entière"}</span>
           {fee.installments.length > 0 && <span style={{ fontSize: 10.5, color: "var(--ink-3)" }}>· {fee.installments.length} tranche(s)</span>}
+          {fee.dueDate && <span style={{ fontSize: 10.5, color: "var(--ink-3)", display: "inline-flex", alignItems: "center", gap: 3 }}><Icon name="clock" size={11} /> {new Date(fee.dueDate).toLocaleDateString("fr-FR")}</span>}
           {fee.archived && <span style={{ fontSize: 10.5, color: "var(--ink-3)" }}>· archivé</span>}
         </div>
         <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
@@ -166,6 +167,7 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
   const togglePick = (ck: string) => setPicked((p) => { const n = new Set(p); n.has(ck) ? n.delete(ck) : n.add(ck); return n; });
   const [totalAmount, setTotalAmount] = useState(existing ? String(existing.totalAmount) : "");
   const [currency, setCurrency] = useState(existing?.currency ?? "CDF");
+  const [dueDate, setDueDate] = useState(existing?.dueDate ?? "");
   const [rows, setRows] = useState<{ name: string; amount: string; dueDate: string }[]>(
     existing?.installments.length ? existing.installments.map((i) => ({ name: i.name, amount: String(i.amount), dueDate: i.dueDate ?? "" })) : []
   );
@@ -200,7 +202,7 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
       if (scope === "specific" && targets.length === 0) { setError("Sélectionnez au moins une classe."); return; }
       start(async () => {
         for (const t of targets as (ClassOption | null)[]) {
-          const r = await createFee({ kind, label: effLabel, className: t ? t.className : null, option: t ? t.option : null, schoolYear: year, totalAmount: parsedTotal, currency, installments });
+          const r = await createFee({ kind, label: effLabel, className: t ? t.className : null, option: t ? t.option : null, schoolYear: year, totalAmount: parsedTotal, currency, dueDate: dueDate || null, installments });
           if (!r.ok) { setError(r.message); return; }
         }
         onDone();
@@ -210,8 +212,8 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
 
     start(async () => {
       const r = existing
-        ? await updateFee({ id: existing.id, label: effLabel, category: isScol ? null : category.trim(), className: className || null, option: option || null, totalAmount: parsedTotal, currency, installments })
-        : await createFee({ kind, label: effLabel, category: isScol ? null : category.trim(), className: className || null, option: option || null, schoolYear: year, totalAmount: parsedTotal, currency, installments });
+        ? await updateFee({ id: existing.id, label: effLabel, category: isScol ? null : category.trim(), className: className || null, option: option || null, totalAmount: parsedTotal, currency, dueDate: dueDate || null, installments })
+        : await createFee({ kind, label: effLabel, category: isScol ? null : category.trim(), className: className || null, option: option || null, schoolYear: year, totalAmount: parsedTotal, currency, dueDate: dueDate || null, installments });
       if (r.ok) onDone(); else setError(r.message);
     });
   };
@@ -256,9 +258,10 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
       ) : (
         <Labeled label="Nom de la catégorie"><input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Uniforme, Transport, Cantine…" style={modalInp} /></Labeled>
       )}
-      <div style={{ display: "flex", gap: 10 }}>
-        <Labeled label="Montant total" style={{ flex: 1 }}><input value={totalAmount} onChange={(e) => setTotalAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="250000" style={modalInp} /></Labeled>
-        <Labeled label="Devise" style={{ width: 110 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">CDF</option><option value="USD">USD</option></select></Labeled>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <Labeled label="Montant total" style={{ flex: 1, minWidth: 130 }}><input value={totalAmount} onChange={(e) => setTotalAmount(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" placeholder="250000" style={modalInp} /></Labeled>
+        <Labeled label="Devise" style={{ width: 96 }}><select value={currency} onChange={(e) => setCurrency(e.target.value)} style={modalInp}><option value="CDF">CDF</option><option value="USD">USD</option></select></Labeled>
+        <Labeled label="Échéance (facultatif)" style={{ flex: 1, minWidth: 150 }}><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} title="Date limite de paiement du frais" style={modalInp} /></Labeled>
       </div>
 
       {/* Tranches */}
@@ -322,6 +325,7 @@ function FeeDetailModal({ fee: initFee, school, year, onClose }: { fee: Fee; sch
         <MiniStat label="Encaissé" value={money(fee.collected, c)} color={COLORS.collected} />
         <MiniStat label="Restant" value={money(fee.remaining, c)} color={COLORS.remaining} />
         <MiniStat label="Recouvrement" value={`${fee.recoveryPct.toFixed(0)} %`} color={COLORS.brand} />
+        {fee.dueDate && <MiniStat label="Échéance" value={new Date(fee.dueDate).toLocaleDateString("fr-FR")} color={COLORS.remaining} />}
       </div>
 
       <Toolbar>

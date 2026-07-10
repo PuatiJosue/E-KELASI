@@ -74,6 +74,7 @@ export async function createFee(input: {
   schoolYear?: string | null;
   totalAmount: number;
   currency?: string;
+  dueDate?: string | null;
   installments?: InstallmentInput[];
 }): Promise<Result> {
   const label = input.label?.trim();
@@ -91,6 +92,7 @@ export async function createFee(input: {
     class_name: input.className || null, option: input.option || null,
     school_year: input.schoolYear || null,
     total_amount: input.totalAmount || 0, currency: input.currency || "CDF",
+    due_date: input.dueDate || null,
     position: count ?? 0,
   }).select("id").single();
   if (error || !fee) return { ok: false, message: "Création du frais impossible." };
@@ -116,6 +118,7 @@ export async function updateFee(input: {
   option?: string | null;
   totalAmount: number;
   currency?: string;
+  dueDate?: string | null;
   installments?: InstallmentInput[];
 }): Promise<Result> {
   // (category persistée ci-dessous)
@@ -133,6 +136,7 @@ export async function updateFee(input: {
     category: input.category === undefined ? undefined : (input.category?.trim() || null),
     class_name: input.className || null, option: input.option || null,
     total_amount: input.totalAmount || 0, currency: input.currency || "CDF",
+    due_date: input.dueDate || null,
   }).eq("id", input.id).eq("school_id", c.schoolId);
   if (error) return { ok: false, message: "Mise à jour impossible." };
 
