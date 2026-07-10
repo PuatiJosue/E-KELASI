@@ -57,6 +57,22 @@ export async function getFinanceAlerts(
     alerts.push({ id: "solde", type: "solde", severity: "warning", title: "Solde de trésorerie faible", detail: `Solde actuel : ${fmt(solde)}.` });
   }
 
+  // Échéances au niveau du frais (date limite globale de la rubrique). Les vues
+  // déjà chargées portent dueDate + remaining → pas de requête supplémentaire.
+  // On n'alerte que s'il reste un montant dû sur le frais.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const in7Str = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+  for (const f of [...feesScolaire.fees, ...feesAutre.fees]) {
+    if (!f.dueDate || f.remaining <= 0) continue;
+    const cls = f.classDisplay ? ` · ${f.classDisplay}` : "";
+    const when = new Date(f.dueDate).toLocaleDateString("fr-FR");
+    if (f.dueDate < todayStr) {
+      alerts.push({ id: `echf-${f.id}`, type: "echeance", severity: "critical", title: "Échéance dépassée", detail: `${f.label}${cls} — échéance le ${when}, reste ${fmt(f.remaining)}.`, date: f.dueDate });
+    } else if (f.dueDate <= in7Str) {
+      alerts.push({ id: `echf-${f.id}`, type: "echeance", severity: "warning", title: "Échéance proche", detail: `${f.label}${cls} — échéance le ${when}, reste ${fmt(f.remaining)}.`, date: f.dueDate });
+    }
+  }
+
   try {
     const school = await getMySchool();
     if (school) {
