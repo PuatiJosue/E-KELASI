@@ -36,16 +36,17 @@ export type TimetableRowInput = {
   subject: string;
   teacher?: string;
   room?: string;
+  color?: string;
 };
 
 // Valide une grille de créneaux ; renvoie un message d'erreur ou null si OK.
 function validateRows(rows: TimetableRowInput[]): string | null {
-  if (rows.length === 0) return "Ajoutez au moins une ligne.";
+  if (rows.length === 0) return "Ajoutez au moins un cours.";
   for (const r of rows) {
     if (!(r.day >= 1 && r.day <= 7)) return "Jour invalide.";
     if (!r.startTime || !r.endTime) return "Heures de début et de fin requises.";
     if (r.endTime <= r.startTime) return "L'heure de fin doit être après l'heure de début.";
-    if (!r.subject?.trim()) return "Matière requise pour chaque ligne.";
+    if (!r.subject?.trim()) return "Matière requise pour chaque cours.";
   }
   return null;
 }
@@ -62,6 +63,7 @@ function rowsToPayload(schoolId: string, className: string, option: string | und
     subject: r.subject.trim(),
     teacher: r.teacher?.trim() || null,
     room: r.room?.trim() || null,
+    color: r.color?.trim() || null,
     published,
   }));
 }
@@ -97,6 +99,7 @@ export async function saveClassTimetable(input: {
     .from("timetable_slots")
     .insert(rowsToPayload(c.schoolId, className, input.option, rows, input.publish));
   if (insErr) return { ok: false, message: "Enregistrement impossible." };
+
   revalidatePath("/school/timetable");
   return { ok: true };
 }

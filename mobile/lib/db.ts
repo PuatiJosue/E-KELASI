@@ -411,7 +411,7 @@ export async function listChildFees(childId?: string): Promise<FeePayment[]> {
 }
 
 // ── Emploi du temps ──────────────────────────────────────────────────
-export type TimetableSlot = { id: string; day: number; startTime: string; endTime: string; subject: string; teacher: string | null; room: string | null };
+export type TimetableSlot = { id: string; day: number; startTime: string; endTime: string; subject: string; teacher: string | null; room: string | null; color: string | null };
 
 export async function listTimetable(className?: string, schoolId?: string | null): Promise<TimetableSlot[]> {
   if (!isLiveMode || !supabase) return [];
@@ -422,7 +422,7 @@ export async function listTimetable(className?: string, schoolId?: string | null
     if (!cls || !sid) return [];
     const { data } = await supabase
       .from("timetable_slots")
-      .select("id, day, start_time, end_time, subject, teacher, room")
+      .select("id, day, start_time, end_time, subject, teacher, room, color")
       .eq("school_id", sid)
       .eq("class_name", cls)
       .eq("published", true)
@@ -430,7 +430,7 @@ export async function listTimetable(className?: string, schoolId?: string | null
       .order("start_time", { ascending: true });
     return (data ?? []).map((s: any) => ({
       id: s.id, day: s.day, startTime: s.start_time, endTime: s.end_time,
-      subject: s.subject, teacher: s.teacher ?? null, room: s.room ?? null,
+      subject: s.subject, teacher: s.teacher ?? null, room: s.room ?? null, color: s.color ?? null,
     }));
   } catch {
     return [];

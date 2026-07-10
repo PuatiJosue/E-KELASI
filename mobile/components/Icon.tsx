@@ -52,6 +52,7 @@ const MAP: Record<string, React.ComponentProps<typeof Feather>["name"]> = {
   folder: "folder",
   phone: "phone",
   dots: "more-vertical",
+  pin: "map-pin",
 };
 
 export function Icon({
