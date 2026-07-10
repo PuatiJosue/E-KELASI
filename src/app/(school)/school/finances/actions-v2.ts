@@ -128,9 +128,8 @@ export async function updateFee(input: {
   if (!c) return { ok: false, message: "Réservé à la direction." };
   const svc = service();
 
-  if (await feePaymentCount(svc, c.schoolId, input.id) > 0)
-    return { ok: false, message: "Modification impossible : des paiements ont déjà été enregistrés." };
-
+  // La modification reste autorisée même si des paiements existent (l'UI demande
+  // confirmation). Seule la suppression est interdite dans ce cas (voir deleteFee).
   const { error } = await (svc.from("fees").update as any)({
     label: input.label?.trim() || "Frais",
     category: input.category === undefined ? undefined : (input.category?.trim() || null),
@@ -140,7 +139,9 @@ export async function updateFee(input: {
   }).eq("id", input.id).eq("school_id", c.schoolId);
   if (error) return { ok: false, message: "Mise à jour impossible." };
 
-  // Remplace les tranches (aucun paiement → pas de référence à préserver).
+  // Remplace les tranches. Si des paiements référençaient une tranche supprimée,
+  // leur lien est mis à NULL (fee_payments.installment_id ON DELETE SET NULL) ;
+  // le montant et l'historique du paiement sont conservés.
   if (input.installments) {
     await svc.from("fee_installments").delete().eq("fee_id", input.id).eq("school_id", c.schoolId);
     const insts = input.installments.filter((i) => i.name?.trim() && i.amount > 0);

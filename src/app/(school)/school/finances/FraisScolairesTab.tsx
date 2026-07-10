@@ -147,9 +147,9 @@ function FeeRow({ fee, first, onOpen, onEdit, onChanged }: { fee: Fee; first: bo
         <div style={{ marginTop: 6, maxWidth: 260 }}><RecoveryBar pct={fee.recoveryPct} /></div>
       </div>
       <button onClick={onOpen} className="ek-btn ek-btn-outline" style={{ height: 32, fontSize: 12 }}>Paiements</button>
-      {!fee.hasPayments && <button onClick={onEdit} title="Modifier" style={iconBtn}><Icon name="edit" size={15} /></button>}
+      <button onClick={onEdit} title="Modifier" style={iconBtn}><Icon name="edit" size={15} /></button>
       <button onClick={arch} disabled={pending} title={fee.archived ? "Réactiver" : "Archiver"} style={iconBtn}><Icon name={fee.archived ? "refresh" : "eyeOff"} size={15} /></button>
-      <button onClick={del} disabled={pending} title="Supprimer" style={iconBtn}><Icon name="trash" size={15} /></button>
+      <button onClick={del} disabled={pending || fee.hasPayments} title={fee.hasPayments ? "Suppression désactivée : des paiements existent (utilisez l’archivage)" : "Supprimer"} style={{ ...iconBtn, opacity: fee.hasPayments ? 0.4 : 1, cursor: fee.hasPayments ? "not-allowed" : "pointer" }}><Icon name="trash" size={15} /></button>
     </div>
   );
 }
@@ -210,6 +210,8 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
       return;
     }
 
+    if (existing?.hasPayments && !confirm("Cette rubrique contient déjà des paiements. Voulez-vous vraiment enregistrer les modifications ?")) return;
+
     start(async () => {
       const r = existing
         ? await updateFee({ id: existing.id, label: effLabel, category: isScol ? null : category.trim(), className: className || null, option: option || null, totalAmount: parsedTotal, currency, dueDate: dueDate || null, installments })
@@ -233,7 +235,7 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
           </Labeled>
         ) : (
           <Labeled label={isScol ? "Niveau / classe" : "Cible"} style={{ flex: 1, minWidth: 180 }}>
-            <select value={classKeyVal} onChange={(e) => setClassKeyVal(e.target.value)} style={modalInp} disabled={!!existing && existing.hasPayments}>
+            <select value={classKeyVal} onChange={(e) => setClassKeyVal(e.target.value)} style={modalInp}>
               {!isScol && <option value="">École entière</option>}
               {isScol && classes.length === 0 && <option value="">— aucune classe —</option>}
               {classes.map((cl) => { const ck = classKey(cl.className, cl.option); return <option key={ck} value={ck}>{cl.display}</option>; })}
@@ -285,7 +287,7 @@ function FeeFormModal({ kind, existing, classes, year, onClose, onDone }: { kind
         )}
       </div>
 
-      {existing?.hasPayments && <div style={errBox}>Des paiements existent : la classe n’est plus modifiable.</div>}
+      {existing?.hasPayments && <div style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.4 }}>Cette rubrique contient déjà des paiements. La modification reste possible (une confirmation sera demandée) ; la suppression est désactivée — utilisez l’archivage.</div>}
       {error && <div style={errBox}>{error}</div>}
       <ModalActions onClose={onClose} onSubmit={submit} pending={pending} submitLabel={existing ? "Enregistrer" : "Créer le frais"} />
     </Modal>
