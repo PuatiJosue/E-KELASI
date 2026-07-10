@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
+import { createUserErrorMessage } from "@/lib/auth-errors";
 
 type GenResult =
   | { ok: true; code: string }
@@ -151,9 +152,9 @@ export async function redeemTeacherCodeAction(args: {
     password,
     email_confirm: true,
   });
-  if (createErr) {
-    console.warn("[redeem-teacher] createUser error:", createErr.message);
-    return { ok: false, message: "Impossible de créer le compte (email déjà utilisé ?)." };
+  if (createErr || !created?.user) {
+    console.warn("[redeem-teacher] createUser error:", createErr?.message);
+    return { ok: false, message: createUserErrorMessage(createErr?.message) };
   }
   const userId = created.user.id;
 

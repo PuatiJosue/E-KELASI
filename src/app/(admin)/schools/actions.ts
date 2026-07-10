@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
+import { createUserErrorMessage } from "@/lib/auth-errors";
 
 type Result =
   | { ok: true; message: string; invite?: { code: string; school: string } }
@@ -191,7 +192,8 @@ export async function redeemSchoolCodeAction(args: {
     user_metadata: { full_name: row.director_name ?? undefined },
   });
   if (createErr || !created?.user) {
-    return { ok: false, message: "Impossible de créer le compte (email déjà utilisé ?)." };
+    console.warn("[redeem-school] createUser error:", createErr?.message);
+    return { ok: false, message: createUserErrorMessage(createErr?.message) };
   }
   const userId = created.user.id;
 
