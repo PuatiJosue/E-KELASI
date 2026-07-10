@@ -4,6 +4,7 @@
 // graphiques). Palette alignée sur le design system de l'app (statuts : vert =
 // encaissé/payé, rouge = impayé, ambre = partiel, brand = accent).
 
+import { createContext, useContext, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { money } from "./finance-export";
 
@@ -144,12 +145,28 @@ export function RecoveryBar({ pct }: { pct: number }) {
 }
 
 // ── Modale ───────────────────────────────────────────────────────────
-export function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
+// Contexte exposant l'état « agrandi » aux contenus de la modale (pour que les
+// zones défilantes puissent occuper toute la hauteur disponible).
+const ModalMaxContext = createContext(false);
+export const useModalMaximized = () => useContext(ModalMaxContext);
+
+export function Modal({ title, children, onClose, wide, maximizable }: { title: string; children: React.ReactNode | ((maximized: boolean) => React.ReactNode); onClose: () => void; wide?: boolean; maximizable?: boolean }) {
+  const [max, setMax] = useState(false);
+  const cardStyle: React.CSSProperties = max
+    ? { width: "96vw", maxWidth: 1200, height: "94vh" }
+    : { width: "100%", maxWidth: wide ? 620 : 460, maxHeight: "90vh" };
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 200, padding: 24, overflowY: "auto" }}>
-      <div onClick={(e) => e.stopPropagation()} className="ek-card" style={{ width: "100%", maxWidth: wide ? 620 : 460, padding: 22, display: "flex", flexDirection: "column", gap: 12, maxHeight: "90vh", overflowY: "auto" }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{title}</h3>
-        {children}
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 200, padding: max ? 12 : 24, overflowY: "auto" }}>
+      <div onClick={(e) => e.stopPropagation()} className="ek-card" style={{ ...cardStyle, padding: 22, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <h3 style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 16, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{title}</h3>
+          {maximizable && (
+            <button onClick={() => setMax((m) => !m)} title={max ? "Réduire" : "Agrandir"} className="ek-btn ek-btn-outline" style={{ height: 30, width: 30, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Icon name={max ? "minimize" : "maximize"} size={15} />
+            </button>
+          )}
+        </div>
+        <ModalMaxContext.Provider value={max}>{typeof children === "function" ? children(max) : children}</ModalMaxContext.Provider>
       </div>
     </div>
   );

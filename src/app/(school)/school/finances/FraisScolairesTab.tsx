@@ -312,7 +312,9 @@ function FeeDetailModal({ fee: initFee, school, year, onClose }: { fee: Fee; sch
   });
 
   return (
-    <Modal title={`${fee.label}${fee.classDisplay ? ` · ${fee.classDisplay}` : ""}`} onClose={onClose} wide>
+    <Modal title={`${fee.label}${fee.classDisplay ? ` · ${fee.classDisplay}` : ""}`} onClose={onClose} wide maximizable>
+      {(maximized) => (
+      <>
       {/* Résumé */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px,1fr))", gap: 1, background: "var(--border)", borderRadius: 10, overflow: "hidden" }}>
         <MiniStat label="Total / élève" value={money(fee.totalAmount, c)} color="var(--ink)" />
@@ -335,7 +337,7 @@ function FeeDetailModal({ fee: initFee, school, year, onClose }: { fee: Fee; sch
       {loading && !detail ? (
         <div style={{ padding: 20, color: "var(--ink-3)", fontSize: 13 }}>Chargement…</div>
       ) : (
-        <div className="ek-tablewrap" style={{ maxHeight: "42vh", overflowY: "auto" }}>
+        <div className="ek-tablewrap" style={maximized ? { flex: 1, minHeight: 0, overflowY: "auto" } : { maxHeight: "42vh", overflowY: "auto" }}>
           <div style={{ minWidth: 620 }}>
             <div style={{ display: "grid", gridTemplateColumns: DET_GRID, padding: "8px 4px", fontSize: 10, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.03em", borderBottom: "1px solid var(--divider)", position: "sticky", top: 0, background: "var(--surface)" }}>
               <div>Élève</div><div style={{ textAlign: "right" }}>Attendu</div><div style={{ textAlign: "right" }}>Payé</div><div style={{ textAlign: "right" }}>Reste</div><div>Statut</div><div style={{ textAlign: "center" }}>Actions</div>
@@ -378,6 +380,8 @@ function FeeDetailModal({ fee: initFee, school, year, onClose }: { fee: Fee; sch
       {payFor && <PaymentModal fee={fee} student={payFor} school={school} year={year} onClose={() => setPayFor(null)} onDone={() => { setPayFor(null); reload(); }} />}
       {ovrFor && <OverrideModal fee={fee} student={ovrFor} onClose={() => setOvrFor(null)} onDone={() => { setOvrFor(null); reload(); }} />}
       {histFor && <StudentHistoryModal fee={fee} student={histFor} school={school} year={year} onClose={() => setHistFor(null)} onChanged={reload} />}
+      </>
+      )}
     </Modal>
   );
 }
