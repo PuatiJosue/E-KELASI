@@ -112,6 +112,38 @@ export async function sendPaymentReminders(
   return { ok: true, sent };
 }
 
+// Envoie un message libre de la direction à une sélection de parents.
+// Même mécanisme que sendPaymentReminders (RPC start_conversation → conversation
+// 1:1 + notification), mais avec un sujet générique et un texte libre.
+export async function sendSchoolMessage(
+  parentIds: string[],
+  body: string
+): Promise<{ ok: true; sent: number } | { ok: false; message: string }> {
+  const text = body?.trim();
+  if (!text) return { ok: false, message: "Message vide." };
+  const ids = [...new Set((parentIds ?? []).filter(Boolean))];
+  if (ids.length === 0) return { ok: false, message: "Aucun parent sélectionné." };
+  if (!isLiveMode()) return { ok: true, sent: ids.length };
+
+  const c = await caller();
+  if (!c) return { ok: false, message: "Réservé à la direction." };
+
+  const session = createClient();
+  let sent = 0;
+  for (const pid of ids) {
+    const { error } = await (session.rpc as any)("start_conversation", {
+      p_other: pid,
+      p_subject: "Message de la direction",
+      p_body: text,
+    });
+    if (!error) sent++;
+  }
+  if (sent === 0) return { ok: false, message: "Envoi impossible." };
+
+  revalidatePath("/school/messages");
+  return { ok: true, sent };
+}
+
 // Répond dans une conversation (en tant que direction).
 export async function replyToConversation(conversationId: string, body: string): Promise<Result> {
   if (!conversationId || !body?.trim()) return { ok: false, message: "Message vide." };
