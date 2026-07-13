@@ -289,7 +289,7 @@ function CashClosure({ state, school }: { state: CashState; school: SchoolBrandi
           {state.recent.map((s, i) => (
             <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderTop: "1px solid var(--divider)", fontSize: 12.5 }}>
               <span style={{ flex: 1 }}>{new Date(s.sessionDate).toLocaleDateString("fr-FR")}{s.closedBy ? ` · ${s.closedBy}` : ""}</span>
-              <span style={{ fontWeight: 700, textAlign: "right" }}>{s.totals && Object.keys(s.totals.byCurrency).length ? Object.entries(s.totals.byCurrency).map(([cur, tt]) => <div key={cur} style={{ color: tt.solde >= 0 ? COLORS.collected : COLORS.remaining }}>{money(tt.solde, cur)}</div>) : <span style={{ color: "var(--ink-3)" }}>—</span>}</span>
+              <span style={{ fontWeight: 700, textAlign: "right" }}>{s.totals?.byCurrency && Object.keys(s.totals.byCurrency).length ? Object.entries(s.totals.byCurrency).map(([cur, tt]) => <div key={cur} style={{ color: tt.solde >= 0 ? COLORS.collected : COLORS.remaining }}>{money(tt.solde, cur)}</div>) : <span style={{ color: "var(--ink-3)" }}>—</span>}</span>
               <button onClick={() => setViewSession(s)} title="Rapport de clôture" style={iconBtn}><Icon name="file" size={14} /></button>
             </div>
           ))}

@@ -177,12 +177,43 @@ export type CashSession = {
   totals: CashTotals | null;
 };
 
+// Normalise le JSON `totals` brut vers une forme CashTotals toujours valide.
+// Les clôtures créées avant la refonte multi-devises peuvent contenir un objet
+// sans `byCurrency`/`currencies` : sans ça, un `Object.keys(totals.byCurrency)`
+// côté UI lève « Cannot convert undefined or null to object » et fait planter
+// tout l'onglet Trésorerie.
+function normalizeTotals(raw: any): CashTotals | null {
+  if (!raw || typeof raw !== "object") return null;
+  let byCurrency: Record<string, CashCurrencyTotals> =
+    raw.byCurrency && typeof raw.byCurrency === "object" ? raw.byCurrency : {};
+  // Rétrocompat : ancienne forme mono-devise (solde/currency/totalRecettes… à
+  // plat, sans byCurrency). On la reconstruit pour garder la clôture lisible.
+  if (Object.keys(byCurrency).length === 0 && typeof raw.currency === "string") {
+    byCurrency = {
+      [raw.currency]: {
+        recettesScolaires: raw.recettesScolaires ?? 0,
+        recettesAutres: raw.recettesAutres ?? 0,
+        recettesExceptionnelles: raw.recettesExceptionnelles ?? 0,
+        totalRecettes: raw.totalRecettes ?? 0,
+        totalDepenses: raw.totalDepenses ?? 0,
+        solde: raw.solde ?? 0,
+      },
+    };
+  }
+  return {
+    currencies: Array.isArray(raw.currencies) && raw.currencies.length ? raw.currencies : Object.keys(byCurrency),
+    byCurrency,
+    recettes: Array.isArray(raw.recettes) ? raw.recettes : [],
+    depenses: Array.isArray(raw.depenses) ? raw.depenses : [],
+  };
+}
+
 function mapSession(s: any): CashSession {
   return {
     id: s.id, sessionDate: s.session_date, status: s.status,
     openedBy: s.opener?.full_name ?? null, openedAt: s.opened_at,
     closedBy: s.closer?.full_name ?? null, closedAt: s.closed_at ?? null,
-    totals: (s.totals as CashTotals) ?? null,
+    totals: normalizeTotals(s.totals),
   };
 }
 const SESSION_SELECT = "id, session_date, status, opened_at, closed_at, totals, opener:opened_by(full_name), closer:closed_by(full_name)";
