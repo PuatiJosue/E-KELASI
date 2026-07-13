@@ -1,12 +1,26 @@
 import { PageHeader } from "@/components/KPI";
 import { Logo } from "@/components/Logo";
 import { listSchoolAnnouncements } from "@/lib/announce-db";
-import { getMySchool } from "@/lib/school-db";
-import { AnnouncementManager } from "./AnnouncementManager";
+import { getMySchool, listSchoolStudents } from "@/lib/school-db";
+import { classLabel, normOption, classKey } from "@/lib/classes";
+import { AnnouncementManager, type AnnounceClass } from "./AnnouncementManager";
 import { SignatureForm } from "../settings/SignatureForm";
 
 export default async function SchoolAnnouncements() {
-  const [announcements, school] = await Promise.all([listSchoolAnnouncements(), getMySchool()]);
+  const [announcements, school, students] = await Promise.all([
+    listSchoolAnnouncements(),
+    getMySchool(),
+    listSchoolStudents(),
+  ]);
+
+  // Classes distinctes (class_name + option) pour cibler une annonce.
+  const seen = new Map<string, AnnounceClass>();
+  for (const s of students) {
+    if (!s.className || s.className === "—") continue;
+    const key = classKey(s.className, s.option);
+    if (!seen.has(key)) seen.set(key, { className: s.className, option: normOption(s.option), display: classLabel(s.className, s.option) });
+  }
+  const classes = [...seen.values()].sort((a, b) => a.display.localeCompare(b.display, "fr", { numeric: true }));
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
@@ -32,7 +46,7 @@ export default async function SchoolAnnouncements() {
         </div>
       </div>
 
-      <AnnouncementManager announcements={announcements} />
+      <AnnouncementManager announcements={announcements} classes={classes} />
 
       {/* Signature électronique (utilisée pour signer bulletins & validations) */}
       <div className="ek-card" style={{ padding: 20 }}>

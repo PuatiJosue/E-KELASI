@@ -24,15 +24,20 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function AnnouncementManager({ announcements }: { announcements: Announcement[] }) {
+export type AnnounceClass = { className: string; option: string | null; display: string };
+
+export function AnnouncementManager({ announcements, classes = [] }: { announcements: Announcement[]; classes?: AnnounceClass[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [target, setTarget] = useState(""); // "" = toutes les classes, sinon classKey
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const targetClass = classes.find((c) => `${c.className}||${c.option ?? ""}` === target) ?? null;
 
   const pickFile = (f: File | null) => {
     setError(null);
@@ -47,9 +52,12 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
       const filePayload = file
         ? { name: file.name, type: file.type, dataBase64: await fileToBase64(file) }
         : undefined;
-      const r = await createAnnouncement({ title, body, eventDate: eventDate || undefined, file: filePayload });
+      const r = await createAnnouncement({
+        title, body, eventDate: eventDate || undefined, file: filePayload,
+        targetClassName: targetClass?.className, targetOption: targetClass?.option ?? null,
+      });
       if (r.ok) {
-        setTitle(""); setBody(""); setEventDate(""); setFile(null);
+        setTitle(""); setBody(""); setEventDate(""); setTarget(""); setFile(null);
         if (fileRef.current) fileRef.current.value = "";
         router.refresh();
       } else setError(r.message);
@@ -86,6 +94,19 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
           style={{ ...inp, resize: "vertical" as const }}
         />
         <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+          {classes.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-2)", marginBottom: 4 }}>
+                <T fr="Destinataires" en="Recipients" />
+              </div>
+              <select value={target} onChange={(e) => setTarget(e.target.value)} style={{ ...inp, width: 210 }}>
+                <option value="">🏫 Toutes les classes</option>
+                {classes.map((c) => (
+                  <option key={`${c.className}||${c.option ?? ""}`} value={`${c.className}||${c.option ?? ""}`}>{c.display}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-2)", marginBottom: 4 }}>
               <T fr="Date de l'événement (optionnel)" en="Event date (optional)" />
@@ -119,7 +140,9 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
         </div>
         {error && <div style={{ color: "var(--danger)", fontSize: 12, fontWeight: 600 }}>{error}</div>}
         <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>
-          <T fr="Tous les parents de l'école recevront une notification dans l'application." en="All school parents will get a notification in the app." />
+          {targetClass
+            ? `Seuls les parents de la classe « ${targetClass.display} » recevront une notification dans l'application.`
+            : <T fr="Tous les parents de l'école recevront une notification dans l'application." en="All school parents will get a notification in the app." />}
         </div>
       </div>
 

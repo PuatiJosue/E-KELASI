@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
+import { normOption } from "@/lib/classes";
 import { renderAnnouncementPdf } from "@/lib/announcement-pdf";
 
 type Result = { ok: true } | { ok: false; message: string };
@@ -38,6 +39,8 @@ export async function createAnnouncement(input: {
   body: string;
   eventDate?: string;
   file?: { name: string; type: string; dataBase64: string };
+  targetClassName?: string;   // undefined = toutes les classes
+  targetOption?: string | null;
 }): Promise<Result> {
   const title = input.title?.trim();
   const body = input.body?.trim();
@@ -119,13 +122,20 @@ export async function createAnnouncement(input: {
   }
 
   // Notifie les parents des élèves actifs de l'école (best effort), avec le PDF.
+  // Si une classe cible est fournie, on restreint aux élèves de cette classe.
   try {
-    const { data: students } = await svc
+    let sq = svc
       .from("students")
-      .select("id")
+      .select("id, class_name, option")
       .eq("school_id", c.schoolId)
       .eq("status", "active");
-    const studentIds = (students ?? []).map((s: any) => s.id);
+    if (input.targetClassName) sq = sq.eq("class_name", input.targetClassName);
+    const { data: students } = await sq;
+    const wantOption = normOption(input.targetOption ?? null);
+    const filtered = input.targetClassName
+      ? (students ?? []).filter((s: any) => normOption(s.option) === wantOption)
+      : (students ?? []);
+    const studentIds = filtered.map((s: any) => s.id);
     if (studentIds.length > 0) {
       const { data: links } = await svc
         .from("parent_links")
