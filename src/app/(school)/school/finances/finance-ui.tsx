@@ -4,7 +4,7 @@
 // graphiques). Palette alignée sur le design system de l'app (statuts : vert =
 // encaissé/payé, rouge = impayé, ambre = partiel, brand = accent).
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { money } from "./finance-export";
 
@@ -152,12 +152,21 @@ export const useModalMaximized = () => useContext(ModalMaxContext);
 
 export function Modal({ title, children, onClose, wide, maximizable }: { title: string; children: React.ReactNode | ((maximized: boolean) => React.ReactNode); onClose: () => void; wide?: boolean; maximizable?: boolean }) {
   const [max, setMax] = useState(false);
+  // Ne ferme sur le fond que si le geste COMMENCE et FINIT sur le fond. Sinon,
+  // effacer/sélectionner le texte d'un champ (relâchement de la souris hors du
+  // champ, sur le fond) émettait un « click » sur le fond et fermait la fenêtre
+  // d'encodage par accident (Chrome + Firefox).
+  const downOnBackdrop = useRef(false);
   const cardStyle: React.CSSProperties = max
     ? { width: "96vw", maxWidth: 1200, height: "94vh" }
     : { width: "100%", maxWidth: wide ? 620 : 460, maxHeight: "90vh" };
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 200, padding: max ? 12 : 24, overflowY: "auto" }}>
-      <div onClick={(e) => e.stopPropagation()} className="ek-card" style={{ ...cardStyle, padding: 22, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+    <div
+      onMouseDown={(e) => { downOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={(e) => { if (e.target === e.currentTarget && downOnBackdrop.current) onClose(); }}
+      style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 200, padding: max ? 12 : 24, overflowY: "auto" }}
+    >
+      <div className="ek-card" style={{ ...cardStyle, padding: 22, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <h3 style={{ flex: 1, minWidth: 0, margin: 0, fontSize: 16, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>{title}</h3>
           {maximizable && (
