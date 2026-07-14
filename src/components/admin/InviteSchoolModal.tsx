@@ -76,7 +76,7 @@ function InviteSchoolModal({ onClose }: { onClose: () => void }) {
       <div
         onClick={(e) => e.stopPropagation()}
         className="ek-card"
-        style={{ width: "100%", maxWidth: 480, padding: 24 }}
+        style={{ width: "100%", maxWidth: 480, padding: 24, maxHeight: "90vh", overflowY: "auto" }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
           <h2
