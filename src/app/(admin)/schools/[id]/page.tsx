@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader, KPI } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
+import { SchoolArchiveButton } from "@/components/admin/SchoolArchiveButton";
 import { getSchoolDossier } from "@/lib/db";
 
 const STATUS_LABEL: Record<string, { fr: string; cls: string }> = {
@@ -48,7 +49,17 @@ export default async function SchoolDossierPage({ params }: { params: { id: stri
       <PageHeader
         title={{ fr: d.name, en: d.name }}
         sub={{ fr: `${d.city}${d.directorName ? ` · Direction : ${d.directorName}` : ""}`, en: `${d.city}${d.directorName ? ` · Director: ${d.directorName}` : ""}` }}
-        right={<span className={`ek-chip ${st.cls}`}>{st.fr}</span>}
+        right={
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span className={`ek-chip ${st.cls}`}>{st.fr}</span>
+            <SchoolArchiveButton
+              schoolId={params.id}
+              schoolName={d.name}
+              archived={d.status === "churned"}
+              students={d.counts.students}
+            />
+          </div>
+        }
       />
 
       {/* KPI */}

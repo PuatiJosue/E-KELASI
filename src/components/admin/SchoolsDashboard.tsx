@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { KPI } from "@/components/KPI";
 import { Donut, MRRChart } from "@/components/Charts";
@@ -22,7 +22,16 @@ const STATUS_LABEL: Record<string, { fr: string; en: string; cls: string }> = {
 export function SchoolsDashboard({ data }: { data: SchoolsAdminOverview }) {
   const lang = useLang();
   const frEn = (fr: string, en: string) => (lang === "en" ? en : fr);
-  const { kpis, schools, distribution, dailyActivity, recentDocuments } = data;
+  const { kpis, schools: allSchools, distribution, dailyActivity, recentDocuments } = data;
+
+  // Les écoles archivées (statut « Partie ») sortent de la liste par défaut,
+  // sans disparaître : on peut les réafficher pour les rouvrir ou les réactiver.
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = useMemo(() => allSchools.filter((s) => s.status === "churned").length, [allSchools]);
+  const schools = useMemo(
+    () => (showArchived ? allSchools : allSchools.filter((s) => s.status !== "churned")),
+    [allSchools, showArchived]
+  );
 
   const totals = useMemo(
     () => ({
@@ -180,6 +189,12 @@ tfoot td{font-weight:700;border-top:2px solid #1a1410}</style></head><body>
           <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>
             <T fr="Toutes les écoles" en="All schools" />
           </div>
+          {archivedCount > 0 && (
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--ink-3)", cursor: "pointer" }}>
+              <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+              {frEn(`Afficher les archivées (${archivedCount})`, `Show archived (${archivedCount})`)}
+            </label>
+          )}
           <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
             <button onClick={exportCsv} disabled={schools.length === 0} className="ek-btn ek-btn-outline" style={{ height: 34, fontSize: 12, opacity: schools.length === 0 ? 0.5 : 1 }}>
               <Icon name="download" size={13} /> Excel

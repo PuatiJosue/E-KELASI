@@ -154,6 +154,45 @@ export async function inviteSchoolAction(formData: FormData): Promise<Result> {
   return { ok: false, message: "Trop de collisions de code, réessaie." };
 }
 
+// ── Archivage d'une école ────────────────────────────────────────────
+// Volontairement PAS de suppression : `schools` est référencée par 36 tables
+// en `on delete cascade` (une suppression effacerait élèves, notes, paiements
+// et factures sans retour) et `students.school_id` est en `on delete restrict`,
+// ce qui bloquerait de toute façon toute école ayant un élève. On bascule donc
+// le statut sur 'churned' : l'école sort de la liste active, rien n'est perdu,
+// et l'opération se défait.
+export async function setSchoolArchivedAction(
+  schoolId: string,
+  archived: boolean
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!schoolId) return { ok: false, message: "École invalide." };
+  if (!isLiveMode()) return { ok: true };
+
+  // Sécurité : on passe ensuite par le service_role, donc l'appelant doit être
+  // verrouillé ici (même contrôle que inviteSchoolAction).
+  const session = createClient();
+  const { data: { user } } = await session.auth.getUser();
+  if (!user) return { ok: false, message: "Non authentifié." };
+  const { data: me } = await session
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (me?.role !== "super_admin") {
+    return { ok: false, message: "Action réservée au super admin." };
+  }
+
+  const { error } = await service()
+    .from("schools")
+    .update({ status: archived ? "churned" : "active", updated_at: new Date().toISOString() })
+    .eq("id", schoolId);
+  if (error) return { ok: false, message: "Mise à jour impossible." };
+
+  revalidatePath("/schools");
+  revalidatePath(`/schools/${schoolId}`);
+  return { ok: true };
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // L'école consomme son code d'accès sur /school-signup pour créer son compte
