@@ -383,28 +383,60 @@ export type FeePayment = {
   currency: string;
   label: string | null;
   paidAt: string;
+  invoiceNo: string | null;
   receiptUrl: string | null;
 };
 
-// Historique des paiements de frais de l'enfant (RLS parent — migration 0051).
+// Historique des paiements de frais de l'enfant, fusionné depuis deux sources :
+//  - `fee_payments` : table unique des encaissements depuis la refonte Finance
+//    v2 (0069). C'est là que va tout nouveau paiement. RLS parent ouverte par
+//    0072 — avant ça l'écran restait vide alors que la notification arrivait.
+//  - `student_fee_payments` : table v1, laissée intacte par 0069 et plus
+//    alimentée, mais elle garde l'historique d'avant la refonte (RLS 0051).
+// Les paiements annulés sont exclus côté policy (0072), pas ici.
 export async function listChildFees(childId?: string): Promise<FeePayment[]> {
   if (!isLiveMode || !supabase) return [];
   try {
     const id = childId ?? (await getChild())?.id;
     if (!id) return [];
-    const { data } = await supabase
-      .from("student_fee_payments")
-      .select("id, amount, currency, label, paid_at, receipt_url")
-      .eq("student_id", id)
-      .order("paid_at", { ascending: false });
-    return (data ?? []).map((f: any) => ({
+    const [v2, v1] = await Promise.all([
+      supabase
+        .from("fee_payments")
+        .select("id, amount, currency, paid_at, invoice_no, note, fees(label), fee_installments(name)")
+        .eq("student_id", id)
+        .order("paid_at", { ascending: false }),
+      supabase
+        .from("student_fee_payments")
+        .select("id, amount, currency, label, paid_at, receipt_url")
+        .eq("student_id", id)
+        .order("paid_at", { ascending: false }),
+    ]);
+    // PostgREST renvoie une jointure « to-one » tantôt en objet, tantôt en
+    // tableau d'un élément selon la détection de la clé étrangère : on accepte
+    // les deux, sinon le libellé retomberait silencieusement sur la note.
+    const one = (rel: any) => (Array.isArray(rel) ? rel[0] : rel);
+    const fromV2: FeePayment[] = (v2.data ?? []).map((f: any) => ({
+      id: f.id as string,
+      amount: Number(f.amount) || 0,
+      currency: (f.currency as string) || "USD",
+      // Même composition que la facture imprimée par l'école : frais · tranche.
+      label:
+        [one(f.fees)?.label, one(f.fee_installments)?.name].filter(Boolean).join(" · ") ||
+        ((f.note as string) ?? null),
+      paidAt: f.paid_at as string,
+      invoiceNo: (f.invoice_no as string) ?? null,
+      receiptUrl: null,
+    }));
+    const fromV1: FeePayment[] = (v1.data ?? []).map((f: any) => ({
       id: f.id as string,
       amount: Number(f.amount) || 0,
       currency: (f.currency as string) || "USD",
       label: (f.label as string) ?? null,
       paidAt: f.paid_at as string,
+      invoiceNo: null,
       receiptUrl: (f.receipt_url as string) ?? null,
     }));
+    return [...fromV2, ...fromV1].sort((a, b) => (a.paidAt < b.paidAt ? 1 : -1));
   } catch {
     return [];
   }

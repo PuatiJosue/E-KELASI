@@ -103,7 +103,10 @@ export default function Paiements() {
                       <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: t.ink, fontFamily: fonts.bodyBold }}>
                         {f.label || tr({ fr: "Paiement", en: "Payment" })}
                       </Text>
-                      <Text style={{ fontSize: 12, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>{fmtDate(f.paidAt)}</Text>
+                      <Text style={{ fontSize: 12, color: t.ink3, marginTop: 1, fontFamily: fonts.body }}>
+                        {fmtDate(f.paidAt)}
+                        {f.invoiceNo ? ` · ${tr({ fr: "Facture", en: "Invoice" })} n° ${f.invoiceNo}` : ""}
+                      </Text>
                       {f.receiptUrl && (
                         <Pressable onPress={() => Linking.openURL(f.receiptUrl!).catch(() => {})} hitSlop={6} style={{ marginTop: 4 }}>
                           <Text style={{ fontSize: 12, color: t.brand600, fontWeight: "600", fontFamily: fonts.bodyBold }}>
