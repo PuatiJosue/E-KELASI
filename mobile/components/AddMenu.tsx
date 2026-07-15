@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { View, Text, Pressable, Modal } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Icon } from "@/components/Icon";
 import { useTheme, fonts } from "@/lib/theme";
@@ -18,6 +19,9 @@ export function AddMenu({ size = 36 }: { size?: number }) {
   const tr = useT();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // Voir notifications.tsx : une Modal n'hérite pas des insets, et Android
+  // dessine sous la barre de navigation.
+  const insets = useSafeAreaInsets();
 
   const go = (route: string) => {
     setOpen(false);
@@ -35,7 +39,7 @@ export function AddMenu({ size = 36 }: { size?: number }) {
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
-          <Pressable onPress={() => {}} style={{ backgroundColor: t.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 16, paddingBottom: 34, gap: 8 }}>
+          <Pressable onPress={() => {}} style={{ backgroundColor: t.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 16, paddingBottom: Math.max(34, insets.bottom + 16), gap: 8 }}>
             <View style={{ alignItems: "center", marginBottom: 6 }}>
               <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: t.border }} />
             </View>

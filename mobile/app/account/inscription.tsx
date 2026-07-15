@@ -1,5 +1,5 @@
 import { View, Text, TextInput, ScrollView, Pressable, Modal, ActivityIndicator, Image } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
@@ -287,6 +287,8 @@ function PhotoPick({ label, uri, onPick }: { label: string; uri: string | null; 
 }
 function PickerField({ value, placeholder, groups, onChange, title }: { value: string; placeholder: string; groups: { group: string; items: string[] }[]; onChange: (v: string) => void; title: string }) {
   const t = useTheme();
+  // Voir notifications.tsx : une Modal n.hérite pas des insets du SafeAreaView.
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -296,7 +298,7 @@ function PickerField({ value, placeholder, groups, onChange, title }: { value: s
       </Pressable>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
-          <Pressable onPress={() => {}} style={{ backgroundColor: t.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "75%", paddingBottom: 24 }}>
+          <Pressable onPress={() => {}} style={{ backgroundColor: t.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "75%", paddingBottom: Math.max(24, insets.bottom + 16) }}>
             <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: t.divider, flexDirection: "row", alignItems: "center" }}>
               <Text style={{ flex: 1, fontSize: 16, fontWeight: "700", color: t.ink, fontFamily: fonts.display }}>{title}</Text>
               <Pressable onPress={() => setOpen(false)}><Icon name="close" size={20} color={t.ink3} /></Pressable>

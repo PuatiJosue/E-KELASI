@@ -2,7 +2,7 @@
 // affichage du nom de l'école et du nom du directeur (informatif).
 
 import { View, Text, ScrollView, Pressable, Modal, ActivityIndicator, Linking, Alert } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 
@@ -20,6 +20,8 @@ export default function ContactTab() {
   const t = useTheme();
   const tr = useT();
   const router = useRouter();
+  // Voir notifications.tsx : une Modal n'hérite pas des insets du SafeAreaView.
+  const insets = useSafeAreaInsets();
   const { selectedChild } = useChildren();
 
   const [schools, setSchools] = useState<School[] | null>(null);
@@ -203,7 +205,7 @@ export default function ContactTab() {
       {/* Menu déroulant des écoles */}
       <Modal visible={pickerOpen} transparent animationType="fade" onRequestClose={() => setPickerOpen(false)}>
         <Pressable onPress={() => setPickerOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
-          <Pressable onPress={() => {}} style={{ backgroundColor: t.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingTop: 12, paddingBottom: 30, maxHeight: "70%" }}>
+          <Pressable onPress={() => {}} style={{ backgroundColor: t.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingTop: 12, paddingBottom: Math.max(30, insets.bottom + 16), maxHeight: "70%" }}>
             <View style={{ alignItems: "center", marginBottom: 8 }}>
               <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: t.border }} />
             </View>

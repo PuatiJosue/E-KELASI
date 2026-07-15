@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Linking, RefreshControl, Modal } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Linking, RefreshControl, Modal, useWindowDimensions } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -30,6 +30,12 @@ function dayLabel(iso: string) {
 export default function NotificationsScreen() {
   const t = useTheme();
   const router = useRouter();
+  // Android dessine sous la barre de navigation (edge-to-edge, imposé depuis
+  // SDK 54) et une Modal n'hérite pas des insets du SafeAreaView : sans ça le
+  // bas des sheets passe derrière la barre et le texte est coupé.
+  const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
+  const sheetPadBottom = Math.max(34, insets.bottom + 16);
   const [notifs, setNotifs] = useState<Notification[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState<Notification | null>(null);
@@ -159,7 +165,7 @@ export default function NotificationsScreen() {
       {/* Détail d'une notification : ouvre le texte complet + pièce jointe. */}
       <Modal visible={selected !== null} transparent animationType="slide" onRequestClose={() => setSelected(null)}>
         <Pressable onPress={() => setSelected(null)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
-          <Pressable onPress={(e) => e.stopPropagation()} style={{ backgroundColor: t.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 22, paddingBottom: 34, gap: 14 }}>
+          <Pressable onPress={(e) => e.stopPropagation()} style={{ backgroundColor: t.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 22, paddingBottom: sheetPadBottom, gap: 14, maxHeight: winH * 0.8 }}>
             {selected && (
               <>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -172,7 +178,10 @@ export default function NotificationsScreen() {
                   </Pressable>
                 </View>
 
-                <Text style={{ fontSize: 15, color: t.ink, lineHeight: 22, fontFamily: fonts.body }}>{selected.text}</Text>
+                {/* Défilable : une annonce longue dépasserait sinon l'écran. */}
+                <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 2 }}>
+                  <Text style={{ fontSize: 15, color: t.ink, lineHeight: 22, fontFamily: fonts.body }}>{selected.text}</Text>
+                </ScrollView>
 
                 {selected.fileUrl ? (
                   <Pressable
@@ -194,7 +203,7 @@ export default function NotificationsScreen() {
       {/* Menu « … » d'une notification : supprimer. */}
       <Modal visible={menuFor !== null} transparent animationType="fade" onRequestClose={() => setMenuFor(null)}>
         <Pressable onPress={() => setMenuFor(null)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}>
-          <Pressable onPress={(e) => e.stopPropagation()} style={{ backgroundColor: t.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 12, paddingBottom: 34 }}>
+          <Pressable onPress={(e) => e.stopPropagation()} style={{ backgroundColor: t.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 12, paddingBottom: sheetPadBottom }}>
             <Pressable
               onPress={() => menuFor && remove(menuFor)}
               style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, paddingHorizontal: 12 }}
