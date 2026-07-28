@@ -1286,7 +1286,7 @@ export type Database = {
         | "unpaid"
       ticket_priority: "P0" | "P1" | "P2" | "P3"
       ticket_status: "new" | "pending" | "waiting" | "resolved"
-      user_role: "super_admin" | "school_admin" | "teacher" | "parent"
+      user_role: "super_admin" | "school_admin" | "teacher" | "surveillant" | "parent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1440,7 +1440,7 @@ export const Constants = {
       ],
       ticket_priority: ["P0", "P1", "P2", "P3"],
       ticket_status: ["new", "pending", "waiting", "resolved"],
-      user_role: ["super_admin", "school_admin", "teacher", "parent"],
+      user_role: ["super_admin", "school_admin", "teacher", "surveillant", "parent"],
     },
   },
 } as const

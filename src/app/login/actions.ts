@@ -55,9 +55,10 @@ export async function loginAction(formData: FormData) {
   if (role === "teacher") redirect("/teacher/dashboard");
   if (role === "school_admin") redirect("/school/overview");
   if (role === "super_admin") redirect("/overview");
+  if (role === "surveillant") redirect("/surveillant/presences");
 
-  // Parent ou compte sans rôle : l'espace web est réservé aux écoles et profs.
+  // Parent ou compte sans rôle : l'espace web est réservé au personnel scolaire.
   // On déconnecte et on informe (les parents utilisent l'app mobile).
   await supabase.auth.signOut();
-  redirect(`/login?error=${encodeURIComponent("Espace réservé aux écoles et aux professeurs. Les parents utilisent l'application mobile E-KLASS.")}`);
+  redirect(`/login?error=${encodeURIComponent("Espace réservé aux écoles et au personnel scolaire. Les parents utilisent l'application mobile E-KLASS.")}`);
 }

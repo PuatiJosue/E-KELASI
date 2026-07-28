@@ -17,16 +17,24 @@ const STATUSES: { key: string; fr: string; en: string; color: string }[] = [
 ];
 const labelOf = (k: string) => STATUSES.find((s) => s.key === k);
 
+type SaveResult = { ok: true } | { ok: false; message: string };
+
 export function StudentAttendanceManager({
   students,
   date,
   attendance,
   schoolName,
+  basePath = "/school/student-attendance",
+  saveAction = setStudentAttendance,
 }: {
   students: StudentLite[];
   date: string;
   attendance: StudentDayAttendance;
   schoolName: string;
+  /** Route de la page qui affiche ce tableau (navigation par date). */
+  basePath?: string;
+  /** Action d'enregistrement — la direction et le surveillant ont la leur. */
+  saveAction?: (studentId: string, date: string, status: string) => Promise<SaveResult>;
 }) {
   const router = useRouter();
   const lang = useLang();
@@ -49,14 +57,14 @@ export function StudentAttendanceManager({
 
   const changeDate = (d: string) => {
     const sp = new URLSearchParams({ date: d });
-    router.push(`/school/student-attendance?${sp.toString()}`);
+    router.push(`${basePath}?${sp.toString()}`);
   };
 
   const mark = (studentId: string, status: string) => {
     setMarks((prev) => ({ ...prev, [studentId]: status }));
     setSavingId(studentId);
     startTransition(async () => {
-      const r = await setStudentAttendance(studentId, date, status);
+      const r = await saveAction(studentId, date, status);
       setSavingId(null);
       if (!r.ok) {
         alert(r.message);

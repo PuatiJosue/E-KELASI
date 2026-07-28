@@ -108,9 +108,11 @@ export function StaffManager({
                 <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
                   <button onClick={() => setEditing(s)} style={linkBtn}>Modifier</button>
                 </div>
-                {s.category === "enseignant" && (
+                {/* Seuls enseignants et surveillants ont un espace dans l'app. */}
+                {(s.category === "enseignant" || s.category === "surveillant") && (
                   <AccessCodeControl
                     staffId={s.id}
+                    category={s.category}
                     linked={!!s.linkedUserId}
                     pending={pendingSet.has(s.id)}
                     onChanged={() => router.refresh()}
@@ -152,15 +154,20 @@ function Pill({ on, onClick, label }: { on: boolean; onClick: () => void; label:
   );
 }
 
-// Code d'accès généré depuis la fiche enseignant (déjà remplie par la direction).
+// Code d'accès généré depuis la fiche (déjà remplie par la direction) d'un
+// enseignant ou d'un surveillant.
 function AccessCodeControl({
-  staffId, linked, pending, onChanged,
+  staffId, category, linked, pending, onChanged,
 }: {
   staffId: string;
+  category: string;
   linked: boolean;
   pending: boolean;
   onChanged: () => void;
 }) {
+  const isSurveillant = category === "surveillant";
+  const signupPath = isSurveillant ? "/surveillant-signup" : "/teacher-signup";
+  const who = isSurveillant ? "au surveillant" : "au prof";
   const [busy, startTransition] = useTransition();
   const [code, setCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -216,7 +223,9 @@ function AccessCodeControl({
         <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>Un code est en attente (affiché une seule fois à la génération).</div>
       )}
       {code && (
-        <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>À remettre au prof. Affiché une seule fois.</div>
+        <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>
+          À remettre {who}, à utiliser sur <strong>{signupPath}</strong>. Affiché une seule fois.
+        </div>
       )}
       {error && <div style={{ fontSize: 11, color: "var(--danger)", fontWeight: 600 }}>{error}</div>}
     </div>

@@ -69,15 +69,21 @@ export type StudentDayAttendance = Record<string, string>; // studentId -> statu
 
 // Tous les élèves actifs de l'école (groupés côté UI par classe).
 export async function listStudentsForAttendance(): Promise<StudentLite[]> {
-  if (!isLiveMode()) return [];
+  const school = await getMySchool();
+  if (!school) return [];
+  return listStudentsForAttendanceOf(school.id);
+}
+
+// Même chose pour une école donnée — utilisé par l'espace surveillant, qui
+// résout son école autrement que la direction.
+export async function listStudentsForAttendanceOf(schoolId: string): Promise<StudentLite[]> {
+  if (!isLiveMode() || !schoolId) return [];
   try {
-    const school = await getMySchool();
-    if (!school) return [];
     const svc = service();
     const { data } = await svc
       .from("students")
       .select("id, full_name, class_name, option, matricule, sex")
-      .eq("school_id", school.id)
+      .eq("school_id", schoolId)
       .eq("status", "active")
       .order("class_name")
       .order("option")
@@ -98,15 +104,19 @@ export async function listStudentsForAttendance(): Promise<StudentLite[]> {
 
 // Statuts de présence des élèves de l'école pour une date donnée.
 export async function getStudentAttendanceForDate(date: string): Promise<StudentDayAttendance> {
-  if (!isLiveMode()) return {};
+  const school = await getMySchool();
+  if (!school) return {};
+  return getStudentAttendanceForDateOf(school.id, date);
+}
+
+export async function getStudentAttendanceForDateOf(schoolId: string, date: string): Promise<StudentDayAttendance> {
+  if (!isLiveMode() || !schoolId) return {};
   try {
-    const school = await getMySchool();
-    if (!school) return {};
     const svc = service();
     const { data } = await svc
       .from("student_attendance")
       .select("student_id, status")
-      .eq("school_id", school.id)
+      .eq("school_id", schoolId)
       .eq("date", date);
     const map: StudentDayAttendance = {};
     for (const r of data ?? []) map[(r as any).student_id] = (r as any).status;

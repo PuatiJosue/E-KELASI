@@ -54,16 +54,18 @@ export async function middleware(request: NextRequest) {
   // une route protégée et renverrait vers /login.
   const isTeacherRoute = path === "/teacher" || path.startsWith("/teacher/");
   const isSchoolRoute = path === "/school" || path.startsWith("/school/");
+  // Même précaution que pour /teacher : ne pas capturer "/surveillant-signup".
+  const isSurveillantRoute = path === "/surveillant" || path.startsWith("/surveillant/");
 
   // Gate : ces routes demandent une session.
-  if ((isAdminRoute || isTeacherRoute || isSchoolRoute) && !user) {
+  if ((isAdminRoute || isTeacherRoute || isSchoolRoute || isSurveillantRoute) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
   // Cross-role : empêche un user d'accéder à un espace qui n'est pas le sien.
-  if (user && (isAdminRoute || isTeacherRoute || isSchoolRoute)) {
+  if (user && (isAdminRoute || isTeacherRoute || isSchoolRoute || isSurveillantRoute)) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -75,12 +77,14 @@ export async function middleware(request: NextRequest) {
       super_admin: "/overview",
       teacher: "/teacher/dashboard",
       school_admin: "/school/overview",
+      surveillant: "/surveillant/presences",
     };
 
     const allowed =
       (isAdminRoute && role === "super_admin") ||
       (isTeacherRoute && (role === "teacher" || role === "super_admin")) ||
-      (isSchoolRoute && (role === "school_admin" || role === "super_admin"));
+      (isSchoolRoute && (role === "school_admin" || role === "super_admin")) ||
+      (isSurveillantRoute && (role === "surveillant" || role === "super_admin"));
 
     // Non autorisé : on redirige vers son espace s'il a un rôle, sinon vers
     // /login (comptes parents/sans rôle ne doivent jamais voir la console).

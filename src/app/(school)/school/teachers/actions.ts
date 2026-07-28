@@ -44,7 +44,14 @@ async function callerSchoolId(): Promise<string | null> {
   return staff?.school_id ?? null;
 }
 
-// ── 1. École : générer un code d'accès DEPUIS la fiche du prof ───────
+// Catégorie de la fiche personnel → rôle applicatif ouvert par le code.
+// Seuls les enseignants et les surveillants ont un espace dans l'app.
+const ROLE_BY_CATEGORY: Record<string, "teacher" | "surveillant"> = {
+  enseignant: "teacher",
+  surveillant: "surveillant",
+};
+
+// ── 1. École : générer un code d'accès DEPUIS la fiche du personnel ──
 // La direction a déjà rempli la fiche (identité, cours, classes, options) ;
 // on génère un code rattaché à cette fiche, pré-rempli avec son identité.
 // Régénération : tout code en attente pour cette fiche est d'abord révoqué.
@@ -66,8 +73,9 @@ export async function generateCodeForStaffAction(staffId: string): Promise<GenRe
     .eq("school_id", schoolId)
     .maybeSingle();
   if (!member) return { ok: false, message: "Fiche introuvable." };
-  if (member.linked_user_id) return { ok: false, message: "Ce prof a déjà un compte actif." };
-  if (member.category !== "enseignant") return { ok: false, message: "Réservé aux enseignants." };
+  if (member.linked_user_id) return { ok: false, message: "Cette personne a déjà un compte actif." };
+  const role = ROLE_BY_CATEGORY[member.category ?? ""];
+  if (!role) return { ok: false, message: "Réservé aux enseignants et aux surveillants." };
   if (!member.full_name?.trim()) return { ok: false, message: "Complétez d'abord le nom de la fiche." };
 
   // Révoque un éventuel code en attente pour cette fiche (régénération).
@@ -81,6 +89,7 @@ export async function generateCodeForStaffAction(staffId: string): Promise<GenRe
       staff_id: staffId,
       full_name: member.full_name,
       address: member.address ?? null,
+      role,
       created_by: user?.id ?? null,
     });
     if (!error) {
@@ -114,13 +123,16 @@ export async function revokeStaffCodeAction(staffId: string): Promise<{ ok: true
   return { ok: true };
 }
 
-// ── 2. Prof : consommer un code pour créer son compte ────────────────
+// ── 2. Prof / surveillant : consommer un code pour créer son compte ──
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function redeemTeacherCodeAction(args: {
   code: string;
   email: string;
   password: string;
+  /** Rôle attendu par la page d'inscription (garde-fou : un code prof ne peut
+   *  pas créer un compte surveillant, et inversement). Défaut : prof. */
+  expectedRole?: "teacher" | "surveillant";
 }): Promise<RedeemResult> {
   const code = (args.code ?? "").trim().toUpperCase();
   const email = (args.email ?? "").trim().toLowerCase();
@@ -136,7 +148,7 @@ export async function redeemTeacherCodeAction(args: {
   // 1. Vérifie le code (encore non consommé)
   const { data: row, error: rowErr } = await admin
     .from("teacher_access_codes")
-    .select("code, school_id, staff_id, full_name, address, redeemed_at")
+    .select("code, school_id, staff_id, full_name, address, role, redeemed_at")
     .eq("code", code)
     .maybeSingle();
   if (rowErr) {
@@ -145,6 +157,19 @@ export async function redeemTeacherCodeAction(args: {
   }
   if (!row) return { ok: false, message: "Code inconnu." };
   if (row.redeemed_at) return { ok: false, message: "Code déjà utilisé." };
+
+  // Le code porte le rôle qu'il ouvre (colonne ajoutée en 0075 ; les codes
+  // antérieurs sont des codes prof).
+  const codeRole: "teacher" | "surveillant" = (row as any).role === "surveillant" ? "surveillant" : "teacher";
+  const expected = args.expectedRole ?? "teacher";
+  if (codeRole !== expected) {
+    return {
+      ok: false,
+      message: expected === "surveillant"
+        ? "Ce code est un code professeur. Utilisez la page d'inscription des professeurs."
+        : "Ce code est un code surveillant. Utilisez la page d'inscription des surveillants.",
+    };
+  }
 
   // 2. Crée l'utilisateur Supabase Auth
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
@@ -158,23 +183,23 @@ export async function redeemTeacherCodeAction(args: {
   }
   const userId = created.user.id;
 
-  // 3. Profil prof + lien school_staff (service_role contourne la RLS et le
+  // 3. Profil + lien school_staff (service_role contourne la RLS et le
   //    trigger lock_profile_role accepte service_role pour le rôle).
-  await admin.from("profiles").upsert({
+  //    Cast : 'surveillant' est ajouté à l'enum user_role par la migration 0074,
+  //    les types Supabase générés ne le connaissent pas encore.
+  await (admin.from("profiles").upsert as any)({
     id: userId,
     email,
     full_name: row.full_name,
     address: row.address,
-    role: "teacher",
+    role: codeRole,
     locale: "fr",
   });
 
-  const { error: staffErr } = await admin
-    .from("school_staff")
-    .upsert(
-      { school_id: row.school_id, user_id: userId, role: "teacher" },
-      { onConflict: "school_id,user_id" }
-    );
+  const { error: staffErr } = await (admin.from("school_staff").upsert as any)(
+    { school_id: row.school_id, user_id: userId, role: codeRole },
+    { onConflict: "school_id,user_id" }
+  );
   if (staffErr) {
     console.warn("[redeem-teacher] staff upsert error:", staffErr.message);
     return { ok: false, message: "Liaison à l'école échouée." };

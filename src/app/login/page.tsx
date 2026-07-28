@@ -24,6 +24,12 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
               S&apos;inscrire ici
             </Link>
           </span>
+          <span>
+            Surveillant avec un code d&apos;accès ?{" "}
+            <Link href="/surveillant-signup" style={{ color: "var(--brand-600)", fontWeight: 700 }}>
+              S&apos;inscrire ici
+            </Link>
+          </span>
         </div>
       }
     >
