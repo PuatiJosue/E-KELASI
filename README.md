@@ -116,10 +116,11 @@ Tokens et palette repris de [`e-kelasi/project/tokens.css`](e-kelasi/project/tok
 
 ## Prochaines étapes
 
-- [ ] Découper les derniers gros composants clients (`FraisScolairesTab`,
-      `TimetableManager`, `StudentFormModal`, `StaffManager`)
+- [ ] Découper les composants restants au-dessus de ~300 lignes
+      (`TresorerieTab`, `MessagesManager`, `PreferencesCard`, `GradesEntryForm`)
 - [ ] Typer le client `service_role` avec `Database` (aujourd'hui volontairement non typé)
-- [ ] Étendre la couverture de tests au-delà des utilitaires purs
+- [ ] Étendre la couverture de tests au-delà des utilitaires purs — les écrans
+      n'ont aujourd'hui aucun test, seuls `tsc` et le build protègent des régressions
 
 ---
 
