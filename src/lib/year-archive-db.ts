@@ -1,17 +1,9 @@
 // Lecture des archives de fin d'année (instantané durable, table
 // student_year_archives). Service role ; scope école via getMySchool.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 
 export type ArchiveBulletin = {
   trimester: number;
@@ -53,7 +45,7 @@ export async function getArchiveYears(): Promise<string[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc.from("student_year_archives").select("school_year").eq("school_id", school.id);
     return [...new Set((data ?? []).map((r: any) => r.school_year))].sort().reverse();
   } catch { return []; }
@@ -64,7 +56,7 @@ export async function getArchiveClasses(year: string): Promise<ArchiveClass[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc.from("student_year_archives").select("class_name").eq("school_id", school.id).eq("school_year", year);
     const counts = new Map<string, number>();
     for (const r of (data ?? []) as any[]) { const n = r.class_name ?? "—"; counts.set(n, (counts.get(n) ?? 0) + 1); }
@@ -77,7 +69,7 @@ export async function getArchiveStudents(year: string, className: string): Promi
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("student_year_archives")
       .select("id, full_name, class_name, payload")
@@ -92,7 +84,7 @@ export async function getStudentArchive(id: string): Promise<StudentArchive | nu
   try {
     const school = await getMySchool();
     if (!school) return null;
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("student_year_archives")
       .select("id, full_name, class_name, school_year, payload")

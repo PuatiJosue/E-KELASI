@@ -1,19 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
+import type { Result } from "@/lib/result";
 
-type Result = { ok: true } | { ok: false; message: string };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 async function caller(): Promise<string | null> {
   const session = createClient();
@@ -38,7 +30,7 @@ export async function addPlatformVideo(input: {
 
   const uid = await caller();
   if (!uid) return { ok: false, message: "Réservé à l'équipe E-KLASS." };
-  const svc = service();
+  const svc = serviceClient();
 
   const { data: video, error } = await svc.from("platform_videos").insert({
     title,
@@ -66,7 +58,7 @@ export async function deletePlatformVideo(id: string): Promise<Result> {
   if (!isLiveMode()) return { ok: true };
   const uid = await caller();
   if (!uid) return { ok: false, message: "Réservé à l'équipe E-KLASS." };
-  const { error } = await service().from("platform_videos").delete().eq("id", id);
+  const { error } = await serviceClient().from("platform_videos").delete().eq("id", id);
   if (error) return { ok: false, message: "Suppression impossible." };
   revalidatePath("/videos");
   return { ok: true };

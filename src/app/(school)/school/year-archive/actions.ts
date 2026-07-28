@@ -1,14 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import { classLabel } from "@/lib/classes";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import {
   getArchiveClasses, getArchiveStudents, getStudentArchive,
   type ArchivePayload, type ArchiveClass, type ArchiveStudentLite, type StudentArchive,
 } from "@/lib/year-archive-db";
+import { requireSchoolAdmin } from "@/lib/auth/guards";
 
 // Wrappers server-action pour la consultation des archives (Option 1) côté client.
 export async function loadArchiveClasses(year: string): Promise<ArchiveClass[]> {
@@ -21,28 +22,6 @@ export async function loadStudentArchive(id: string): Promise<StudentArchive | n
   return getStudentArchive(id);
 }
 
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
-async function caller(): Promise<{ userId: string; schoolId: string } | null> {
-  const session = createClient();
-  const { data: { user } } = await session.auth.getUser();
-  if (!user) return null;
-  const { data: staff } = await session
-    .from("school_staff")
-    .select("school_id")
-    .eq("user_id", user.id)
-    .eq("role", "school_admin")
-    .maybeSingle();
-  if (!staff?.school_id) return null;
-  return { userId: user.id, schoolId: staff.school_id };
-}
-
 // ── Option 1 — Archiver l'année (instantané durable, classé par classe) ──
 export async function archiveYearSnapshot(
   schoolYear: string
@@ -51,9 +30,9 @@ export async function archiveYearSnapshot(
   if (!year) return { ok: false, message: "Indiquez l'année scolaire à archiver." };
   if (!isLiveMode()) return { ok: true, count: 0 };
 
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
 
   const { data: students } = await svc
     .from("students")
@@ -151,10 +130,10 @@ export async function archiveSchoolYearAction(args: { confirm: string }): Promis
   }
   if (!isLiveMode()) return { ok: true, gradesArchived: 0, homeworkArchived: 0 };
 
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
 
-  const svc = service();
+  const svc = serviceClient();
 
   // Garde-fou : exiger d'avoir archivé l'année (Option 1) d'abord.
   const { count: archived } = await svc

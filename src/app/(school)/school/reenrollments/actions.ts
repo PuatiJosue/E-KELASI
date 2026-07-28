@@ -2,39 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { randomBytes } from "crypto";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { serviceClient } from "@/lib/supabase/service";
+import { isLiveMode } from "@/lib/env";
+import { requireSchoolAdmin } from "@/lib/auth/guards";
+import type { Result } from "@/lib/result";
 
-type Result = { ok: true } | { ok: false; message: string };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
-async function caller(): Promise<{ userId: string; schoolId: string } | null> {
-  const session = createClient();
-  const { data: { user } } = await session.auth.getUser();
-  if (!user) return null;
-  const { data: staff } = await session
-    .from("school_staff")
-    .select("school_id")
-    .eq("user_id", user.id)
-    .eq("role", "school_admin")
-    .maybeSingle();
-  if (!staff?.school_id) return null;
-  return { userId: user.id, schoolId: staff.school_id };
-}
 
 export async function setSchoolYearAction(year: string): Promise<Result> {
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc.from("schools").update({ current_year: year.trim() || null }).eq("id", c.schoolId);
   if (error) return { ok: false, message: "Enregistrement impossible." };
   revalidatePath("/school/reenrollments");
@@ -44,9 +22,9 @@ export async function setSchoolYearAction(year: string): Promise<Result> {
 export async function validateReenrollment(id: string, extra: { label: string; value: string }[]): Promise<Result> {
   if (!id) return { ok: false, message: "Demande invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
 
   const { data: rr } = await svc
     .from("reenrollments")
@@ -129,9 +107,9 @@ export async function rejectReenrollment(id: string, comment: string): Promise<R
   if (!id) return { ok: false, message: "Demande invalide." };
   if (!comment?.trim()) return { ok: false, message: "Indiquez un motif de rejet." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { data: rr } = await svc
     .from("reenrollments")
     .select("student_id")

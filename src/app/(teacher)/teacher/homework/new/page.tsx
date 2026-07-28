@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/KPI";
 import { T } from "@/lib/i18n";
-import { listTeacherClasses, listTeacherSubjects } from "@/lib/teacher-db";
+import { listTeacherClasses } from "@/lib/teacher/classes";
+import { listTeacherSubjects } from "@/lib/teacher/profile";
 import { NewHomeworkForm } from "@/components/teacher/NewHomeworkForm";
 
 export default async function NewHomeworkPage() {

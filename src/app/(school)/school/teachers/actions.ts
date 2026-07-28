@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { createUserErrorMessage } from "@/lib/auth-errors";
 
 type GenResult =
@@ -13,14 +13,6 @@ type GenResult =
 type RedeemResult =
   | { ok: true }
   | { ok: false; message: string };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 // Alphabet sans caractères ambigus (0/O, 1/I/L) pour faciliter la dictée.
 const ALPHABET = "ACDEFGHJKMNPQRTVWXY3479";
@@ -63,7 +55,7 @@ export async function generateCodeForStaffAction(staffId: string): Promise<GenRe
   if (!schoolId) return { ok: false, message: "Action réservée à la direction." };
 
   const { data: { user } } = await createClient().auth.getUser();
-  const admin = service();
+  const admin = serviceClient();
 
   // Lit la fiche (service role) en vérifiant qu'elle appartient à l'école.
   const { data: member } = await admin
@@ -111,7 +103,7 @@ export async function revokeStaffCodeAction(staffId: string): Promise<{ ok: true
   if (!isLiveMode()) return { ok: true };
   const schoolId = await callerSchoolId();
   if (!schoolId) return { ok: false, message: "Action réservée à la direction." };
-  const admin = service();
+  const admin = serviceClient();
   const { error } = await admin
     .from("teacher_access_codes")
     .delete()
@@ -143,7 +135,7 @@ export async function redeemTeacherCodeAction(args: {
 
   if (!isLiveMode()) return { ok: true };
 
-  const admin = service();
+  const admin = serviceClient();
 
   // 1. Vérifie le code (encore non consommé)
   const { data: row, error: rowErr } = await admin

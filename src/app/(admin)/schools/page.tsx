@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/KPI";
-import { getSchoolsAdminOverview } from "@/lib/db";
+import { getSchoolsAdminOverview } from "@/lib/admin/schools";
 import { SchoolsDashboard } from "@/components/admin/SchoolsDashboard";
 
 export default async function SchoolsPage() {

@@ -7,7 +7,7 @@ import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
 import { ClassPicker } from "@/components/school/ClassPicker";
 import { T } from "@/lib/i18n";
-import type { SchoolStudentRow } from "@/lib/school-db";
+import type { SchoolStudentRow } from "@/lib/school/people";
 
 export function StudentsBrowser({ students }: { students: SchoolStudentRow[] }) {
   const [query, setQuery] = useState("");

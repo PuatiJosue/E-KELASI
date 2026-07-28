@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { T } from "@/lib/i18n";
-import type { TeacherSubject } from "@/lib/teacher-db";
+import type { TeacherSubject } from "@/lib/teacher/profile";
 import { createHomeworkAction } from "@/app/(teacher)/teacher/homework/actions";
 
 export function NewHomeworkForm({ classes, subjects }: { classes: string[]; subjects: TeacherSubject[] }) {

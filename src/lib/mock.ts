@@ -13,17 +13,6 @@ export const MOCK_TOP_SCHOOLS = [
   { name: "École les Acacias",    city: "Yaoundé, CM",  parents: 156, mrr: "$1 560", growth: "+18%" },
 ];
 
-export const MOCK_SCHOOLS = [
-  { name: "Lycée Albert-Camus",   city: "Dakar, SN",    plan: "Pro",      parents: 312, teachers: 48, mrr: "$3 120", status: "active",     since: "Sept 2024" },
-  { name: "École Sainte-Thérèse", city: "Montréal, CA", plan: "Pro",      parents: 286, teachers: 36, mrr: "$2 860", status: "active",     since: "Janv 2025" },
-  { name: "Institut Lumière",     city: "Abidjan, CI",  plan: "Standard", parents: 224, teachers: 31, mrr: "$2 240", status: "active",     since: "Mars 2025" },
-  { name: "Collège Saint-Joseph", city: "Lyon, FR",     plan: "Standard", parents: 198, teachers: 28, mrr: "$1 980", status: "active",     since: "Sept 2025" },
-  { name: "École les Acacias",    city: "Yaoundé, CM",  plan: "Standard", parents: 156, teachers: 22, mrr: "$1 560", status: "trial",      since: "Mai 2026" },
-  { name: "Lycée Lumière",        city: "Casablanca, MA", plan: "Pro",    parents: 0,   teachers: 0,  mrr: "—",      status: "onboarding", since: "Mai 2026" },
-  { name: "École Tunis-Centre",   city: "Tunis, TN",    plan: "Standard", parents: 89,  teachers: 14, mrr: "$890",   status: "active",     since: "Nov 2025" },
-  { name: "Collège Mermoz",       city: "Nouakchott, MR", plan: "Standard", parents: 132, teachers: 19, mrr: "$1 320", status: "active",   since: "Avr 2025" },
-];
-
 export type PaymentRow = {
   parent: string;
   plan: "Essentiel" | "Famille" | "Premium";

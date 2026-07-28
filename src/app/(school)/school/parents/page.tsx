@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
 import { T } from "@/lib/i18n";
-import { listSchoolParents } from "@/lib/school-db";
+import { listSchoolParents } from "@/lib/school/people";
 import { ParentAccessButton } from "./ParentAccessButton";
 
 export default async function SchoolParents() {

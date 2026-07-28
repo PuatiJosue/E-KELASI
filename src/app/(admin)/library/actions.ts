@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
+import type { Result } from "@/lib/result";
 
-type Result = { ok: true } | { ok: false; message: string };
 
 async function requireSuperAdmin() {
   const supabase = createClient();

@@ -7,7 +7,8 @@ import { Icon } from "@/components/Icon";
 import { KPI } from "@/components/KPI";
 import { T } from "@/lib/i18n";
 import { CoursesManager } from "../courses/CoursesManager";
-import type { ClassDirectoryRow, SchoolTeacherRow, ClassReportMatrix, ClassReportLevel } from "@/lib/school-db";
+import type { ClassDirectoryRow, ClassReportMatrix, ClassReportLevel } from "@/lib/school/classes";
+import type { SchoolTeacherRow } from "@/lib/school/people";
 import type { Assignment, FormOptions } from "@/lib/courses-db";
 
 type Tab = "overview" | "profs" | "cours";

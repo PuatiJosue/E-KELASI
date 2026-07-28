@@ -1,17 +1,9 @@
 // Couche données — agenda de la direction (événements internes affichés sur la
 // vue d'ensemble « Aujourd'hui »). Lecture via service_role, scope école.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 
 export type SchoolEvent = {
   id: string;
@@ -29,7 +21,7 @@ export async function listUpcomingEvents(limit = 6): Promise<SchoolEvent[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     const { data } = await svc

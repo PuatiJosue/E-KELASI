@@ -1,16 +1,8 @@
 // Couche données — attribution des cours (Lot D2). Service role, scope école.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 
 export type Assignment = {
   id: string;
@@ -35,7 +27,7 @@ export async function listAssignments(): Promise<Assignment[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("course_assignments")
       .select("id, staff_id, subject_id, class_name, option, weekly_hours, staff_members(full_name), subjects(name)")
@@ -61,7 +53,7 @@ export async function listFormOptions(): Promise<FormOptions> {
   try {
     const school = await getMySchool();
     if (!school) return { teachers: [], subjects: [], classes: [], options: [] };
-    const svc = service();
+    const svc = serviceClient();
     const [{ data: staff }, { data: subjects }, { data: students }] = await Promise.all([
       svc.from("staff_members").select("id, full_name, category").eq("school_id", school.id).order("full_name"),
       svc.from("subjects").select("id, name").eq("school_id", school.id).order("name"),

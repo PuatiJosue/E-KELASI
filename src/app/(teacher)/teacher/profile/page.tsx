@@ -2,7 +2,8 @@ import { PageHeader } from "@/components/KPI";
 import { ProfileAvatarUploader } from "@/components/ProfileAvatarUploader";
 import { ProfileEditForm } from "@/components/ProfileEditForm";
 import { T } from "@/lib/i18n";
-import { getTeacherProfile, getTeacherSchool, listTeacherClasses } from "@/lib/teacher-db";
+import { getTeacherProfile, getTeacherSchool } from "@/lib/teacher/profile";
+import { listTeacherClasses } from "@/lib/teacher/classes";
 
 export default async function TeacherProfilePage() {
   const [profile, school, classes] = await Promise.all([

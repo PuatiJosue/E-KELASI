@@ -1,19 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
+import type { MessageResult as Result } from "@/lib/result";
 
-type Result = { ok: true; message: string } | { ok: false; message: string };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -32,7 +24,7 @@ export async function updateProfileAction(formData: FormData): Promise<Result> {
   const { data: { user } } = await session.auth.getUser();
   if (!user) return { ok: false, message: "Non authentifié." };
 
-  const svc = service();
+  const svc = serviceClient();
 
   if (email !== (user.email ?? "").toLowerCase()) {
     const { error: authErr } = await svc.auth.admin.updateUserById(user.id, {

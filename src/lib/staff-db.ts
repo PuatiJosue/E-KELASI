@@ -1,27 +1,19 @@
 // Couche données — fiches du personnel (Lot D1). Lecture via service role
 // (table hors types générés ; scope école via getMySchool).
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 import type { StaffMember } from "@/lib/staff-types";
 
 export type { StaffMember } from "@/lib/staff-types";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 export async function listStaff(): Promise<StaffMember[]> {
   if (!isLiveMode()) return [];
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("staff_members")
       .select("id, full_name, last_name, middle_name, first_name, category, phone, email, qualifications, hire_date, status, photo_url, address, notes, linked_user_id")
@@ -55,7 +47,7 @@ export async function listPendingCodeStaffIds(): Promise<string[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("teacher_access_codes")
       .select("staff_id")

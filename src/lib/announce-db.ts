@@ -1,17 +1,9 @@
 // Couche données — annonces de l'école (Lot C). Lecture via service role
 // (table hors types générés ; scope école via getMySchool).
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 
 export type Announcement = {
   id: string;
@@ -53,7 +45,7 @@ export async function getSchoolActivity(limit = 6): Promise<ActivityItem[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
 
     const [grades, homework, announces] = await Promise.all([
       svc
@@ -139,7 +131,7 @@ export async function listSchoolAnnouncements(): Promise<Announcement[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("announcements")
       .select("id, title, body, event_date, created_at, attachment_url, attachment_name")

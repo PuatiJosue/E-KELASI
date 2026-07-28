@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
-import { listTeacherHomework } from "@/lib/teacher-db";
+import { listTeacherHomework } from "@/lib/teacher/homework";
 import { DeleteHomeworkButton } from "./DeleteHomeworkButton";
 
 const STATUS_LABEL: Record<string, { fr: string; en: string; tone: string }> = {

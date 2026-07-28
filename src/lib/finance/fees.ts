@@ -3,21 +3,13 @@
 // Source unique : les encaissements vivent dans `fee_payments`. Attendu / encaissé
 // / restant / impayés / % de recouvrement sont TOUJOURS calculés ici, jamais saisis.
 // Accès via le client service (scope garanti par getMySchool + filtre school_id),
-// comme le reste du module (voir src/lib/finance-db.ts).
+// comme le reste du module.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
 import { classLabel, normOption } from "@/lib/classes";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { schoolYearLabel } from "@/lib/trimester";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 export type FeeKind = "scolaire" | "autre";
 export type FeeStudentStatus = "paye" | "partiel" | "impaye";
@@ -92,7 +84,7 @@ const statusOf = (expected: number, paid: number): FeeStudentStatus =>
 
 // Élèves actifs ciblés par un frais (classe précise ou école entière si class null).
 async function targetStudents(
-  svc: ReturnType<typeof service>,
+  svc: ReturnType<typeof serviceClient>,
   schoolId: string,
   className: string | null,
   option: string | null
@@ -140,7 +132,7 @@ export async function getFeesOverview(kind: FeeKind, year?: string): Promise<Fee
   try {
     const school = await getMySchool();
     if (!school) return emptyOverview(year);
-    const svc = service();
+    const svc = serviceClient();
     const yr = year || school.currentYear || schoolYearLabel();
 
     const { data: feeRows } = await svc
@@ -218,7 +210,7 @@ export async function getFeeDetail(feeId: string): Promise<FeeDetail | null> {
   try {
     const school = await getMySchool();
     if (!school || !feeId) return null;
-    const svc = service();
+    const svc = serviceClient();
 
     const { data: f } = await svc
       .from("fees")

@@ -5,9 +5,9 @@ import { ProfileEditForm } from "@/components/ProfileEditForm";
 import { PreferencesCard } from "@/components/settings/PreferencesCard";
 import { SignatureForm } from "./SignatureForm";
 import { T } from "@/lib/i18n";
-import { getMySchool } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 
 async function getMyProfile() {
   if (!isLiveMode()) return { name: "Direction", email: "direction@ekelasi.demo", avatarUrl: null };

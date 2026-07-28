@@ -1,16 +1,8 @@
 // Couche données — réinscriptions (Lot E1). Service role, scope école.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 
 export type Reenrollment = {
   id: string;
@@ -36,7 +28,7 @@ export async function listReenrollments(status?: string): Promise<Reenrollment[]
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     let q = svc
       .from("reenrollments")
       .select("id, student_id, school_year, mode, requested_class, option, student_data, parent_data, extra, status, comment, verify_code, signed_by, created_at, students(full_name, class_name)")
@@ -71,7 +63,7 @@ export async function listReenrollments(status?: string): Promise<Reenrollment[]
 export async function getReenrollmentByCode(code: string) {
   if (!isLiveMode()) return null;
   try {
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("reenrollments")
       .select(
@@ -112,7 +104,7 @@ export async function countPendingReenrollments(): Promise<number> {
   try {
     const school = await getMySchool();
     if (!school) return 0;
-    const svc = service();
+    const svc = serviceClient();
     const { count } = await svc
       .from("reenrollments")
       .select("*", { count: "exact", head: true })

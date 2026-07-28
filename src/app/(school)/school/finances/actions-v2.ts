@@ -1,40 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { serviceClient } from "@/lib/supabase/service";
+import { isLiveMode } from "@/lib/env";
 import { getFeeDetail, type FeeDetail, type FeeKind } from "@/lib/finance/fees";
 import { listFeePayments, type FeePayment } from "@/lib/finance/payments";
 import { computeDayTotals, getCashState, type TreasuryKind, type CashState } from "@/lib/finance/treasury";
 import { getClassReport, getStudentReport, type ClassReport, type StudentReport } from "@/lib/finance/reports";
+import { requireSchoolAdmin } from "@/lib/auth/guards";
+import type { Result } from "@/lib/result";
 
-type Result = { ok: true } | { ok: false; message: string };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
-async function caller(): Promise<{ schoolId: string; userId: string } | null> {
-  const session = createClient();
-  const { data: { user } } = await session.auth.getUser();
-  if (!user) return null;
-  const { data: staff } = await session
-    .from("school_staff")
-    .select("school_id")
-    .eq("user_id", user.id)
-    .eq("role", "school_admin")
-    .maybeSingle();
-  if (!staff?.school_id) return null;
-  return { schoolId: staff.school_id, userId: user.id };
-}
 
 // Nombre de paiements NON annulés attachés à un frais (verrou modification/suppression).
-async function feePaymentCount(svc: ReturnType<typeof service>, schoolId: string, feeId: string): Promise<number> {
+async function feePaymentCount(svc: ReturnType<typeof serviceClient>, schoolId: string, feeId: string): Promise<number> {
   const { count } = await svc
     .from("fee_payments")
     .select("id", { count: "exact", head: true })
@@ -81,9 +59,9 @@ export async function createFee(input: {
   if (!label) return { ok: false, message: "Libellé du frais requis." };
   if (input.kind === "scolaire" && !input.className) return { ok: false, message: "Choisissez une classe." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
 
   const { count } = await svc.from("fees").select("id", { count: "exact", head: true }).eq("school_id", c.schoolId).eq("kind", input.kind);
   const { data: fee, error } = await (svc.from("fees").insert as any)({
@@ -124,9 +102,9 @@ export async function updateFee(input: {
   // (category persistée ci-dessous)
   if (!input.id) return { ok: false, message: "Frais invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
 
   // La modification reste autorisée même si des paiements existent (l'UI demande
   // confirmation). Seule la suppression est interdite dans ce cas (voir deleteFee).
@@ -158,9 +136,9 @@ export async function updateFee(input: {
 export async function deleteFee(id: string): Promise<Result> {
   if (!id) return { ok: false, message: "Frais invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   if (await feePaymentCount(svc, c.schoolId, id) > 0)
     return { ok: false, message: "Suppression impossible : des paiements existent. Archivez plutôt le frais." };
   const { error } = await svc.from("fees").delete().eq("id", id).eq("school_id", c.schoolId);
@@ -172,9 +150,9 @@ export async function deleteFee(id: string): Promise<Result> {
 export async function archiveFee(id: string, archived: boolean): Promise<Result> {
   if (!id) return { ok: false, message: "Frais invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await (svc.from("fees").update as any)({ archived }).eq("id", id).eq("school_id", c.schoolId);
   if (error) return { ok: false, message: "Opération impossible." };
   revalidatePath("/school/finances");
@@ -186,9 +164,9 @@ export async function setFeeOverride(input: { feeId: string; studentId: string; 
   if (!input.feeId || !input.studentId) return { ok: false, message: "Frais ou élève invalide." };
   if (input.amount < 0) return { ok: false, message: "Montant invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await (svc.from("fee_overrides").upsert as any)({
     school_id: c.schoolId, fee_id: input.feeId, student_id: input.studentId,
     amount: input.amount, reason: input.reason?.trim() || null,
@@ -201,9 +179,9 @@ export async function setFeeOverride(input: { feeId: string; studentId: string; 
 export async function removeFeeOverride(feeId: string, studentId: string): Promise<Result> {
   if (!feeId || !studentId) return { ok: false, message: "Invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc.from("fee_overrides").delete().eq("fee_id", feeId).eq("student_id", studentId).eq("school_id", c.schoolId);
   if (error) return { ok: false, message: "Opération impossible." };
   revalidatePath("/school/finances");
@@ -225,9 +203,9 @@ export async function recordFeePayment(input: {
   if (!input.feeId || !input.studentId) return { ok: false, message: "Frais ou élève invalide." };
   if (!(input.amount > 0)) return { ok: false, message: "Montant invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
 
   const { error } = await (svc.from("fee_payments").insert as any)({
     school_id: c.schoolId, fee_id: input.feeId, student_id: input.studentId,
@@ -249,9 +227,9 @@ export async function cancelFeePayment(id: string, reason: string): Promise<Resu
   if (!id) return { ok: false, message: "Paiement invalide." };
   if (!reason?.trim()) return { ok: false, message: "Motif d'annulation requis." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await (svc.from("fee_payments").update as any)({
     cancelled_at: new Date().toISOString(), cancel_reason: reason.trim(), cancelled_by: c.userId,
   }).eq("id", id).eq("school_id", c.schoolId).is("cancelled_at", null);
@@ -278,9 +256,9 @@ export async function addTreasuryEntry(input: {
   if (!(input.amount > 0)) return { ok: false, message: "Montant invalide." };
   if (!input.label?.trim()) return { ok: false, message: "Libellé requis." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await (svc.from("treasury_entries").insert as any)({
     school_id: c.schoolId, kind: input.kind, amount: input.amount, currency: input.currency || "CDF",
     label: input.label.trim(), category: input.category?.trim() || null,
@@ -305,9 +283,9 @@ export async function updateTreasuryEntry(input: {
   if (!(input.amount > 0)) return { ok: false, message: "Montant invalide." };
   if (!input.label?.trim()) return { ok: false, message: "Libellé requis." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await (svc.from("treasury_entries").update as any)({
     amount: input.amount, currency: input.currency || "CDF", label: input.label.trim(),
     category: input.category?.trim() || null, entry_date: input.entryDate?.trim() || undefined, note: input.note?.trim() || null,
@@ -324,9 +302,9 @@ export async function cancelTreasuryEntry(id: string, reason: string): Promise<R
   if (!id) return { ok: false, message: "Écriture invalide." };
   if (!reason?.trim()) return { ok: false, message: "Motif d'annulation requis." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await (svc.from("treasury_entries").update as any)({
     cancelled_at: new Date().toISOString(), cancel_reason: reason.trim(), cancelled_by: c.userId,
   }).eq("id", id).eq("school_id", c.schoolId).is("cancelled_at", null);
@@ -341,9 +319,9 @@ export async function cancelTreasuryEntry(id: string, reason: string): Promise<R
 // ── Clôture quotidienne de caisse ────────────────────────────────────
 export async function openCashSession(): Promise<Result> {
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const today = new Date().toISOString().slice(0, 10);
   const { data: existing } = await svc.from("cash_sessions").select("id, status").eq("school_id", c.schoolId).eq("session_date", today).maybeSingle();
   if (existing) return { ok: false, message: (existing as any).status === "closed" ? "La caisse du jour est déjà clôturée." : "Une caisse est déjà ouverte." };
@@ -358,9 +336,9 @@ export async function openCashSession(): Promise<Result> {
 export async function closeCashSession(sessionId: string): Promise<Result> {
   if (!sessionId) return { ok: false, message: "Session invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { data: sess } = await svc.from("cash_sessions").select("id, session_date, status").eq("id", sessionId).eq("school_id", c.schoolId).maybeSingle();
   if (!sess) return { ok: false, message: "Session introuvable." };
   if ((sess as any).status === "closed") return { ok: false, message: "Caisse déjà clôturée." };
@@ -380,9 +358,9 @@ export async function reopenCashSession(sessionId: string, reason: string): Prom
   if (!sessionId) return { ok: false, message: "Session invalide." };
   if (!reason?.trim()) return { ok: false, message: "Motif requis." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await (svc.from("cash_sessions").update as any)({
     status: "open", closed_by: null, closed_at: null,
   }).eq("id", sessionId).eq("school_id", c.schoolId).eq("status", "closed");
@@ -398,9 +376,9 @@ export async function reopenCashSession(sessionId: string, reason: string): Prom
 export async function sendInvoiceToParent(input: { studentId: string; feeLabel: string; amount: number; currency: string; invoiceNo?: string }): Promise<Result> {
   if (!input.studentId) return { ok: false, message: "Élève invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   try {
     const { data: links } = await svc.from("parent_links").select("parent_id").eq("student_id", input.studentId);
     const parentIds = [...new Set((links ?? []).map((l: any) => l.parent_id).filter(Boolean))];

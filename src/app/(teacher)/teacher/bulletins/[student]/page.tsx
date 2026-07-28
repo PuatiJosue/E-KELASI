@@ -4,7 +4,7 @@ import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { SchoolLetterhead } from "@/components/school/SchoolLetterhead";
 import { BulletinTable } from "@/components/school/BulletinTable";
-import { getTeacherStudentBulletin } from "@/lib/teacher-db";
+import { getTeacherStudentBulletin } from "@/lib/teacher/bulletins";
 import { getBulletinDraft } from "@/lib/bulletin-actions";
 import { TRIMESTERS, currentTrimester, trimesterMeta, schoolYearLabel } from "@/lib/trimester";
 

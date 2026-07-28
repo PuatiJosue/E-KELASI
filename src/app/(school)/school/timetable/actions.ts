@@ -1,33 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { serviceClient } from "@/lib/supabase/service";
+import { isLiveMode } from "@/lib/env";
+import { requireSchoolAdmin } from "@/lib/auth/guards";
+import type { Result } from "@/lib/result";
 
-type Result = { ok: true } | { ok: false; message: string };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
-async function caller(): Promise<{ userId: string; schoolId: string } | null> {
-  const session = createClient();
-  const { data: { user } } = await session.auth.getUser();
-  if (!user) return null;
-  const { data: staff } = await session
-    .from("school_staff")
-    .select("school_id")
-    .eq("user_id", user.id)
-    .eq("role", "school_admin")
-    .maybeSingle();
-  if (!staff?.school_id) return null;
-  return { userId: user.id, schoolId: staff.school_id };
-}
 
 export type TimetableRowInput = {
   day: number;
@@ -84,10 +62,10 @@ export async function saveClassTimetable(input: {
   if (invalid) return { ok: false, message: invalid };
   if (!isLiveMode()) return { ok: true };
 
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
 
-  const svc = service();
+  const svc = serviceClient();
   const { error: delErr } = await svc
     .from("timetable_slots")
     .delete()
@@ -119,10 +97,10 @@ export async function duplicateClassTimetable(input: {
   if (invalid) return { ok: false, message: invalid };
   if (!isLiveMode()) return { ok: true };
 
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
 
-  const svc = service();
+  const svc = serviceClient();
   for (const cls of targets) {
     const { error: delErr } = await svc
       .from("timetable_slots")
@@ -144,9 +122,9 @@ export async function deleteClassTimetable(className: string): Promise<Result> {
   const cls = className?.trim();
   if (!cls) return { ok: false, message: "Classe invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const { error } = await service()
+  const { error } = await serviceClient()
     .from("timetable_slots")
     .delete()
     .eq("school_id", c.schoolId)
@@ -160,9 +138,9 @@ export async function deleteClassTimetable(className: string): Promise<Result> {
 export async function publishClassTimetable(className: string, publish: boolean): Promise<Result> {
   if (!className?.trim()) return { ok: false, message: "Classe invalide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const { error } = await service()
+  const { error } = await serviceClient()
     .from("timetable_slots")
     .update({ published: publish })
     .eq("school_id", c.schoolId)

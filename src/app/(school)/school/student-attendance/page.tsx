@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { listStudentsForAttendance, getStudentAttendanceForDate } from "@/lib/attendance-db";
-import { getMySchool } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
 import { listSchoolClassNames } from "@/lib/content-db";
 import { StudentAttendanceManager } from "@/components/school/StudentAttendanceManager";
 import { AddStudentButton } from "@/components/school/AddStudentButton";

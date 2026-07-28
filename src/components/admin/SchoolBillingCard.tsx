@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { SCHOOL_PAYMENT_METHODS, PAYMENT_METHOD_LABEL, type SchoolPaymentMethod } from "@/lib/school-payment-methods";
 import { markSchoolPaid, unmarkSchoolPaid, setSchoolSuspended } from "@/app/(admin)/schools/billing-actions";
-import type { SchoolBilling } from "@/lib/db";
+import type { SchoolBilling } from "@/lib/admin/school-dossier";
 
 export function SchoolBillingCard({
   schoolId,

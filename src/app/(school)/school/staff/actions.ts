@@ -1,34 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { serviceClient } from "@/lib/supabase/service";
+import { isLiveMode } from "@/lib/env";
 import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
 import { composeFullName } from "@/lib/staff-types";
+import { requireSchoolAdminId } from "@/lib/auth/guards";
+import type { Result } from "@/lib/result";
 
-type Result = { ok: true } | { ok: false; message: string };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
-async function callerSchoolId(): Promise<string | null> {
-  const session = createClient();
-  const { data: { user } } = await session.auth.getUser();
-  if (!user) return null;
-  const { data: staff } = await session
-    .from("school_staff")
-    .select("school_id")
-    .eq("user_id", user.id)
-    .eq("role", "school_admin")
-    .maybeSingle();
-  return staff?.school_id ?? null;
-}
 
 export type StaffInput = {
   fullName: string;
@@ -55,7 +34,7 @@ export type CourseInput = {
 };
 
 // Remplace les attributions de cours du membre par la liste fournie (ajout/retrait/édition).
-async function syncCourses(svc: ReturnType<typeof service>, schoolId: string, staffId: string, courses: CourseInput[]) {
+async function syncCourses(svc: ReturnType<typeof serviceClient>, schoolId: string, staffId: string, courses: CourseInput[]) {
   await svc.from("course_assignments").delete().eq("school_id", schoolId).eq("staff_id", staffId);
   const valid = courses.filter((c) => c.subjectName?.trim() && c.className?.trim());
   for (const c of valid) {
@@ -95,9 +74,9 @@ function toRow(input: StaffInput) {
 export async function createStaff(input: StaffInput, courses?: CourseInput[]): Promise<Result> {
   if (!input.fullName?.trim()) return { ok: false, message: "Le nom est requis." };
   if (!isLiveMode()) return { ok: true };
-  const schoolId = await callerSchoolId();
+  const schoolId = await requireSchoolAdminId();
   if (!schoolId) return { ok: false, message: "Action réservée à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { data: created, error } = await svc
     .from("staff_members")
     .insert({ school_id: schoolId, ...toRow(input) })
@@ -115,9 +94,9 @@ export async function updateStaff(id: string, input: StaffInput, courses?: Cours
   if (!id) return { ok: false, message: "Fiche invalide." };
   if (!input.fullName?.trim()) return { ok: false, message: "Le nom est requis." };
   if (!isLiveMode()) return { ok: true };
-  const schoolId = await callerSchoolId();
+  const schoolId = await requireSchoolAdminId();
   if (!schoolId) return { ok: false, message: "Action réservée à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc.from("staff_members").update(toRow(input)).eq("id", id).eq("school_id", schoolId);
   if (error) return { ok: false, message: "Mise à jour impossible." };
   if (courses) await syncCourses(svc, schoolId, id, courses);
@@ -130,9 +109,9 @@ export async function updateStaff(id: string, input: StaffInput, courses?: Cours
 export async function deleteStaff(id: string): Promise<Result> {
   if (!id) return { ok: false, message: "Fiche invalide." };
   if (!isLiveMode()) return { ok: true };
-  const schoolId = await callerSchoolId();
+  const schoolId = await requireSchoolAdminId();
   if (!schoolId) return { ok: false, message: "Action réservée à la direction." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc.from("staff_members").delete().eq("id", id).eq("school_id", schoolId);
   if (error) return { ok: false, message: "Suppression impossible." };
   revalidatePath("/school/staff");

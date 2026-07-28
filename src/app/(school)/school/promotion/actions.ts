@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { randomBytes } from "crypto";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { serviceClient } from "@/lib/supabase/service";
+import { isLiveMode } from "@/lib/env";
+import { requireSchoolAdmin } from "@/lib/auth/guards";
 
 export type PromotionAction = "promote" | "redouble" | "graduate" | "skip";
 
@@ -21,28 +21,6 @@ type Result =
   | { ok: true; promoted: number; repeated: number; graduated: number }
   | { ok: false; message: string };
 
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
-async function caller(): Promise<{ userId: string; schoolId: string } | null> {
-  const session = createClient();
-  const { data: { user } } = await session.auth.getUser();
-  if (!user) return null;
-  const { data: staff } = await session
-    .from("school_staff")
-    .select("school_id")
-    .eq("user_id", user.id)
-    .eq("role", "school_admin")
-    .maybeSingle();
-  if (!staff?.school_id) return null;
-  return { userId: user.id, schoolId: staff.school_id };
-}
-
 export async function applyPromotion(input: {
   schoolYear: string;
   decisions: PromotionDecision[];
@@ -53,10 +31,10 @@ export async function applyPromotion(input: {
   if (decisions.length === 0) return { ok: false, message: "Aucun élève à traiter." };
   if (!isLiveMode()) return { ok: true, promoted: 0, repeated: 0, graduated: 0 };
 
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
 
-  const svc = service();
+  const svc = serviceClient();
   const { data: school } = await svc
     .from("schools")
     .select("director_name, signature_url")
@@ -117,9 +95,9 @@ export async function applyPromotion(input: {
 /** Résumé du dernier passage appliqué (pour proposer une annulation). */
 export async function getLastPromotionInfo(): Promise<{ at: string; students: number; dateLabel: string } | null> {
   if (!isLiveMode()) return null;
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return null;
-  const svc = service();
+  const svc = serviceClient();
   const { data: last } = await svc
     .from("students")
     .select("promoted_at")
@@ -145,9 +123,9 @@ export async function getLastPromotionInfo(): Promise<{ at: string; students: nu
 /** Annule le dernier passage : restaure les classes/statuts et supprime ses certificats. */
 export async function undoLastPromotion(): Promise<{ ok: true; reverted: number } | { ok: false; message: string }> {
   if (!isLiveMode()) return { ok: true, reverted: 0 };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
 
   const { data: last } = await svc
     .from("students")

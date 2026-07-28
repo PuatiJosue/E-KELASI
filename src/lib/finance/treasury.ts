@@ -5,19 +5,11 @@
 // DÉRIVÉES des encaissements (`fee_payments`, via getFeesOverview) — jamais ressaisies.
 // Solde, impayés et taux de recouvrement en découlent automatiquement.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 import { schoolYearLabel } from "@/lib/trimester";
 import { getFeesOverview } from "./fees";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 export type TreasuryKind = "depense" | "recette_exceptionnelle";
 
@@ -76,7 +68,7 @@ export async function getTreasuryOverview(year?: string): Promise<TreasuryOvervi
   try {
     const school = await getMySchool();
     if (!school) return emptyTreasury(year);
-    const svc = service();
+    const svc = serviceClient();
     const yr = year || school.currentYear || schoolYearLabel();
 
     const [feesScol, feesAutre, { data: entriesRaw }, { data: paysRaw }] = await Promise.all([
@@ -225,7 +217,7 @@ export async function getCashState(): Promise<CashState> {
   try {
     const school = await getMySchool();
     if (!school) return { today: null, recent: [] };
-    const svc = service();
+    const svc = serviceClient();
     const today = new Date().toISOString().slice(0, 10);
     const [{ data: todayRows }, { data: recent }] = await Promise.all([
       svc.from("cash_sessions").select(SESSION_SELECT).eq("school_id", school.id).eq("session_date", today).order("opened_at", { ascending: false }).limit(1),
@@ -239,7 +231,7 @@ export async function getCashState(): Promise<CashState> {
 
 // Totaux d'une journée (utilisé à la clôture). Calculés depuis la source unique,
 // séparés par devise (USD / CDF…).
-export async function computeDayTotals(svc: ReturnType<typeof service>, schoolId: string, date: string): Promise<CashTotals> {
+export async function computeDayTotals(svc: ReturnType<typeof serviceClient>, schoolId: string, date: string): Promise<CashTotals> {
   const start = `${date}T00:00:00`;
   const end = `${date}T23:59:59.999`;
   const [{ data: pays }, { data: entries }] = await Promise.all([

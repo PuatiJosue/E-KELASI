@@ -4,7 +4,7 @@ import { ProfileEditForm } from "@/components/ProfileEditForm";
 import { PreferencesCard } from "@/components/settings/PreferencesCard";
 import { T } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",

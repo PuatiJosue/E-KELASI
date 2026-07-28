@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { T } from "@/lib/i18n";
-import { getMySchool } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
 import { BrandingForm } from "@/components/school/BrandingForm";
 
 export default async function SchoolBranding() {

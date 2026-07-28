@@ -6,7 +6,8 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
-import type { StudentRow, TeacherSubject } from "@/lib/teacher-db";
+import type { StudentRow } from "@/lib/teacher/classes";
+import type { TeacherSubject } from "@/lib/teacher/profile";
 import { submitGradesAction, type GradeInput } from "@/app/(teacher)/teacher/grades/actions";
 import { TRIMESTERS, currentTrimester, trimesterOf, representativeDateForTrimester } from "@/lib/trimester";
 

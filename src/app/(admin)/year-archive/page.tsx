@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { YearArchiveForm } from "./YearArchiveForm";
 
 function defaultCutoff(): string {

@@ -7,7 +7,7 @@ import { Logo } from "@/components/Logo";
 import { Avatar } from "@/components/Avatar";
 import { LogoutButton } from "@/components/LogoutButton";
 import { T } from "@/lib/i18n";
-import type { MySchool, SchoolRequestCounts } from "@/lib/school-db";
+import type { MySchool, SchoolRequestCounts } from "@/lib/school/profile";
 
 type NavItem = { id: string; href: string; icon: string; fr: string; en: string };
 

@@ -3,7 +3,7 @@ import { getLang } from "@/lib/lang";
 import { Shell } from "@/components/Shell";
 import { TeacherSidebar } from "@/components/teacher/Sidebar";
 import { TeacherTopbar } from "@/components/teacher/Topbar";
-import { getTeacherSchoolStatus, getTeacherProfile } from "@/lib/teacher-db";
+import { getTeacherSchoolStatus, getTeacherProfile } from "@/lib/teacher/profile";
 import { SuspendedNotice } from "@/components/SuspendedNotice";
 
 export const dynamic = "force-dynamic";

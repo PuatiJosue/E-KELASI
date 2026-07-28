@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/KPI";
 import { T } from "@/lib/i18n";
-import { listTeacherClasses, listTeacherSubjects, listStudentsInClass } from "@/lib/teacher-db";
+import { listTeacherClasses, listStudentsInClass } from "@/lib/teacher/classes";
+import { listTeacherSubjects } from "@/lib/teacher/profile";
 import { GradesEntryForm } from "@/components/teacher/GradesEntryForm";
 
 export default async function GradesPage({

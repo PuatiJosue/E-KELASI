@@ -1,8 +1,8 @@
 "use server";
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 
 export type BulletinRow = { branche: string; max: string; obtenu: string };
 export type BulletinDraft = {
@@ -15,14 +15,6 @@ export type BulletinDraft = {
   totalMax: string;
   percentage: string;
 };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 // Vérifie que l'appelant (prof ou direction) appartient à l'école de l'élève.
 // Renvoie { schoolId } si autorisé, sinon null.
@@ -37,7 +29,7 @@ async function authForStudent(studentId: string): Promise<{ schoolId: string; us
     .in("role", ["teacher", "school_admin"]);
   const schoolIds = (staff ?? []).map((s: any) => s.school_id);
   if (schoolIds.length === 0) return null;
-  const svc = service();
+  const svc = serviceClient();
   const { data: student } = await svc
     .from("students")
     .select("school_id")
@@ -80,7 +72,7 @@ export async function saveBulletinDraft(input: {
   const totalObtenu = input.totalObtenu?.trim() ? num(input.totalObtenu) : autoObtenu;
   const percentage = input.percentage?.trim() ? num(input.percentage) : autoPct;
 
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc.from("bulletin_drafts").upsert(
     {
       school_id: auth.schoolId,
@@ -106,7 +98,7 @@ export async function saveBulletinDraft(input: {
 export async function getBulletinDraft(studentId: string, trimester: number): Promise<BulletinDraft | null> {
   if (!isLiveMode()) return null;
   try {
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("bulletin_drafts")
       .select("rows, place, mention, total_obtenu, total_max, percentage")

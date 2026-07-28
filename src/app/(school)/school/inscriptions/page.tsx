@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { listInscriptions } from "@/lib/inscription-db";
-import { getMySchool } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
 import { InscriptionsManager } from "./InscriptionsManager";
 
 export default async function SchoolInscriptions() {

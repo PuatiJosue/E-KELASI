@@ -1,7 +1,8 @@
 import { getFeesOverview } from "@/lib/finance/fees";
 import { getTreasuryOverview, getCashState } from "@/lib/finance/treasury";
 import { getFinanceAlerts } from "@/lib/finance/alerts";
-import { getMySchool, listSchoolStudents } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
+import { listSchoolStudents } from "@/lib/school/people";
 import { classLabel, normOption, classKey } from "@/lib/classes";
 import { schoolYearLabel } from "@/lib/trimester";
 import { FinanceModule } from "./FinanceModule";

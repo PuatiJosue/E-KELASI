@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { T, useLang } from "@/lib/i18n";
-import type { GradeHistoryRow } from "@/lib/teacher-db";
+import type { GradeHistoryRow } from "@/lib/teacher/grades";
 
 const ALL = "__all__";
 

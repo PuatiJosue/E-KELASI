@@ -3,9 +3,9 @@ import { getLang } from "@/lib/lang";
 import { Shell } from "@/components/Shell";
 import { SchoolSidebar } from "@/components/school/Sidebar";
 import { SchoolTopbar } from "@/components/school/Topbar";
-import { getMySchool, getSchoolRequestCounts } from "@/lib/school-db";
+import { getMySchool, getSchoolRequestCounts } from "@/lib/school/profile";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { SuspendedNotice } from "@/components/SuspendedNotice";
 
 export const dynamic = "force-dynamic";

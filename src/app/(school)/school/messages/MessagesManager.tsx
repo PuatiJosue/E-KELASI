@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import type { SchoolConversation } from "@/lib/messages-db";
-import type { ReminderRecipient } from "@/lib/finance-db";
+import type { ReminderRecipient } from "@/lib/finance/reminders";
 import { getSchoolThread, replyToConversation, sendPaymentReminders, sendSchoolMessage, type SchoolThread } from "./actions";
 
 function initials(name: string) {

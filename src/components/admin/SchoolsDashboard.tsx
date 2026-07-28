@@ -7,7 +7,7 @@ import { Donut, MRRChart } from "@/components/Charts";
 import { Icon } from "@/components/Icon";
 import { T, useLang } from "@/lib/i18n";
 import { InviteSchoolButton } from "@/components/admin/InviteSchoolModal";
-import type { SchoolsAdminOverview } from "@/lib/db";
+import type { SchoolsAdminOverview } from "@/lib/admin/schools";
 
 const DONUT_COLORS = ["#3A6DBC", "#1D6650", "#E0701E", "#9747BB", "#B8475B", "#C28728", "#4FA286", "#1E2F6D"];
 

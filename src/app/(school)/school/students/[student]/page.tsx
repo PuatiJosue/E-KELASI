@@ -3,7 +3,7 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
-import { getStudentDossier } from "@/lib/school-db";
+import { getStudentDossier } from "@/lib/school/dossier";
 import { listSchoolClassNames } from "@/lib/content-db";
 import { splitFullName } from "@/lib/staff-types";
 import { currentTrimester } from "@/lib/trimester";

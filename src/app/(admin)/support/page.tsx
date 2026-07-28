@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/KPI";
-import { listTicketsByStatus } from "@/lib/db";
+import { listTicketsByStatus } from "@/lib/admin/support";
 import { TicketBoard } from "@/components/admin/TicketBoard";
 
 export default async function SupportPage() {
