@@ -60,31 +60,49 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 
 ## Structure
 
+Chaque espace applicatif est un *route group* Next.js avec son propre shell, et
+chaque espace a sa couche données dédiée dans `src/lib/`.
+
 ```
 src/
 ├── app/
-│   ├── (admin)/             # routes auth-protégées (sidebar + topbar)
-│   │   ├── layout.tsx       # shell admin
-│   │   ├── overview/        # KPIs, MRR, top écoles
-│   │   ├── schools/         # table partenaires
-│   │   ├── billing/         # paiements Stripe
-│   │   ├── support/         # kanban tickets
-│   │   └── security/        # KPIs + audit log
-│   ├── login/               # connexion Supabase (action server)
-│   ├── api/stripe/webhook/  # webhook Stripe (stub)
-│   ├── globals.css          # design tokens E-KELASI
-│   └── layout.tsx           # root
+│   ├── (admin)/             # console super admin (écoles, facturation, support, sécurité)
+│   ├── (school)/            # console direction d'école (élèves, finances, bulletins…)
+│   ├── (teacher)/           # console professeur (notes, devoirs, présences)
+│   ├── (surveillant)/       # espace surveillant (pointage des présences)
+│   ├── api/                 # routes REST : Stripe, inscriptions parents, bibliothèque
+│   └── login/ · inscription/ · reenroll/ · verify/   # parcours publics
 ├── components/
-│   ├── admin/               # Sidebar, Topbar
-│   ├── Avatar.tsx · Logo.tsx · Icon.tsx
-│   ├── Charts.tsx           # Sparkline · MRRChart · Donut
-│   └── KPI.tsx · PageHeader
+│   ├── admin/ · school/ · teacher/ · surveillant/    # composants par espace
+│   ├── settings/ · auth/
+│   └── Avatar · Charts · Icon · KPI · Shell…         # primitives transverses
 └── lib/
-    ├── i18n.tsx             # <T fr="..." en="..." />
-    ├── mock.ts              # données démo
-    ├── stripe.ts            # client Stripe
-    └── supabase/            # client browser + server + types
+    ├── env.ts               # isLiveMode() — bascule démo ↔ Supabase
+    ├── result.ts            # type Result des server actions
+    ├── auth/guards.ts       # gardes d'autorisation (requireSchoolAdmin…)
+    ├── supabase/
+    │   ├── client.ts        # client navigateur
+    │   ├── server.ts        # client serveur (session, RLS active)
+    │   ├── service.ts       # client service_role — contourne la RLS
+    │   └── types.ts         # types générés par Supabase
+    ├── admin/               # données console admin (schools, overview, billing…)
+    ├── school/              # données console école (profile, kpis, people, classes, dossier)
+    ├── teacher/             # données console prof (profile, classes, grades, bulletins…)
+    └── finance/             # module Finance v2 (fees, treasury, reports, alerts…)
 ```
+
+### Conventions
+
+- **Séparation données / UI** — les `page.tsx` (Server Components) chargent via
+  `src/lib/**`, puis passent des props à des composants clients ; aucun appel
+  Supabase dans un composant client.
+- **Mutations** — toujours des server actions (`actions.ts` à côté de la route),
+  renvoyant le type `Result` de [`src/lib/result.ts`](src/lib/result.ts).
+- **Accès service_role** — passer par [`serviceClient()`](src/lib/supabase/service.ts),
+  et **uniquement** après un garde de [`src/lib/auth/guards.ts`](src/lib/auth/guards.ts),
+  puisque ce client contourne la Row Level Security.
+- **Mode démo** — `isLiveMode()` garde chaque accès base : sans variables
+  d'environnement, l'app reste navigable sur les données de `src/lib/mock.ts`.
 
 ---
 
@@ -98,12 +116,10 @@ Tokens et palette repris de [`e-kelasi/project/tokens.css`](e-kelasi/project/tok
 
 ## Prochaines étapes
 
-- [ ] Générer les types Supabase : `supabase gen types typescript --linked > src/lib/supabase/types.ts`
-- [ ] Middleware Next.js pour rafraîchir la session Supabase (`src/middleware.ts`)
-- [ ] Remplacer les mocks par des fetch Supabase dans chaque écran
-- [ ] App parent React Native (Expo) — Phase 2
-- [ ] Console professeur (saisie de notes) — Phase 3
-- [ ] Dashboard école/direction (stats, bulletins PDF, branding) — Phase 4
+- [ ] Découper les derniers gros composants clients (`FraisScolairesTab`,
+      `TimetableManager`, `StudentFormModal`, `StaffManager`)
+- [ ] Typer le client `service_role` avec `Database` (aujourd'hui volontairement non typé)
+- [ ] Étendre la couverture de tests au-delà des utilitaires purs
 
 ---
 
