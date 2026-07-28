@@ -4,7 +4,8 @@
 
 import { money, escHtml, openPrint, downloadCsv, reportHead, REPORT_CSS } from "../finance-export";
 import type { SchoolBranding } from "../finance-ui";
-import type { TreasuryOverview, TreasuryEntry, CashSession } from "@/lib/finance/treasury";
+import type { TreasuryOverview, TreasuryEntry } from "@/lib/finance/treasury";
+import type { CashSession } from "@/lib/finance/cash-session";
 import { KIND_LABEL } from "./constants";
 
 export function exportClosureCsv(s: CashSession) {

@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { Icon } from "@/components/Icon";
 import { RecoveryBar, COLORS, iconBtn } from "../finance-ui";
 import { money } from "../finance-export";
-import { deleteFee, archiveFee } from "../actions-v2";
+import { deleteFee, archiveFee } from "../actions/fees";
 import type { Fee } from "@/lib/finance/fees";
 
 // ── Ligne d’un frais ─────────────────────────────────────────────────

@@ -6,7 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { SexBadge } from "@/components/SexBadge";
 import { Modal, Chip, Toolbar, SearchInput, STUDENT_STATUS, COLORS, selStyle, iconBtn, type SchoolBranding } from "../finance-ui";
 import { money } from "../finance-export";
-import { loadFeeDetail } from "../actions-v2";
+import { loadFeeDetail } from "../actions/loaders";
 import { exportFeeStudentsCsv, exportFeeStudentsPdf } from "./exports";
 import { PaymentModal } from "./PaymentModal";
 import { OverrideModal } from "./OverrideModal";

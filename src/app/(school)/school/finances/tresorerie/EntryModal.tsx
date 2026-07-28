@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Modal, Labeled, ModalActions, modalInp, errBox } from "../finance-ui";
-import { addTreasuryEntry, updateTreasuryEntry } from "../actions-v2";
+import { addTreasuryEntry, updateTreasuryEntry } from "../actions/treasury";
 import type { TreasuryEntry, TreasuryKind } from "@/lib/finance/treasury";
 import { KIND_LABEL, EXC_CATEGORIES } from "./constants";
 

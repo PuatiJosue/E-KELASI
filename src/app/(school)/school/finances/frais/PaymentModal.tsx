@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Modal, Labeled, ModalActions, COLORS, modalInp, errBox, type SchoolBranding } from "../finance-ui";
 import { money, openPrint, buildInvoiceHtml } from "../finance-export";
-import { recordFeePayment, sendInvoiceToParent } from "../actions-v2";
+import { recordFeePayment, sendInvoiceToParent } from "../actions/payments";
 import { localDateTime } from "./exports";
 import type { Fee, FeeStudentRow } from "@/lib/finance/fees";
 

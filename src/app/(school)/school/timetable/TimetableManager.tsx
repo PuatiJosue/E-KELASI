@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import type { TimetableSlot } from "@/lib/content-db";
-import { saveClassTimetable, publishClassTimetable, deleteClassTimetable, duplicateClassTimetable } from "./actions";
+import { saveClassTimetable, publishClassTimetable, deleteClassTimetable } from "./actions";
 import { DAYS, PALETTE, byDayTime, blankRow, input, rowColor, readableText, type Row } from "./timetable-shared";
 import { WeekCalendar } from "./WeekCalendar";
 import { SlotRow } from "./SlotRow";
+import { DuplicatePanel } from "./DuplicatePanel";
+import { PreviewOverlay } from "./PreviewOverlay";
 import { exportTimetableCsv, exportTimetablePdf } from "./timetable-exports";
 
 export function TimetableManager({ slots, classNames, schoolName }: { slots: TimetableSlot[]; classNames: string[]; schoolName: string }) {
@@ -25,7 +27,6 @@ export function TimetableManager({ slots, classNames, schoolName }: { slots: Tim
 
   // Duplication.
   const [showDup, setShowDup] = useState(false);
-  const [dupTargets, setDupTargets] = useState<string[]>([]);
   const [dupMsg, setDupMsg] = useState<string | null>(null);
 
   const stored = useMemo(() => {
@@ -62,7 +63,6 @@ export function TimetableManager({ slots, classNames, schoolName }: { slots: Tim
     setPreview(false);
     setColorFor(null);
     setShowDup(false);
-    setDupTargets([]);
     setDupMsg(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [className]);
@@ -107,25 +107,6 @@ export function TimetableManager({ slots, classNames, schoolName }: { slots: Tim
     });
   };
 
-  const toggleTarget = (c: string) => setDupTargets((ts) => (ts.includes(c) ? ts.filter((x) => x !== c) : [...ts, c]));
-
-  const duplicate = () => {
-    setErr(null);
-    setDupMsg(null);
-    start(async () => {
-      const res = await duplicateClassTimetable({
-        targetClasses: dupTargets, option,
-        rows: rows.map(({ day, startTime, endTime, subject, teacher, room, color }) => ({ day, startTime, endTime, subject, teacher, room, color })),
-        publish: false,
-      });
-      if (!res.ok) { setErr(res.message); return; }
-      const n = dupTargets.length;
-      setDupMsg(`Emploi du temps copié (brouillon) vers ${n} classe${n > 1 ? "s" : ""}.`);
-      setShowDup(false);
-      setDupTargets([]);
-      router.refresh();
-    });
-  };
 
   const exportArgs = { rows, className, option, schoolName };
   const exportExcel = () => exportTimetableCsv(exportArgs);
@@ -211,39 +192,14 @@ export function TimetableManager({ slots, classNames, schoolName }: { slots: Tim
           )}
 
           {showDup && (
-            <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--divider)", background: "var(--surface-2)" }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink)", marginBottom: 8 }}>
-                <T fr="Dupliquer cet emploi du temps vers d'autres classes" en="Duplicate this timetable to other classes" />
-              </div>
-              {dupCandidates.length === 0 ? (
-                <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
-                  <T fr="Aucune autre classe disponible. Ajoutez d'abord des classes à l'école." en="No other class available. Add classes to the school first." />
-                </div>
-              ) : (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {dupCandidates.map((c) => {
-                    const on = dupTargets.includes(c);
-                    return (
-                      <button key={c} onClick={() => toggleTarget(c)} className={`ek-chip ${on ? "brand" : ""}`}
-                        style={{ fontSize: 11.5, cursor: "pointer", fontWeight: on ? 700 : 500, border: on ? "1px solid var(--brand)" : "1px solid var(--border-strong)" }}>
-                        {on ? "✓ " : ""}{c}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
-                <button onClick={duplicate} disabled={pending || dupTargets.length === 0} className="ek-btn ek-btn-primary" style={{ height: 34, fontSize: 12.5, opacity: pending || dupTargets.length === 0 ? 0.6 : 1 }}>
-                  <Icon name="copy" size={13} /> <T fr="Dupliquer" en="Duplicate" /> ({dupTargets.length})
-                </button>
-                <button onClick={() => { setShowDup(false); setDupTargets([]); }} className="ek-btn ek-btn-outline" style={{ height: 34, fontSize: 12.5 }}>
-                  <T fr="Annuler" en="Cancel" />
-                </button>
-                <span style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                  <T fr="Copie en brouillon ; remplace l'emploi du temps existant des classes cibles." en="Copied as a draft; replaces the target classes' existing timetable." />
-                </span>
-              </div>
-            </div>
+            <DuplicatePanel
+              candidates={dupCandidates}
+              rows={rows}
+              option={option}
+              onCancel={() => setShowDup(false)}
+              onDone={(msg) => { setDupMsg(msg); setShowDup(false); router.refresh(); }}
+              onError={(msg) => setErr(msg)}
+            />
           )}
 
           {editing ? (
@@ -328,21 +284,8 @@ export function TimetableManager({ slots, classNames, schoolName }: { slots: Tim
         </div>
       )}
 
-      {/* Aperçu plein écran */}
       {preview && (
-        <div onClick={() => setPreview(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div onClick={(e) => e.stopPropagation()} className="ek-card" style={{ width: "100%", maxWidth: 1040, maxHeight: "92vh", overflow: "auto", padding: 0 }}>
-            <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--divider)", display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
-                {className.trim()}{option ? ` · ${option}` : ""}
-              </div>
-              <button onClick={() => setPreview(false)} className="ek-btn ek-btn-outline" style={{ height: 30, fontSize: 12, marginLeft: "auto" }}>
-                <Icon name="close" size={14} /> <T fr="Fermer" en="Close" />
-              </button>
-            </div>
-            <WeekCalendar rows={rows} />
-          </div>
-        </div>
+        <PreviewOverlay rows={rows} className={className} option={option} onClose={() => setPreview(false)} />
       )}
     </div>
   );

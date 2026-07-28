@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import { Icon } from "@/components/Icon";
 import { Modal, Labeled, ModalActions, modalInp, errBox, iconBtn, type SchoolBranding } from "../finance-ui";
 import { money, openPrint, buildInvoiceHtml } from "../finance-export";
-import { loadFeePayments, cancelFeePayment } from "../actions-v2";
+import { loadFeePayments } from "../actions/loaders";
+import { cancelFeePayment } from "../actions/payments";
 import type { Fee, FeeStudentRow } from "@/lib/finance/fees";
 import type { FeePayment } from "@/lib/finance/payments";
 

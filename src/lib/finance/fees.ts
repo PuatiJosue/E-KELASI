@@ -10,6 +10,7 @@ import { getMySchool } from "@/lib/school/profile";
 import { classLabel, normOption } from "@/lib/classes";
 import { isLiveMode } from "@/lib/env";
 import { schoolYearLabel } from "@/lib/trimester";
+import { emptyOverview, mockOverview } from "./fees-mock";
 
 export type FeeKind = "scolaire" | "autre";
 export type FeeStudentStatus = "paye" | "partiel" | "impaye";
@@ -79,11 +80,11 @@ export type FeeDetail = {
   students: FeeStudentRow[];
 };
 
-const statusOf = (expected: number, paid: number): FeeStudentStatus =>
+export const statusOf = (expected: number, paid: number): FeeStudentStatus =>
   paid <= 0 ? "impaye" : expected - paid <= 0.001 ? "paye" : "partiel";
 
 // Élèves actifs ciblés par un frais (classe précise ou école entière si class null).
-async function targetStudents(
+export async function targetStudents(
   svc: ReturnType<typeof serviceClient>,
   schoolId: string,
   className: string | null,
@@ -102,7 +103,7 @@ async function targetStudents(
   );
 }
 
-function mapFeeRow(f: any): Omit<Fee, keyof FeeAggregates> {
+export function mapFeeRow(f: any): Omit<Fee, keyof FeeAggregates> {
   return {
     id: f.id,
     kind: (f.kind ?? "scolaire") as FeeKind,
@@ -121,7 +122,7 @@ function mapFeeRow(f: any): Omit<Fee, keyof FeeAggregates> {
   };
 }
 
-type FeeAggregates = {
+export type FeeAggregates = {
   studentCount: number; expected: number; collected: number; remaining: number;
   recoveryPct: number; unpaidCount: number; paidCount: number; partialCount: number; hasPayments: boolean;
 };
@@ -202,136 +203,4 @@ export async function getFeesOverview(kind: FeeKind, year?: string): Promise<Fee
   } catch {
     return emptyOverview(year);
   }
-}
-
-// Détail d'un frais : situation par élève.
-export async function getFeeDetail(feeId: string): Promise<FeeDetail | null> {
-  if (!isLiveMode()) return mockDetail(feeId);
-  try {
-    const school = await getMySchool();
-    if (!school || !feeId) return null;
-    const svc = serviceClient();
-
-    const { data: f } = await svc
-      .from("fees")
-      .select("id, kind, label, category, class_name, option, school_year, total_amount, currency, due_date, position, archived")
-      .eq("id", feeId).eq("school_id", school.id).maybeSingle();
-    if (!f) return null;
-
-    const [{ data: insts }, { data: overrides }, { data: pays }, students] = await Promise.all([
-      svc.from("fee_installments").select("id, name, position, amount, due_date").eq("fee_id", feeId),
-      svc.from("fee_overrides").select("student_id, amount").eq("fee_id", feeId),
-      svc.from("fee_payments").select("student_id, amount, paid_at").eq("fee_id", feeId).is("cancelled_at", null),
-      targetStudents(svc, school.id, (f as any).class_name ?? null, (f as any).option ?? null),
-    ]);
-
-    const ovr = new Map<string, number>();
-    for (const o of (overrides ?? []) as any[]) ovr.set(o.student_id, Number(o.amount));
-    const paidByStudent = new Map<string, number>();
-    const lastByStudent = new Map<string, string>();
-    for (const p of (pays ?? []) as any[]) {
-      paidByStudent.set(p.student_id, (paidByStudent.get(p.student_id) ?? 0) + Number(p.amount));
-      const d = p.paid_at as string;
-      if (!lastByStudent.has(p.student_id) || d > lastByStudent.get(p.student_id)!) lastByStudent.set(p.student_id, d);
-    }
-
-    const totalAmount = Number((f as any).total_amount ?? 0);
-    const currency = (f as any).currency ?? "CDF";
-    const rows: FeeStudentRow[] = students.map((s: any) => {
-      const expected = ovr.has(s.id) ? ovr.get(s.id)! : totalAmount;
-      const paid = paidByStudent.get(s.id) ?? 0;
-      return {
-        studentId: s.id,
-        matricule: s.matricule ?? "—",
-        fullName: s.full_name,
-        avatarUrl: s.avatar_url ?? null,
-        sex: s.sex ?? null,
-        classDisplay: classLabel(s.class_name, s.option),
-        expected, paid, remaining: Math.max(0, expected - paid), currency,
-        status: statusOf(expected, paid),
-        overrideAmount: ovr.has(s.id) ? ovr.get(s.id)! : null,
-        lastPaidAt: lastByStudent.get(s.id) ?? null,
-      };
-    });
-
-    const feeInstallments: FeeInstallment[] = (insts ?? [])
-      .map((i: any) => ({ id: i.id, name: i.name, position: i.position ?? 0, amount: Number(i.amount), dueDate: i.due_date ?? null }))
-      .sort((a: FeeInstallment, b: FeeInstallment) => a.position - b.position);
-
-    const expected = rows.reduce((a, r) => a + r.expected, 0);
-    const collected = rows.reduce((a, r) => a + Math.min(r.paid, r.expected || r.paid), 0);
-    const fee: Fee = {
-      ...mapFeeRow(f),
-      installments: feeInstallments,
-      studentCount: rows.length,
-      expected, collected, remaining: Math.max(0, expected - collected),
-      recoveryPct: expected > 0 ? (collected / expected) * 100 : 0,
-      unpaidCount: rows.filter((r) => r.status === "impaye").length,
-      paidCount: rows.filter((r) => r.status === "paye").length,
-      partialCount: rows.filter((r) => r.status === "partiel").length,
-      hasPayments: [...paidByStudent.values()].some((v) => v > 0),
-    };
-    return { fee, students: rows };
-  } catch {
-    return null;
-  }
-}
-
-// ── Mocks (mode démo) ────────────────────────────────────────────────
-function emptyOverview(year?: string): FeesOverview {
-  return { currency: "CDF", year: year || schoolYearLabel(), kpis: { expected: 0, collected: 0, remaining: 0, recoveryPct: 0 }, fees: [], chart: [] };
-}
-
-const MOCK_CLASSES = ["5ème A", "4ème B", "3ème A"];
-function mockFee(kind: FeeKind, i: number): Fee {
-  const totalAmount = kind === "scolaire" ? 250000 : [30000, 15000, 20000][i % 3];
-  const studentCount = [12, 10, 8][i % 3];
-  const collected = Math.round(totalAmount * studentCount * [0.7, 0.45, 0.3][i % 3]);
-  const expected = totalAmount * studentCount;
-  const labelS = ["Minerval", "Frais d'examen", "Assurance"][i % 3];
-  const labelA = ["Uniforme", "Transport", "Cantine"][i % 3];
-  return {
-    id: `mock-fee-${kind}-${i}`, kind, label: kind === "scolaire" ? labelS : labelA,
-    category: kind === "autre" ? labelA : null,
-    className: MOCK_CLASSES[i % 3], option: null, classDisplay: MOCK_CLASSES[i % 3],
-    schoolYear: schoolYearLabel(), totalAmount, currency: "CDF", dueDate: null, position: i, archived: false,
-    installments: kind === "scolaire" ? [
-      { id: `mi-${i}-1`, name: "1ère tranche", position: 0, amount: Math.round(totalAmount / 2), dueDate: "2026-10-15" },
-      { id: `mi-${i}-2`, name: "2ème tranche", position: 1, amount: Math.round(totalAmount / 2), dueDate: "2027-01-15" },
-    ] : [],
-    studentCount, expected, collected, remaining: expected - collected,
-    recoveryPct: (collected / expected) * 100,
-    unpaidCount: Math.round(studentCount * 0.3), paidCount: Math.round(studentCount * 0.5), partialCount: Math.round(studentCount * 0.2),
-    hasPayments: collected > 0,
-  };
-}
-function mockOverview(kind: FeeKind, year?: string): FeesOverview {
-  const fees = [0, 1, 2].map((i) => mockFee(kind, i));
-  const expected = fees.reduce((a, f) => a + f.expected, 0);
-  const collected = fees.reduce((a, f) => a + f.collected, 0);
-  return {
-    currency: "CDF", year: year || schoolYearLabel(),
-    kpis: { expected, collected, remaining: Math.max(0, expected - collected), recoveryPct: expected > 0 ? (collected / expected) * 100 : 0 },
-    fees, chart: fees.map((f) => ({ label: f.label, expected: f.expected, collected: f.collected, remaining: f.remaining })),
-  };
-}
-function mockDetail(feeId: string): FeeDetail {
-  const kind: FeeKind = feeId.includes("autre") ? "autre" : "scolaire";
-  const fee = mockFee(kind, 0);
-  fee.id = feeId;
-  const names: [string, string, string][] = [
-    ["Diallo", "Moussa", "M"], ["Koné", "Aïssata", "F"], ["Traoré", "Ibrahim", "M"],
-    ["Camara", "Fatou", "F"], ["Sow", "Amadou", "M"], ["Baldé", "Mariama", "F"],
-  ];
-  const students: FeeStudentRow[] = names.map(([last, first, sex], i) => {
-    const expected = fee.totalAmount;
-    const paid = [expected, expected / 2, 0, expected, expected / 4, 0][i] ?? 0;
-    return {
-      studentId: `mock-s-${i}`, matricule: `ELV-${125 + i}`, fullName: `${last} ${first}`,
-      avatarUrl: null, sex, classDisplay: fee.classDisplay ?? "—",
-      expected, paid, remaining: Math.max(0, expected - paid), currency: fee.currency,
-      status: statusOf(expected, paid), overrideAmount: null, lastPaidAt: paid > 0 ? "2026-10-12" : null,
-    };
-  });
-  return { fee, students };
 }

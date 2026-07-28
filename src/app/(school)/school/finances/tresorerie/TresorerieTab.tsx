@@ -11,7 +11,8 @@ import { CancelEntryModal } from "./CancelEntryModal";
 import { CashClosure } from "./CashClosure";
 import { exportTreasuryCsv, exportTreasuryPdf } from "./exports";
 import { KIND_LABEL } from "./constants";
-import type { TreasuryOverview, TreasuryEntry, TreasuryKind, CashState } from "@/lib/finance/treasury";
+import type { TreasuryOverview, TreasuryEntry, TreasuryKind } from "@/lib/finance/treasury";
+import type { CashState } from "@/lib/finance/cash-session";
 
 export function TresorerieTab({ overview, cashState, year, school }: { overview: TreasuryOverview; cashState: CashState; year: string; school: SchoolBranding }) {
   const router = useRouter();

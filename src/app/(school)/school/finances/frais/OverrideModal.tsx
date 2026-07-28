@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Modal, Labeled, ModalActions, modalInp, errBox } from "../finance-ui";
 import { money } from "../finance-export";
-import { setFeeOverride, removeFeeOverride } from "../actions-v2";
+import { setFeeOverride, removeFeeOverride } from "../actions/fees";
 import type { Fee, FeeStudentRow } from "@/lib/finance/fees";
 
 // ── Ajustement / exonération ─────────────────────────────────────────

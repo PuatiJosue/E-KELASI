@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { Modal, Labeled, ModalActions, COLORS, modalInp, iconBtn, errBox, type SchoolBranding } from "../finance-ui";
 import { money } from "../finance-export";
-import { openCashSession, closeCashSession, reopenCashSession } from "../actions-v2";
+import { openCashSession, closeCashSession, reopenCashSession } from "../actions/cash-session";
 import { exportClosureCsv, exportClosurePdf } from "./exports";
-import type { CashState, CashSession } from "@/lib/finance/treasury";
+import type { CashState, CashSession } from "@/lib/finance/cash-session";
 
 // ── Clôture quotidienne de caisse ────────────────────────────────────
 export function CashClosure({ state, school }: { state: CashState; school: SchoolBranding }) {

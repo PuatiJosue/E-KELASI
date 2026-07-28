@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Modal, Labeled, ModalActions, modalInp, errBox } from "../finance-ui";
 import { money } from "../finance-export";
-import { cancelTreasuryEntry } from "../actions-v2";
+import { cancelTreasuryEntry } from "../actions/treasury";
 import type { TreasuryEntry } from "@/lib/finance/treasury";
 
 export function CancelEntryModal({ entry, onClose, onDone }: { entry: TreasuryEntry; onClose: () => void; onDone: () => void }) {

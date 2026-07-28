@@ -1,5 +1,6 @@
 import { getFeesOverview } from "@/lib/finance/fees";
-import { getTreasuryOverview, getCashState } from "@/lib/finance/treasury";
+import { getTreasuryOverview } from "@/lib/finance/treasury";
+import { getCashState } from "@/lib/finance/cash-session";
 import { getFinanceAlerts } from "@/lib/finance/alerts";
 import { getMySchool } from "@/lib/school/profile";
 import { listSchoolStudents } from "@/lib/school/people";

@@ -5,7 +5,7 @@ import { Icon } from "@/components/Icon";
 import { classKey } from "@/lib/classes";
 import { Modal, Labeled, ModalActions, COLORS, selStyle, modalInp, iconBtn, errBox } from "../finance-ui";
 import { money } from "../finance-export";
-import { createFee, updateFee, type InstallmentInput } from "../actions-v2";
+import { createFee, updateFee, type InstallmentInput } from "../actions/fees";
 import type { Fee, FeeKind } from "@/lib/finance/fees";
 import type { ClassOption } from "./types";
 

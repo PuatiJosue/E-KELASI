@@ -10,7 +10,8 @@ import { AlertsBell } from "./AlertsBell";
 import { ReportsPanel } from "./ReportsPanel";
 import type { SchoolBranding } from "./finance-ui";
 import type { FeesOverview } from "@/lib/finance/fees";
-import type { TreasuryOverview, CashState } from "@/lib/finance/treasury";
+import type { TreasuryOverview } from "@/lib/finance/treasury";
+import type { CashState } from "@/lib/finance/cash-session";
 import type { FinanceAlert } from "@/lib/finance/alerts";
 
 const TABS = [
