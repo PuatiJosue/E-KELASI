@@ -117,8 +117,19 @@ export type StudentDossier = {
   guardianName: string | null;
   guardianRelation: string | null;
   guardianPhone: string | null;
+  bloodGroup: string | null;
+  allergies: string | null;
+  medicalNotes: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  previousSchool: string | null;
+  previousClass: string | null;
   observation: string | null;
   documents: { name: string; url: string }[];
+  extraFields: { label: string; value: string }[];
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
   parents: { name: string; email: string; phone: string | null; address: string | null; access: string }[];
   subjects: DossierSubject[];
   overallAvg: number;
@@ -790,7 +801,7 @@ export async function getStudentDossier(studentId: string): Promise<StudentDossi
 
     const { data: s } = await supabase
       .from("students")
-      .select("id, full_name, avatar_url, sex, birth_date, birth_place, class_name, option, status, address, enrolled_at, province_origin, father_name, mother_name, guardian_name, guardian_relation, guardian_phone, observation, documents, school_id, schools(name)")
+      .select("id, full_name, first_name, middle_name, last_name, avatar_url, sex, birth_date, birth_place, class_name, option, status, address, enrolled_at, province_origin, father_name, mother_name, guardian_name, guardian_relation, guardian_phone, blood_group, allergies, medical_notes, emergency_contact_name, emergency_contact_phone, previous_school, previous_class, observation, documents, extra_fields, school_id, schools(name)")
       .eq("id", studentId)
       .eq("school_id", school.id)
       .maybeSingle();
@@ -851,8 +862,19 @@ export async function getStudentDossier(studentId: string): Promise<StudentDossi
       guardianName: (s as any).guardian_name ?? null,
       guardianRelation: (s as any).guardian_relation ?? null,
       guardianPhone: (s as any).guardian_phone ?? null,
+      bloodGroup: (s as any).blood_group ?? null,
+      allergies: (s as any).allergies ?? null,
+      medicalNotes: (s as any).medical_notes ?? null,
+      emergencyContactName: (s as any).emergency_contact_name ?? null,
+      emergencyContactPhone: (s as any).emergency_contact_phone ?? null,
+      previousSchool: (s as any).previous_school ?? null,
+      previousClass: (s as any).previous_class ?? null,
       observation: (s as any).observation ?? null,
       documents: Array.isArray((s as any).documents) ? (s as any).documents : [],
+      extraFields: Array.isArray((s as any).extra_fields) ? (s as any).extra_fields : [],
+      firstName: (s as any).first_name ?? null,
+      middleName: (s as any).middle_name ?? null,
+      lastName: (s as any).last_name ?? null,
       parents,
       subjects,
       overallAvg,

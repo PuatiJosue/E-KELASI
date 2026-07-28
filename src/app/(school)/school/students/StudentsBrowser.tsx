@@ -197,7 +197,12 @@ function StudentLine({ s, first, showClass }: { s: SchoolStudentRow; first: bool
       <div style={{ color: "var(--ink-3)", fontSize: 11.5 }}>
         {s.parentNames.length > 0 ? s.parentNames.join(", ") : "—"}
       </div>
-      <div style={{ textAlign: "right", display: "flex", gap: 12, justifyContent: "flex-end" }}>
+      <div style={{ textAlign: "right", display: "flex", gap: 12, justifyContent: "flex-end", alignItems: "center" }}>
+        {/* La modification se fait depuis le dossier, sur la fiche pré-remplie. */}
+        <Link href={`/school/students/${s.id}`} style={{ fontSize: 11.5, color: "var(--ink-3)", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <Icon name="edit" size={12} />
+          <T fr="Modifier" en="Edit" />
+        </Link>
         <Link href={`/school/students/${s.id}`} style={{ fontSize: 11.5, color: "var(--brand-600)", fontWeight: 600 }}>
           <T fr="Dossier" en="Record" /> →
         </Link>

@@ -4,8 +4,11 @@ import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import { getStudentDossier } from "@/lib/school-db";
+import { listSchoolClassNames } from "@/lib/content-db";
+import { splitFullName } from "@/lib/staff-types";
 import { currentTrimester } from "@/lib/trimester";
 import { DeleteStudentButton } from "./DeleteStudentButton";
+import { EditStudentButton } from "./EditStudentButton";
 
 function ageFrom(birth: string | null): string {
   if (!birth) return "—";
@@ -28,7 +31,10 @@ function fmtDate(birth: string | null): string {
 const sexLabel = (s: string | null) => (s === "M" ? "Masculin" : s === "F" ? "Féminin" : "—");
 
 export default async function StudentDossierPage({ params }: { params: { student: string } }) {
-  const d = await getStudentDossier(params.student);
+  const [d, classNames] = await Promise.all([
+    getStudentDossier(params.student),
+    listSchoolClassNames(),
+  ]);
 
   if (!d) {
     return (
@@ -37,6 +43,45 @@ export default async function StudentDossierPage({ params }: { params: { student
       </div>
     );
   }
+
+  // Fiches créées avant la décomposition du nom : on recompose Nom/Post-nom/Prénom.
+  const split = splitFullName(d.fullName);
+  const initial = {
+    lastName: d.lastName ?? split.lastName,
+    middleName: d.middleName ?? split.middleName,
+    firstName: d.firstName ?? split.firstName,
+    sex: d.sex ?? "",
+    birthDate: d.birthDate ?? "",
+    birthPlace: d.birthPlace ?? "",
+    className: d.className === "—" ? "" : d.className,
+    option: d.option ?? "",
+    enrolledAt: d.enrolledAt ?? "",
+    address: d.address ?? "",
+    provinceOrigin: d.provinceOrigin ?? "",
+    fatherName: d.fatherName ?? "",
+    motherName: d.motherName ?? "",
+    guardianName: d.guardianName ?? "",
+    guardianRelation: d.guardianRelation ?? "",
+    guardianPhone: d.guardianPhone ?? "",
+    bloodGroup: d.bloodGroup ?? "",
+    allergies: d.allergies ?? "",
+    medicalNotes: d.medicalNotes ?? "",
+    emergencyContactName: d.emergencyContactName ?? "",
+    emergencyContactPhone: d.emergencyContactPhone ?? "",
+    previousSchool: d.previousSchool ?? "",
+    previousClass: d.previousClass ?? "",
+    observation: d.observation ?? "",
+    extraFields: d.extraFields,
+    documents: d.documents,
+    avatarUrl: d.avatarUrl,
+  };
+
+  const hasHealth = Boolean(
+    d.bloodGroup?.trim() || d.allergies?.trim() || d.medicalNotes?.trim() ||
+    d.emergencyContactName?.trim() || d.emergencyContactPhone?.trim()
+  );
+  const hasPrevious = Boolean(d.previousSchool?.trim() || d.previousClass?.trim());
+  const customFields = d.extraFields.filter((f) => f?.label?.trim());
 
   return (
     <div style={{ padding: 24, maxWidth: 900, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -48,6 +93,7 @@ export default async function StudentDossierPage({ params }: { params: { student
         </Link>
         <div style={{ display: "flex", gap: 8 }}>
           <DeleteStudentButton studentId={d.id} studentName={d.fullName} />
+          <EditStudentButton studentId={d.id} initial={initial} classNames={classNames} />
           <Link href={`/school/reports/${d.id}`} className="ek-btn ek-btn-primary" style={{ height: 32, fontSize: 12 }}>
             <Icon name="file" size={13} />
             <T fr="Bulletin" en="Report card" />
@@ -130,6 +176,39 @@ export default async function StudentDossierPage({ params }: { params: { student
           )}
         </div>
       </div>
+
+      {/* Santé & urgence + Scolarité antérieure */}
+      {(hasHealth || hasPrevious) && (
+        <div style={{ display: "grid", gridTemplateColumns: hasHealth && hasPrevious ? "1fr 1fr" : "1fr", gap: 16 }}>
+          {hasHealth && (
+            <div className="ek-card" style={{ padding: 18 }}>
+              <SectionTitle fr="Santé & urgence" en="Health & emergency" />
+              {d.bloodGroup?.trim() && <InfoRow label="Groupe sanguin" value={d.bloodGroup} />}
+              {d.allergies?.trim() && <InfoRow label="Allergies" value={d.allergies} />}
+              {d.medicalNotes?.trim() && <InfoRow label="Maladie / traitement" value={d.medicalNotes} />}
+              {d.emergencyContactName?.trim() && <InfoRow label="Personne à prévenir" value={d.emergencyContactName} />}
+              {d.emergencyContactPhone?.trim() && <InfoRow label="Téléphone d'urgence" value={d.emergencyContactPhone} />}
+            </div>
+          )}
+          {hasPrevious && (
+            <div className="ek-card" style={{ padding: 18 }}>
+              <SectionTitle fr="Scolarité antérieure" en="Previous schooling" />
+              {d.previousSchool?.trim() && <InfoRow label="École fréquentée avant" value={d.previousSchool} />}
+              {d.previousClass?.trim() && <InfoRow label="Dernière classe suivie" value={d.previousClass} />}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Rubriques personnalisées de l'école */}
+      {customFields.length > 0 && (
+        <div className="ek-card" style={{ padding: 18 }}>
+          <SectionTitle fr="Rubriques personnalisées" en="Custom fields" />
+          {customFields.map((f, i) => (
+            <InfoRow key={i} label={f.label} value={f.value?.trim() || "—"} />
+          ))}
+        </div>
+      )}
 
       {/* Documents joints */}
       {d.documents.length > 0 && (
