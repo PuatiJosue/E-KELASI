@@ -7,7 +7,7 @@ import { classLabel, normOption, classKey } from "@/lib/classes";
 import { schoolYearLabel } from "@/lib/trimester";
 import { FinanceModule } from "./FinanceModule";
 import type { SchoolBranding } from "./finance-ui";
-import type { ClassOption } from "./FraisScolairesTab";
+import type { ClassOption } from "./frais/types";
 
 export default async function SchoolFinances() {
   const [school, students, feesScolaire, feesAutre, treasury, cashState] = await Promise.all([

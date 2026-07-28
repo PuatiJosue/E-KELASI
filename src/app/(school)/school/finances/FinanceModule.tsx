@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
-import { RubriqueFraisTab, type ClassOption } from "./FraisScolairesTab";
+import { RubriqueFraisTab } from "./frais/RubriqueFraisTab";
+import type { ClassOption } from "./frais/types";
 import { TresorerieTab } from "./TresorerieTab";
 import { AlertsBell } from "./AlertsBell";
 import { ReportsPanel } from "./ReportsPanel";

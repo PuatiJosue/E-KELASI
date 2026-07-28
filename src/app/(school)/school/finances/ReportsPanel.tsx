@@ -8,7 +8,7 @@ import { Modal, Labeled, Chip, MoneyLines, SearchInput, Toolbar, STUDENT_STATUS,
 import { money, escHtml, openPrint, downloadCsv, buildInvoiceHtml, reportHead, REPORT_CSS } from "./finance-export";
 import { loadClassReport, loadStudentReport } from "./actions-v2";
 import { classKey } from "@/lib/classes";
-import type { ClassOption } from "./FraisScolairesTab";
+import type { ClassOption } from "./frais/types";
 import type { ClassReport, StudentReport, CurAmounts } from "@/lib/finance/reports";
 
 type Key = keyof CurAmounts;
