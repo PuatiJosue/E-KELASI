@@ -171,7 +171,7 @@ export function SchoolsTable({
           <div><T fr="École" en="School" /></div>
           <div><T fr="Plan" en="Plan" /></div>
           <div><T fr="Parents · profs" en="Parents · teachers" /></div>
-          <div><T fr="Cotisation 90$" en="Fee $90" /></div>
+          <div><T fr="Cotisation" en="Fee" /></div>
           <div><T fr="Statut" en="Status" /></div>
           <div><T fr="Depuis" en="Since" /></div>
           <div style={{ textAlign: "right" }}><T fr="Actions" en="Actions" /></div>

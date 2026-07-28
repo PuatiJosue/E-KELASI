@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { schoolPriceCents } from "@/lib/school-price";
 
 // Achat d'un livre (paiement unique) : marque l'achat 'paid' et notifie le parent.
 async function handleBookPurchase(session: Stripe.Checkout.Session) {
@@ -58,7 +59,7 @@ function planFromMetadata(sub: Stripe.Subscription): "essentiel" | "famille" | "
   return "essentiel";
 }
 
-// Abonnement ÉCOLE (90$/mois par carte). Renvoie true si géré (= ne pas
+// Abonnement ÉCOLE (mensuel par carte). Renvoie true si géré (= ne pas
 // continuer le flux parent). Active l'école si payée, suspend sinon.
 async function handleSchoolSubscription(sub: Stripe.Subscription): Promise<boolean> {
   const schoolId = sub.metadata?.school_id;
@@ -73,7 +74,7 @@ async function handleSchoolSubscription(sub: Stripe.Subscription): Promise<boole
       {
         school_id: schoolId,
         period,
-        amount_cents: item?.price?.unit_amount ?? 9000,
+        amount_cents: item?.price?.unit_amount ?? schoolPriceCents(),
         currency: (item?.price?.currency ?? "usd").toUpperCase(),
         method: "card",
       },

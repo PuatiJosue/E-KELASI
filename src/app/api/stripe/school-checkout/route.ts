@@ -1,10 +1,11 @@
 // POST /api/stripe/school-checkout
-// Crée une session Stripe Checkout (abonnement 90$/mois) pour l'école de la
+// Crée une session Stripe Checkout (abonnement mensuel) pour l'école de la
 // direction connectée. Au paiement, le webhook active l'école (metadata school_id).
 
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
+import { schoolPriceCents, SCHOOL_PRICE_CURRENCY } from "@/lib/school-price";
 
 export async function POST(_req: NextRequest) {
   try {
@@ -20,16 +21,27 @@ export async function POST(_req: NextRequest) {
       .maybeSingle();
     if (!staff) return NextResponse.json({ error: "not_school_admin" }, { status: 403 });
 
-    const priceId = process.env.STRIPE_PRICE_ECOLE;
-    if (!priceId) {
-      console.error("[school-checkout] STRIPE_PRICE_ECOLE manquant");
-      return NextResponse.json({ error: "server_misconfigured" }, { status: 500 });
-    }
+    // Le tarif est défini côté code (src/lib/school-price.ts) : Stripe crée le
+    // produit/prix à la volée, on n'a donc aucun Price à maintenir au dashboard.
+    const unitAmount = schoolPriceCents();
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const session = await stripe().checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: SCHOOL_PRICE_CURRENCY,
+            unit_amount: unitAmount,
+            recurring: { interval: "month" },
+            product_data: {
+              name: "Abonnement E-KLASS — établissement",
+              description: "Accès complet à la plateforme pour l'école, ses professeurs et les parents.",
+            },
+          },
+        },
+      ],
       customer_email: user.email ?? undefined,
       success_url: `${appUrl}/school/billing?success=1`,
       cancel_url: `${appUrl}/school/billing?canceled=1`,

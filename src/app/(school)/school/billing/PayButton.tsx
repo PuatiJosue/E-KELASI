@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { T } from "@/lib/i18n";
 
-export function PayButton() {
+export function PayButton({ price }: { price: string }) {
   const [loading, setLoading] = useState(false);
 
   const pay = async () => {
@@ -25,7 +25,7 @@ export function PayButton() {
 
   return (
     <button onClick={pay} disabled={loading} className="ek-btn ek-btn-primary" style={{ height: 40, fontSize: 13 }}>
-      {loading ? "…" : <T fr="Payer 90 $/mois par carte" en="Pay $90/mo by card" />}
+      {loading ? "…" : <T fr={`Payer ${price}/mois par carte`} en={`Pay ${price}/mo by card`} />}
     </button>
   );
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/db";
+import { schoolPriceCents } from "@/lib/school-price";
 
 type Result = { ok: true } | { ok: false; message: string };
 
@@ -28,7 +29,7 @@ async function assertSuperAdmin(): Promise<{ ok: boolean; userId?: string }> {
   return { ok: me?.role === "super_admin", userId: user.id };
 }
 
-// Marque l'abonnement 90$ de l'école comme payé pour le mois + active l'école.
+// Marque l'abonnement mensuel de l'école comme payé pour le mois + active l'école.
 export async function markSchoolPaid(schoolId: string, method: "manual" | "mobile_money" = "manual"): Promise<Result> {
   if (!schoolId) return { ok: false, message: "École invalide." };
   if (!isLiveMode()) return { ok: true };
@@ -40,7 +41,7 @@ export async function markSchoolPaid(schoolId: string, method: "manual" | "mobil
     {
       school_id: schoolId,
       period: currentPeriod(),
-      amount_cents: 9000,
+      amount_cents: schoolPriceCents(),
       currency: "USD",
       method,
       recorded_by: auth.userId,

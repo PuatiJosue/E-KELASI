@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/KPI";
 import { T } from "@/lib/i18n";
 import { getMySchool } from "@/lib/school-db";
+import { schoolPriceLabel } from "@/lib/school-price";
 import { PayButton } from "./PayButton";
 
 export default async function SchoolBilling({
@@ -10,12 +11,13 @@ export default async function SchoolBilling({
 }) {
   const school = await getMySchool();
   const active = school?.status === "active";
+  const price = schoolPriceLabel();
 
   return (
     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, maxWidth: 640 }}>
       <PageHeader
         title={{ fr: "Abonnement", en: "Subscription" }}
-        sub={{ fr: "Votre abonnement E-KLASS (90 $/mois).", en: "Your E-KLASS subscription ($90/mo)." }}
+        sub={{ fr: `Votre abonnement E-KLASS (${price}/mois).`, en: `Your E-KLASS subscription (${price}/mo).` }}
       />
 
       {searchParams?.success && (
@@ -53,10 +55,10 @@ export default async function SchoolBilling({
 
         <div style={{ borderTop: "1px solid var(--divider)", paddingTop: 16, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--ink)" }}>
-            90&nbsp;$<span style={{ fontSize: 13, color: "var(--ink-3)", fontWeight: 500 }}> / <T fr="mois" en="month" /></span>
+            {price.replace(" ", " ")}<span style={{ fontSize: 13, color: "var(--ink-3)", fontWeight: 500 }}> / <T fr="mois" en="month" /></span>
           </div>
           <div style={{ flex: 1 }} />
-          <PayButton />
+          <PayButton price={price} />
         </div>
       </div>
 
