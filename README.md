@@ -1,8 +1,29 @@
-# E-KELASI · Console super admin
+# E-KLASS
 
-Web admin pour la plateforme E-KELASI (suivi scolaire SaaS). Next.js 14 (App Router) · TypeScript · Tailwind · Supabase · Stripe.
+Plateforme SaaS de suivi scolaire pour les établissements de RDC : elle relie la
+direction, les professeurs, les surveillants et les parents autour du dossier de
+l'élève — inscriptions, notes, bulletins, présences, finances et messagerie.
 
-> **Statut** — Phase 1 : console super admin web. App parents (React Native) et console prof à venir.
+**Next.js 14** (App Router, Server Components & Server Actions) · **TypeScript**
+strict · **Tailwind** · **Supabase** (Postgres + Auth + Storage, RLS) · **Stripe**
+
+> Ce dépôt contient l'application web. L'application mobile parents (Expo /
+> React Native) vit dans [`mobile/`](mobile/).
+
+---
+
+## Les quatre espaces
+
+L'application n'est pas un seul back-office : chaque rôle a son espace, son shell
+et sa couche données. `src/middleware.ts` route chaque utilisateur vers le sien et
+empêche l'accès aux autres.
+
+| Espace | Route | Rôle | Ce qu'on y fait |
+|---|---|---|---|
+| Super admin | `/overview` | `super_admin` | Écoles partenaires, facturation, support, journal d'audit |
+| Direction | `/school/…` | `school_admin` | Élèves, classes, finances, bulletins, emploi du temps, messagerie |
+| Professeur | `/teacher/…` | `teacher` | Saisie des notes, devoirs, présences, journal de bord |
+| Surveillant | `/surveillant/…` | `surveillant` | Pointage des présences |
 
 ---
 
@@ -13,48 +34,49 @@ npm install
 npm run dev
 ```
 
-Puis ouvrir [http://localhost:3000](http://localhost:3000) — redirige automatiquement vers `/overview`.
+Puis [http://localhost:3000](http://localhost:3000) — la racine redirige vers
+l'espace correspondant au rôle du compte connecté.
 
-Sans variables d'environnement, l'app tourne en mode démo (données mockées de [`src/lib/mock.ts`](src/lib/mock.ts)). La page de login propose un lien « Continuer sans connexion (démo) ».
+Sans variables d'environnement Supabase, `isLiveMode()` renvoie `false` et
+l'application se rabat sur les données de démonstration de
+[`src/lib/mock.ts`](src/lib/mock.ts) : les écrans restent navigables sans base.
+
+> **Attention** — `.env.local` peut pointer sur une instance Supabase **locale**
+> (`http://127.0.0.1:54321`). Dans ce cas la connexion échoue tant que
+> `supabase start` n'a pas été lancé, même avec des identifiants valides en
+> production.
 
 ---
 
 ## Configuration
 
-Copier `.env.example` vers `.env.local` et remplir :
+Copier [`.env.example`](.env.example) vers `.env.local` et remplir les clés
+Supabase, Stripe, l'allowlist des prix et l'origine canonique de l'app.
+
+### Base de données
+
+77 migrations SQL versionnées dans [`supabase/migrations/`](supabase/migrations/),
+de `0001_initial_schema.sql` au schéma courant. Les politiques **Row Level
+Security** (`0002_rls_policies.sql`, puis affinées) isolent les données par école
+et par rôle.
 
 ```sh
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-STRIPE_SECRET_KEY=...
-STRIPE_WEBHOOK_SECRET=...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=...
-```
-
-### Base de données (Supabase)
-
-Les migrations SQL sont dans [`supabase/migrations/`](supabase/migrations/) :
-
-- [`0001_initial_schema.sql`](supabase/migrations/0001_initial_schema.sql) — tables (schools, profiles, students, grades, homework, messages, subscriptions, payments, support_tickets, notifications, audit_logs)
-- [`0002_rls_policies.sql`](supabase/migrations/0002_rls_policies.sql) — Row Level Security (super_admin, school_admin, teacher, parent)
-- [`seed.sql`](supabase/seed.sql) — 8 écoles de démo + 10 événements audit log
-
-Pour exécuter contre une instance Supabase :
-
-```sh
-# avec supabase CLI
 supabase db push
 psql $DATABASE_URL -f supabase/seed.sql
 ```
 
 ### Stripe
 
-Webhook : `POST /api/stripe/webhook` ([code](src/app/api/stripe/webhook/route.ts)). En local :
+Webhook : `POST /api/stripe/webhook`
+([code](src/app/api/stripe/webhook/route.ts)). En local :
 
 ```sh
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
+
+Le tarif de l'abonnement école est piloté par le code
+([`src/lib/school-price.ts`](src/lib/school-price.ts)), pas par un Price Stripe à
+maintenir.
 
 ---
 
@@ -66,16 +88,17 @@ chaque espace a sa couche données dédiée dans `src/lib/`.
 ```
 src/
 ├── app/
-│   ├── (admin)/             # console super admin (écoles, facturation, support, sécurité)
-│   ├── (school)/            # console direction d'école (élèves, finances, bulletins…)
-│   ├── (teacher)/           # console professeur (notes, devoirs, présences)
-│   ├── (surveillant)/       # espace surveillant (pointage des présences)
-│   ├── api/                 # routes REST : Stripe, inscriptions parents, bibliothèque
+│   ├── (admin)/             # console super admin
+│   ├── (school)/            # console direction d'école
+│   ├── (teacher)/           # console professeur
+│   ├── (surveillant)/       # espace surveillant
+│   ├── api/                 # Stripe, inscriptions parents, bibliothèque
 │   └── login/ · inscription/ · reenroll/ · verify/   # parcours publics
+├── middleware.ts            # session Supabase + routage par rôle
 ├── components/
 │   ├── admin/ · school/ · teacher/ · surveillant/    # composants par espace
-│   ├── settings/ · auth/
-│   └── Avatar · Charts · Icon · KPI · Shell…         # primitives transverses
+│   ├── form/ · settings/ · auth/                     # briques transverses
+│   └── Avatar · Charts · Icon · KPI · Shell…
 └── lib/
     ├── env.ts               # isLiveMode() — bascule démo ↔ Supabase
     ├── result.ts            # type Result des server actions
@@ -85,10 +108,10 @@ src/
     │   ├── server.ts        # client serveur (session, RLS active)
     │   ├── service.ts       # client service_role — contourne la RLS
     │   └── types.ts         # types générés par Supabase
-    ├── admin/               # données console admin (schools, overview, billing…)
-    ├── school/              # données console école (profile, kpis, people, classes, dossier)
-    ├── teacher/             # données console prof (profile, classes, grades, bulletins…)
-    └── finance/             # module Finance v2 (fees, treasury, reports, alerts…)
+    ├── admin/               # données console admin
+    ├── school/              # données console école
+    ├── teacher/             # données console prof
+    └── finance/             # module Finance (frais, trésorerie, caisse, rapports)
 ```
 
 ### Conventions
@@ -98,29 +121,50 @@ src/
   Supabase dans un composant client.
 - **Mutations** — toujours des server actions (`actions.ts` à côté de la route),
   renvoyant le type `Result` de [`src/lib/result.ts`](src/lib/result.ts).
-- **Accès service_role** — passer par [`serviceClient()`](src/lib/supabase/service.ts),
-  et **uniquement** après un garde de [`src/lib/auth/guards.ts`](src/lib/auth/guards.ts),
-  puisque ce client contourne la Row Level Security.
-- **Mode démo** — `isLiveMode()` garde chaque accès base : sans variables
-  d'environnement, l'app reste navigable sur les données de `src/lib/mock.ts`.
+- **Accès `service_role`** — passer par
+  [`serviceClient()`](src/lib/supabase/service.ts), et **uniquement** après un
+  garde de [`src/lib/auth/guards.ts`](src/lib/auth/guards.ts) : ce client
+  contourne la Row Level Security.
+- **Mode démo** — `isLiveMode()` garde chaque accès base, pour que l'app reste
+  navigable sans Supabase.
+- **Taille des fichiers** — aucun fichier écrit à la main ne dépasse ~300 lignes ;
+  au-delà, on découpe par responsabilité.
+
+---
+
+## Qualité
+
+```sh
+npm run typecheck   # tsc --noEmit, mode strict
+npm run lint        # ESLint (config next)
+npm test            # vitest
+npm run build       # build de production
+```
+
+État actuel : **0 erreur** TypeScript, **0 erreur** ESLint, build vert.
+
+Les tests couvrent aujourd'hui les utilitaires purs (classes, promotion, import
+d'élèves, trimestres). **Les écrans ne sont pas encore testés** — c'est la
+principale dette du projet, et la prochaine étape ci-dessous.
 
 ---
 
 ## Design
 
-Le design original est dans [`e-kelasi/`](e-kelasi/) — bundle Claude Design (prototype HTML/React+Babel).
-
-Tokens et palette repris de [`e-kelasi/project/tokens.css`](e-kelasi/project/tokens.css) (ambre éducatif chaleureux, Bricolage Grotesque + Plus Jakarta Sans, mode clair/sombre).
+Le prototype d'origine est dans [`e-kelasi/`](e-kelasi/) (bundle HTML/React).
+Les tokens et la palette viennent de
+[`e-kelasi/project/tokens.css`](e-kelasi/project/tokens.css) : ambre éducatif
+chaleureux, Bricolage Grotesque + Plus Jakarta Sans, mode clair/sombre.
 
 ---
 
 ## Prochaines étapes
 
-- [ ] Découper les composants restants au-dessus de ~300 lignes
-      (`TresorerieTab`, `MessagesManager`, `PreferencesCard`, `GradesEntryForm`)
-- [ ] Typer le client `service_role` avec `Database` (aujourd'hui volontairement non typé)
-- [ ] Étendre la couverture de tests au-delà des utilitaires purs — les écrans
-      n'ont aujourd'hui aucun test, seuls `tsc` et le build protègent des régressions
+- [ ] Tester les parcours critiques (encaissement, fiche élève, emploi du temps) —
+      aujourd'hui seuls `tsc` et le build protègent des régressions d'interface
+- [ ] Typer le client `service_role` avec `Database` (volontairement non typé
+      aujourd'hui : certaines tables ne sont pas couvertes par les types générés)
+- [ ] Mettre en place une CI (typecheck + lint + tests à chaque push)
 
 ---
 
@@ -128,8 +172,10 @@ Tokens et palette repris de [`e-kelasi/project/tokens.css`](e-kelasi/project/tok
 
 | Script | Description |
 |---|---|
-| `npm run dev` | Serveur de dev (port 3000) |
-| `npm run build` | Build production |
+| `npm run dev` | Serveur de développement (port 3000) |
+| `npm run build` | Build de production |
 | `npm run start` | Démarrer le build |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Tests (vitest) |
+| `npm run test:watch` | Tests en mode watch |
