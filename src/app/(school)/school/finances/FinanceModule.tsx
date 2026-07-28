@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { RubriqueFraisTab } from "./frais/RubriqueFraisTab";
 import type { ClassOption } from "./frais/types";
-import { TresorerieTab } from "./TresorerieTab";
+import { TresorerieTab } from "./tresorerie/TresorerieTab";
 import { AlertsBell } from "./AlertsBell";
 import { ReportsPanel } from "./ReportsPanel";
 import type { SchoolBranding } from "./finance-ui";
