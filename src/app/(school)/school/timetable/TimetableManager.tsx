@@ -6,163 +6,10 @@ import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import type { TimetableSlot } from "@/lib/content-db";
 import { saveClassTimetable, publishClassTimetable, deleteClassTimetable, duplicateClassTimetable } from "./actions";
-
-const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
-const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
-
-// Palette de couleurs proposée pour les cours (styles de la maquette).
-const PALETTE = ["#7C6CF0", "#E8823C", "#2FA8C0", "#3FA663", "#E0518A", "#4F86E8", "#D9A03A", "#C0553C", "#5B8DEF", "#9C6ADE", "#2E8B7A", "#B23B6E"];
-
-function escapeHtml(s: string) {
-  return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
-}
-
-// Couleur stable par matière (repli quand aucune couleur n'est choisie).
-function colorFor(subject: string) {
-  let h = 0;
-  for (let i = 0; i < subject.length; i++) h = (h * 31 + subject.charCodeAt(i)) >>> 0;
-  return PALETTE[h % PALETTE.length];
-}
-
-// Noir ou blanc selon la luminance du fond.
-function readableText(hex: string) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
-  if (!m) return "#fff";
-  const n = parseInt(m[1], 16);
-  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
-  return lum > 0.62 ? "#1b1f2e" : "#fff";
-}
-
-const toMin = (t: string) => {
-  const [h, m] = (t || "0:0").split(":").map(Number);
-  return (h || 0) * 60 + (m || 0);
-};
-
-// Trie par jour puis heure.
-const byDayTime = (a: TimetableSlot, b: TimetableSlot) => a.day - b.day || a.startTime.localeCompare(b.startTime);
-
-// ── Ligne éditable ──────────────────────────────────────────────────
-type Row = { key: string; day: number; startTime: string; endTime: string; subject: string; teacher: string; room: string; color: string };
-const newKey = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Math.random()));
-const blankRow = (day = 1, startTime = "08:00", endTime = "09:00"): Row => ({ key: newKey(), day, startTime, endTime, subject: "", teacher: "", room: "", color: "" });
-
-const input: React.CSSProperties = {
-  height: 34, padding: "0 8px", borderRadius: 8, border: "1px solid var(--border-strong)",
-  background: "var(--surface)", color: "var(--ink)", fontSize: 13, outline: "none", width: "100%",
-};
-
-const rowColor = (r: { color: string; subject: string }) => r.color || colorFor(r.subject.trim() || "•");
-
-// ── Calendrier hebdomadaire (jours en colonnes, axe horaire vertical) ──
-const HOUR_PX = 58;
-
-function mondayOf(base: Date) {
-  const d = new Date(base);
-  const wd = (d.getDay() + 6) % 7; // 0 = lundi
-  d.setDate(d.getDate() - wd);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
-const fmtDay = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-
-function WeekCalendar({ rows }: { rows: Row[] }) {
-  const [weekOffset, setWeekOffset] = useState(0);
-
-  const valid = rows.filter((r) => r.startTime && r.endTime && r.subject.trim() && toMin(r.endTime) > toMin(r.startTime));
-  if (valid.length === 0) {
-    return (
-      <div style={{ padding: 30, textAlign: "center", color: "var(--ink-3)", fontSize: 13 }}>
-        <T fr="Aucun cours à afficher pour le moment." en="No course to display yet." />
-      </div>
-    );
-  }
-
-  const maxDay = Math.max(5, ...valid.map((r) => r.day));
-  const days = Array.from({ length: maxDay }, (_, i) => i + 1);
-
-  const minH = Math.floor(Math.min(...valid.map((r) => toMin(r.startTime))) / 60);
-  const maxH = Math.ceil(Math.max(...valid.map((r) => toMin(r.endTime))) / 60);
-  const minMin = minH * 60;
-  const totalH = (maxH - minH) * HOUR_PX;
-  const hours = Array.from({ length: maxH - minH + 1 }, (_, i) => minH + i);
-  const forDay = (d: number) => valid.filter((r) => r.day === d).sort((a, b) => toMin(a.startTime) - toMin(b.startTime));
-
-  const monday = addDays(mondayOf(new Date()), weekOffset * 7);
-  const dateFor = (dayNum: number) => addDays(monday, dayNum - 1);
-  const rangeLabel = `${fmtDay(monday)} – ${fmtDay(addDays(monday, 6))} ${addDays(monday, 6).getFullYear()}`;
-
-  const DAY_HEAD = 52;
-
-  return (
-    <div>
-      {/* Barre de navigation par semaine */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "12px 14px" }}>
-        <button onClick={() => setWeekOffset((w) => w - 1)} className="ek-btn ek-btn-outline" style={{ height: 30, width: 30, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Icon name="chevL" size={16} />
-        </button>
-        <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>
-          <Icon name="calendar" size={15} /> {rangeLabel}
-        </div>
-        <button onClick={() => setWeekOffset((w) => w + 1)} className="ek-btn ek-btn-outline" style={{ height: 30, width: 30, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Icon name="chevR" size={16} />
-        </button>
-      </div>
-
-      <div style={{ overflowX: "auto", padding: "0 14px 14px" }}>
-        <div style={{ display: "flex", minWidth: 52 + days.length * 132 }}>
-          {/* Colonne des heures */}
-          <div style={{ width: 52, flexShrink: 0 }}>
-            <div style={{ height: DAY_HEAD }} />
-            <div style={{ position: "relative", height: totalH }}>
-              {hours.map((h) => (
-                <div key={h} style={{ position: "absolute", top: (h - minH) * HOUR_PX - 6, right: 8, fontSize: 10.5, color: "var(--ink-3)", fontFamily: "var(--font-mono)" }}>
-                  {String(h).padStart(2, "0")}:00
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Une colonne par jour */}
-          {days.map((d) => {
-            const date = dateFor(d);
-            return (
-              <div key={d} style={{ flex: 1, minWidth: 128, borderLeft: "1px solid var(--divider)" }}>
-                <div style={{ height: DAY_HEAD, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--ink)", textTransform: "uppercase", letterSpacing: "0.03em" }}>{DAYS[d - 1]}</span>
-                  <span style={{ fontSize: 11, color: "var(--brand600, var(--brand))" }}>{fmtDay(date)}</span>
-                </div>
-                <div style={{ position: "relative", height: totalH, background: "var(--surface-2)" }}>
-                  {hours.map((h) => (
-                    <div key={h} style={{ position: "absolute", top: (h - minH) * HOUR_PX, left: 0, right: 0, borderTop: "1px solid var(--divider)" }} />
-                  ))}
-                  {forDay(d).map((r, i) => {
-                    const top = ((toMin(r.startTime) - minMin) / 60) * HOUR_PX;
-                    const height = Math.max(((toMin(r.endTime) - toMin(r.startTime)) / 60) * HOUR_PX - 4, 30);
-                    const bg = rowColor(r);
-                    const fg = readableText(bg);
-                    return (
-                      <div key={i} style={{ position: "absolute", top: top + 2, left: 4, right: 4, height, background: bg, borderRadius: 10, padding: "6px 8px", color: fg, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.18)" }}>
-                        <div style={{ fontSize: 9.5, fontWeight: 600, opacity: 0.9 }}>{r.startTime} – {r.endTime}</div>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.12, marginTop: 1 }}>{r.subject}</div>
-                        {!!r.room && (
-                          <div style={{ fontSize: 10, opacity: 0.9, marginTop: 3, display: "flex", alignItems: "center", gap: 3 }}>
-                            <Icon name="pin" size={10} /> {r.room}
-                          </div>
-                        )}
-                        {!!r.teacher && <div style={{ fontSize: 10, opacity: 0.85, marginTop: 1, lineHeight: 1.2 }}>{r.teacher}</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
+import { DAYS, PALETTE, byDayTime, blankRow, input, rowColor, readableText, type Row } from "./timetable-shared";
+import { WeekCalendar } from "./WeekCalendar";
+import { SlotRow } from "./SlotRow";
+import { exportTimetableCsv, exportTimetablePdf } from "./timetable-exports";
 
 export function TimetableManager({ slots, classNames, schoolName }: { slots: TimetableSlot[]; classNames: string[]; schoolName: string }) {
   const router = useRouter();
@@ -280,53 +127,9 @@ export function TimetableManager({ slots, classNames, schoolName }: { slots: Tim
     });
   };
 
-  const exportList = () => rows.slice().sort((a, b) => a.day - b.day || a.startTime.localeCompare(b.startTime));
-
-  const exportExcel = () => {
-    const cls = className.trim();
-    const header = ["Jour", "Début", "Fin", "Matière", "Enseignant", "Salle"];
-    const lines = [
-      [schoolName || "Emploi du temps"],
-      [`Classe : ${cls}${option ? " · " + option : ""}`],
-      [],
-      header,
-      ...exportList().map((s) => [DAYS[s.day - 1], s.startTime, s.endTime, s.subject, s.teacher, s.room]),
-    ];
-    const csv = lines.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `emploi-du-temps-${cls.replace(/\s+/g, "_")}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportPdf = () => {
-    const cls = className.trim();
-    const list = exportList();
-    const body = list
-      .map((s) => {
-        const bg = rowColor(s);
-        return `<tr><td>${escapeHtml(DAYS[s.day - 1])}</td><td class="mono">${escapeHtml(s.startTime)}–${escapeHtml(s.endTime)}</td><td><span class="dot" style="background:${bg}"></span><b>${escapeHtml(s.subject)}</b></td><td>${escapeHtml(s.teacher)}</td><td>${escapeHtml(s.room)}</td></tr>`;
-      })
-      .join("");
-    const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Emploi du temps — ${escapeHtml(cls)}</title>
-<style>*{font-family:Arial,Helvetica,sans-serif;box-sizing:border-box}body{margin:32px;color:#181c2a}
-.school{font-size:15px;font-weight:700;color:#4F66E8;margin:0 0 2px}
-h1{font-size:18px;margin:0 0 2px}.sub{color:#666;font-size:12px;margin-bottom:16px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{background:#4F66E8;color:#fff;text-align:left;padding:8px 10px;text-transform:uppercase;font-size:10px}
-td{padding:8px 10px;border-bottom:1px solid #e5e7eb}.mono{font-family:'Courier New',monospace;white-space:nowrap}
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}</style></head>
-<body>${schoolName ? `<div class="school">${escapeHtml(schoolName)}</div>` : ""}<h1>Emploi du temps — ${escapeHtml(cls)}${option ? " · " + escapeHtml(option) : ""}</h1><div class="sub">${list.length} cours</div>
-<table><thead><tr><th>Jour</th><th>Horaire</th><th>Matière</th><th>Enseignant</th><th>Salle</th></tr></thead><tbody>${body}</tbody></table>
-<script>window.onload=function(){window.print()}</script></body></html>`;
-    const w = window.open("", "_blank");
-    if (!w) { alert("Autorisez les fenêtres pop-up pour générer le PDF."); return; }
-    w.document.write(html);
-    w.document.close();
-  };
+  const exportArgs = { rows, className, option, schoolName };
+  const exportExcel = () => exportTimetableCsv(exportArgs);
+  const exportPdf = () => exportTimetablePdf(exportArgs);
 
   const hasClass = className.trim().length > 0;
   const canExport = hasClass && rows.length > 0;
@@ -465,43 +268,16 @@ td{padding:8px 10px;border-bottom:1px solid #e5e7eb}.mono{font-family:'Courier N
                     </div>
                   )}
 
-                  {rows.map((r) => {
-                    const bg = rowColor(r);
-                    const open = colorFor_ === r.key;
-                    return (
-                      <div key={r.key} style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr 0.9fr 1.4fr 1.2fr 0.9fr 52px 32px", gap: 8, alignItems: "center", position: "relative" }}>
-                        <select value={r.day} onChange={(e) => updateRow(r.key, { day: +e.target.value })} style={input}>
-                          {DAYS.map((d, i) => <option key={i} value={i + 1}>{d}</option>)}
-                        </select>
-                        <input type="time" value={r.startTime} onChange={(e) => updateRow(r.key, { startTime: e.target.value })} style={input} />
-                        <input type="time" value={r.endTime} onChange={(e) => updateRow(r.key, { endTime: e.target.value })} style={input} />
-                        <input value={r.subject} onChange={(e) => updateRow(r.key, { subject: e.target.value })} placeholder="Matière" style={input} />
-                        <input value={r.teacher} onChange={(e) => updateRow(r.key, { teacher: e.target.value })} placeholder="Enseignant" style={input} />
-                        <input value={r.room} onChange={(e) => updateRow(r.key, { room: e.target.value })} placeholder="Salle" style={input} />
-                        {/* Sélecteur de couleur */}
-                        <button type="button" onClick={() => setColorFor(open ? null : r.key)} title="Couleur du cours"
-                          style={{ height: 34, borderRadius: 8, border: "1px solid var(--border-strong)", background: bg, cursor: "pointer" }} />
-                        <button onClick={() => removeRow(r.key)} title="Supprimer" style={{ border: "none", background: "transparent", color: "var(--ink-4)", cursor: "pointer", padding: 4 }}>
-                          <Icon name="trash" size={15} />
-                        </button>
-
-                        {open && (
-                          <div style={{ position: "absolute", right: 40, top: 38, zIndex: 20, background: "var(--surface)", border: "1px solid var(--border-strong)", borderRadius: 10, padding: 10, boxShadow: "0 6px 20px rgba(0,0,0,0.18)", width: 190 }}>
-                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                              <button type="button" onClick={() => { updateRow(r.key, { color: "" }); setColorFor(null); }} title="Automatique"
-                                style={{ width: 26, height: 26, borderRadius: "50%", border: r.color === "" ? "2px solid var(--ink)" : "1px solid var(--border-strong)", background: "var(--surface-2)", color: "var(--ink-3)", cursor: "pointer", fontSize: 10 }}>A</button>
-                              {PALETTE.map((c) => (
-                                <button key={c} type="button" onClick={() => { updateRow(r.key, { color: c }); setColorFor(null); }}
-                                  style={{ width: 26, height: 26, borderRadius: "50%", background: c, border: r.color === c ? "2px solid var(--ink)" : "1px solid rgba(0,0,0,0.15)", cursor: "pointer" }} />
-                              ))}
-                              <input type="color" value={r.color || bg} onChange={(e) => updateRow(r.key, { color: e.target.value })} title="Personnalisée"
-                                style={{ width: 30, height: 26, padding: 0, border: "1px solid var(--border-strong)", borderRadius: 6, background: "var(--surface)", cursor: "pointer" }} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {rows.map((r) => (
+                    <SlotRow
+                      key={r.key}
+                      row={r}
+                      open={colorFor_ === r.key}
+                      onToggleColor={() => setColorFor(colorFor_ === r.key ? null : r.key)}
+                      onUpdate={(patch) => updateRow(r.key, patch)}
+                      onRemove={() => removeRow(r.key)}
+                    />
+                  ))}
 
                   <div style={{ marginTop: 4 }}>
                     <button onClick={addRow} className="ek-btn ek-btn-outline" style={{ height: 36, fontSize: 13 }}>
@@ -571,3 +347,4 @@ td{padding:8px 10px;border-bottom:1px solid #e5e7eb}.mono{font-family:'Courier N
     </div>
   );
 }
+
