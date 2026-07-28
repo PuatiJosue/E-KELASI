@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader, KPI } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
 import { SchoolArchiveButton } from "@/components/admin/SchoolArchiveButton";
+import { SchoolBillingCard } from "@/components/admin/SchoolBillingCard";
 import { getSchoolDossier } from "@/lib/db";
 
 const STATUS_LABEL: Record<string, { fr: string; cls: string }> = {
@@ -102,6 +103,9 @@ export default async function SchoolDossierPage({ params }: { params: { id: stri
           )}
         </Card>
       </div>
+
+      {/* Abonnement : encaissement hors Stripe + suspension */}
+      <SchoolBillingCard schoolId={params.id} status={d.status} billing={d.billing} />
 
       {/* Classes */}
       <Card title="Classes">

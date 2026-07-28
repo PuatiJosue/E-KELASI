@@ -3,6 +3,7 @@
 // transparently switch every screen to live queries.
 
 import { createClient } from "@/lib/supabase/server";
+import { schoolPriceCents } from "@/lib/school-price";
 import {
   MOCK_MRR_12M,
   MOCK_TOP_SCHOOLS,
@@ -314,6 +315,27 @@ export type SchoolDossier = {
   staff: { name: string; email: string | null; role: string; joinedFr: string | null }[];
   documents: { name: string; url: string | null; dateFr: string }[];
   accessCodes: { code: string; redeemed: boolean; redeemedFr: string | null }[];
+  billing: SchoolBilling;
+};
+
+export type SchoolPaymentRow = {
+  period: string;        // 'YYYY-MM'
+  periodFr: string;      // 'juillet 2026'
+  amountCents: number;
+  amountLabel: string;
+  method: string;
+  reference: string | null;
+  note: string | null;
+  paidAtFr: string | null;
+};
+
+export type SchoolBilling = {
+  period: string;            // mois en cours 'YYYY-MM'
+  periodFr: string;
+  priceCents: number;        // tarif attendu, pour préremplir la saisie
+  priceLabel: string;
+  currentMonth: SchoolPaymentRow | null; // null = mois non réglé
+  history: SchoolPaymentRow[];           // 12 derniers mois, le plus récent d'abord
 };
 
 export async function getSchoolDossier(id: string): Promise<SchoolDossier | null> {
@@ -333,11 +355,17 @@ export async function getSchoolDossier(id: string): Promise<SchoolDossier | null
       .maybeSingle();
     if (!school) return null;
 
-    const [{ data: students }, { data: staff }, { data: docs }, { data: codes }] = await Promise.all([
+    const [{ data: students }, { data: staff }, { data: docs }, { data: codes }, { data: payments }] = await Promise.all([
       supabase.from("students").select("id, class_name, status").eq("school_id", id),
       supabase.from("school_staff").select("user_id, role, created_at").eq("school_id", id),
       (supabase as any).from("school_documents").select("name, url, created_at").eq("school_id", id).order("created_at", { ascending: false }),
       (supabase as any).from("school_access_codes").select("code, redeemed_at, created_at").eq("school_id", id).order("created_at", { ascending: false }),
+      (supabase as any)
+        .from("school_payments")
+        .select("period, amount_cents, currency, method, reference, note, paid_at")
+        .eq("school_id", id)
+        .order("period", { ascending: false })
+        .limit(12),
     ]);
 
     const studentList = students ?? [];
@@ -359,6 +387,32 @@ export async function getSchoolDossier(id: string): Promise<SchoolDossier | null
       classMap.set(label, (classMap.get(label) ?? 0) + 1);
     }
     const classes = [...classMap.entries()].map(([label, n]) => ({ label, students: n })).sort((a, b) => a.label.localeCompare(b.label, "fr"));
+
+    // Abonnement : état du mois en cours + historique des encaissements.
+    const period = new Date().toISOString().slice(0, 7);
+    const periodLabel = (p: string) => {
+      const [y, m] = p.split("-").map(Number);
+      if (!y || !m) return p;
+      return new Date(y, m - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    };
+    const paymentRows: SchoolPaymentRow[] = (payments ?? []).map((p: any) => ({
+      period: p.period,
+      periodFr: periodLabel(p.period),
+      amountCents: p.amount_cents ?? 0,
+      amountLabel: fmtMoney(p.amount_cents ?? 0, p.currency ?? "USD"),
+      method: p.method ?? "manual",
+      reference: p.reference ?? null,
+      note: p.note ?? null,
+      paidAtFr: fmtDate(p.paid_at),
+    }));
+    const billing: SchoolBilling = {
+      period,
+      periodFr: periodLabel(period),
+      priceCents: schoolPriceCents(),
+      priceLabel: fmtMoney(schoolPriceCents()),
+      currentMonth: paymentRows.find((p) => p.period === period) ?? null,
+      history: paymentRows,
+    };
 
     // Noms du personnel.
     const staffList = staff ?? [];
@@ -405,6 +459,7 @@ export async function getSchoolDossier(id: string): Promise<SchoolDossier | null
       }),
       documents: (docs ?? []).map((d: any) => ({ name: d.name ?? "Document", url: d.url ?? null, dateFr: fmtDate(d.created_at) ?? "—" })),
       accessCodes: (codes ?? []).map((c: any) => ({ code: c.code, redeemed: Boolean(c.redeemed_at), redeemedFr: fmtDate(c.redeemed_at) })),
+      billing,
     };
   } catch {
     return null;
