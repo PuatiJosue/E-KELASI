@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 
 export type JournalEntry = {
   id: string;

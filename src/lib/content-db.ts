@@ -1,17 +1,9 @@
 // Lecture — emploi du temps + vidéos des cours (console école).
 // Service role, scope école via getMySchool.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 
 export type TimetableSlot = {
   id: string;
@@ -32,7 +24,7 @@ export async function listTimetable(): Promise<TimetableSlot[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const { data } = await service()
+    const { data } = await serviceClient()
       .from("timetable_slots")
       .select("id, class_name, option, day, start_time, end_time, subject, teacher, room, color, published")
       .eq("school_id", school.id)
@@ -72,7 +64,7 @@ export async function listCourseVideos(): Promise<CourseVideo[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const { data } = await service()
+    const { data } = await serviceClient()
       .from("course_videos")
       .select("id, class_name, subject, title, url, description, created_at")
       .eq("school_id", school.id)
@@ -98,7 +90,7 @@ export async function listSchoolParents(): Promise<SchoolParent[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data: students } = await svc
       .from("students")
       .select("id, full_name")
@@ -135,7 +127,7 @@ export async function listSchoolClassNames(): Promise<string[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const { data } = await service()
+    const { data } = await serviceClient()
       .from("students")
       .select("class_name")
       .eq("school_id", school.id)

@@ -1,15 +1,7 @@
 // Couche données — annonces plateforme (super-admin E-KLASS). Service role.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
+import { isLiveMode } from "@/lib/env";
 
 export type PlatformAnnouncement = {
   id: string;
@@ -27,7 +19,7 @@ function map(d: any): PlatformAnnouncement {
 export async function listPlatformAnnouncements(): Promise<PlatformAnnouncement[]> {
   if (!isLiveMode()) return [];
   try {
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("platform_announcements")
       .select("id, title, body, audience, created_at")
@@ -51,7 +43,7 @@ export type PlatformVideo = {
 export async function listPlatformVideos(): Promise<PlatformVideo[]> {
   if (!isLiveMode()) return [];
   try {
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("platform_videos")
       .select("id, title, url, subject, description, created_at")
@@ -74,7 +66,7 @@ export type PlatformParent = { id: string; name: string; email: string };
 export async function listAllParents(): Promise<PlatformParent[]> {
   if (!isLiveMode()) return [];
   try {
-    const { data } = await service()
+    const { data } = await serviceClient()
       .from("profiles")
       .select("id, full_name, email")
       .eq("role", "parent")
@@ -89,7 +81,7 @@ export async function listAllParents(): Promise<PlatformParent[]> {
 export async function getPlatformForSchools(): Promise<PlatformAnnouncement[]> {
   if (!isLiveMode()) return [];
   try {
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("platform_announcements")
       .select("id, title, body, audience, created_at")

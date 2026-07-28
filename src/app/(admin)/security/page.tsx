@@ -1,6 +1,6 @@
 import { KPI, PageHeader } from "@/components/KPI";
 import { T } from "@/lib/i18n";
-import { listAuditLogs } from "@/lib/db";
+import { listAuditLogs } from "@/lib/admin/security";
 import { SecurityLogTable } from "@/components/admin/SecurityLogTable";
 
 export default async function SecurityPage() {

@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { caller, service } from "@/lib/messages-db";
+import { requireSchoolAdmin } from "@/lib/auth/guards";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
+import type { Result } from "@/lib/result";
 
 export type SchoolThreadMessage = { id: string; body: string; fromSchool: boolean; createdAt: string };
 export type SchoolThread = {
@@ -13,7 +15,6 @@ export type SchoolThread = {
   messages: SchoolThreadMessage[];
 };
 
-type Result = { ok: true } | { ok: false; message: string };
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -25,9 +26,9 @@ function fmtTime(iso: string): string {
 export async function getSchoolThread(conversationId: string): Promise<SchoolThread | null> {
   if (!conversationId) return null;
   if (!isLiveMode()) return null;
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return null;
-  const svc = service();
+  const svc = serviceClient();
 
   const { data: conv } = await svc
     .from("conversations")
@@ -93,7 +94,7 @@ export async function sendPaymentReminders(
   if (ids.length === 0) return { ok: false, message: "Aucun parent sélectionné." };
   if (!isLiveMode()) return { ok: true, sent: ids.length };
 
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
 
   const session = createClient();
@@ -125,7 +126,7 @@ export async function sendSchoolMessage(
   if (ids.length === 0) return { ok: false, message: "Aucun parent sélectionné." };
   if (!isLiveMode()) return { ok: true, sent: ids.length };
 
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
 
   const session = createClient();
@@ -148,9 +149,9 @@ export async function sendSchoolMessage(
 export async function replyToConversation(conversationId: string, body: string): Promise<Result> {
   if (!conversationId || !body?.trim()) return { ok: false, message: "Message vide." };
   if (!isLiveMode()) return { ok: true };
-  const c = await caller();
+  const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
-  const svc = service();
+  const svc = serviceClient();
 
   const { data: conv } = await svc.from("conversations").select("id, school_id").eq("id", conversationId).maybeSingle();
   if (!conv || (conv as any).school_id !== c.schoolId) return { ok: false, message: "Conversation introuvable." };

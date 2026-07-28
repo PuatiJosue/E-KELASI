@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { listSchoolConversations } from "@/lib/messages-db";
-import { getReminderRecipients } from "@/lib/finance-db";
+import { getReminderRecipients } from "@/lib/finance/reminders";
 import { MessagesManager } from "./MessagesManager";
 
 export default async function SchoolMessages({

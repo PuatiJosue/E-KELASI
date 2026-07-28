@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { listReenrollments } from "@/lib/enroll-db";
-import { getMySchool } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
 import { ReenrollmentsManager } from "./ReenrollmentsManager";
 
 export default async function SchoolReenrollments() {

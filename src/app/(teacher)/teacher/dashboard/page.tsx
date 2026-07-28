@@ -3,13 +3,10 @@ import { KPI, PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
-import {
-  getTeacherProfile,
-  getTeacherSchool,
-  listTeacherClasses,
-  listTeacherRecentGrades,
-  listTeacherHomework,
-} from "@/lib/teacher-db";
+import { getTeacherProfile, getTeacherSchool } from "@/lib/teacher/profile";
+import { listTeacherClasses } from "@/lib/teacher/classes";
+import { listTeacherRecentGrades } from "@/lib/teacher/grades";
+import { listTeacherHomework } from "@/lib/teacher/homework";
 
 export default async function TeacherDashboard() {
   const [profile, school, classes, recentGrades, homework] = await Promise.all([

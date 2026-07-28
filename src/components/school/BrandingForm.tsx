@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { T } from "@/lib/i18n";
 import { Icon } from "@/components/Icon";
 import { createClient } from "@/lib/supabase/client";
-import type { MySchool } from "@/lib/school-db";
+import type { MySchool } from "@/lib/school/profile";
 import { updateBrandingAction } from "@/app/(school)/school/branding/actions";
 
 const COLORS = ["#1E2F6D", "#1D6650", "#3A6DBC", "#9747BB", "#B8475B", "#C28728"];

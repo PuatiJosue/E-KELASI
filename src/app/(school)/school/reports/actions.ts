@@ -2,23 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { randomBytes } from "crypto";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
-import { getStudentReportData } from "@/lib/school-db";
+import { isLiveMode } from "@/lib/env";
+import { getStudentReportData } from "@/lib/school/dossier";
 import { getBulletinDraft } from "@/lib/bulletin-actions";
 import { renderBulletinPointsPdf } from "@/lib/bulletin-points-pdf";
 import { currentTrimester } from "@/lib/trimester";
 
 type Result = { ok: true; code: string } | { ok: false; message: string };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 // Publie le bulletin d'un élève comme document officiel signé, visible des parents.
 export async function publishBulletinAction(studentId: string, period: string, trimester?: number): Promise<Result> {
@@ -37,7 +29,7 @@ export async function publishBulletinAction(studentId: string, period: string, t
   if (!staff?.school_id) return { ok: false, message: "Réservé à la direction." };
   const schoolId = staff.school_id;
 
-  const svc = service();
+  const svc = serviceClient();
   const tri = trimester ?? currentTrimester();
 
   // L'élève appartient bien à l'école + identité de l'école (en-tête + signature).

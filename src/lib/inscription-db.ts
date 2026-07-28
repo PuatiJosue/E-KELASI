@@ -1,16 +1,8 @@
 // Couche données — inscriptions (nouvel élève). Service role, scope école.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 
 export type Inscription = {
   id: string;
@@ -59,7 +51,7 @@ export async function listInscriptions(status?: string): Promise<Inscription[]> 
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     let q = svc.from("inscriptions").select(COLS).eq("school_id", school.id).order("created_at", { ascending: false });
     if (status) q = q.eq("status", status);
     const { data } = await q;
@@ -73,7 +65,7 @@ export async function listInscriptions(status?: string): Promise<Inscription[]> 
 export async function getInscriptionByCode(code: string) {
   if (!isLiveMode()) return null;
   try {
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("inscriptions")
       .select(COLS + ", schools(name, city, commune, logo_url)")

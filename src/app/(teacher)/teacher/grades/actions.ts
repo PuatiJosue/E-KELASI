@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
 import { formatDateFr } from "@/lib/grade-report";
 import { renderNotePdf } from "@/lib/note-pdf";
@@ -24,14 +24,6 @@ type SubmitArgs = {
 type Result =
   | { ok: true; count: number; pdfsSent?: number }
   | { ok: false; message: string };
-
-function adminClient() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 export async function submitGradesAction(args: SubmitArgs): Promise<Result> {
   if (!isLiveMode()) return { ok: true, count: args.items.length };
@@ -137,7 +129,7 @@ async function sendNotePdfs(opts: {
   gradedAt: string;
   items: GradeInput[];
 }): Promise<number> {
-  const admin = adminClient();
+  const admin = serviceClient();
 
   // École (en-tête : nom + logo).
   const { data: school } = await admin

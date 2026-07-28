@@ -5,20 +5,12 @@
 // exceptionnelle enregistrée. Reçoit les vues déjà chargées par la page pour éviter
 // de recalculer les agrégats ; ne fait que 2 requêtes légères supplémentaires.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
 import { classLabel } from "@/lib/classes";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import type { FeesOverview } from "./fees";
 import type { TreasuryOverview } from "./treasury";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 export type AlertSeverity = "info" | "warning" | "critical";
 export type FinanceAlert = {
@@ -76,7 +68,7 @@ export async function getFinanceAlerts(
   try {
     const school = await getMySchool();
     if (school) {
-      const svc = service();
+      const svc = serviceClient();
       const today = new Date().toISOString().slice(0, 10);
       const in7 = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
       const ago7 = new Date(Date.now() - 7 * 864e5).toISOString();

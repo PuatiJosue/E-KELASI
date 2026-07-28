@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 
 export type NotifPref = "all" | "important" | "none";
 

@@ -1,19 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
+import type { Result } from "@/lib/result";
 
-type Result = { ok: true } | { ok: false; message: string };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 async function superAdmin(): Promise<string | null> {
   const session = createClient();
@@ -37,7 +29,7 @@ export async function createPlatformAnnouncement(input: {
   const uid = await superAdmin();
   if (!uid) return { ok: false, message: "Réservé au super-admin." };
 
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc.from("platform_announcements").insert({ title, body, audience, created_by: uid });
   if (error) return { ok: false, message: "Publication impossible." };
 
@@ -67,7 +59,7 @@ export async function deletePlatformAnnouncement(id: string): Promise<Result> {
   if (!isLiveMode()) return { ok: true };
   const uid = await superAdmin();
   if (!uid) return { ok: false, message: "Réservé au super-admin." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc.from("platform_announcements").delete().eq("id", id);
   if (error) return { ok: false, message: "Suppression impossible." };
   revalidatePath("/broadcast");

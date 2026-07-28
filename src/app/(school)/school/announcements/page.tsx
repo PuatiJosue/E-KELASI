@@ -1,7 +1,8 @@
 import { PageHeader } from "@/components/KPI";
 import { Logo } from "@/components/Logo";
 import { listSchoolAnnouncements } from "@/lib/announce-db";
-import { getMySchool, listSchoolStudents } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
+import { listSchoolStudents } from "@/lib/school/people";
 import { classLabel, normOption, classKey } from "@/lib/classes";
 import { AnnouncementManager, type AnnounceClass } from "./AnnouncementManager";
 import { SignatureForm } from "../settings/SignatureForm";

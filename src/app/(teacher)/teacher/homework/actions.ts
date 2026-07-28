@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
+import type { Result } from "@/lib/result";
 
 type Args = {
   className: string;
@@ -13,7 +14,6 @@ type Args = {
   dueAt: string;
 };
 
-type Result = { ok: true } | { ok: false; message: string };
 
 export async function createHomeworkAction(args: Args): Promise<Result> {
   if (!isLiveMode()) return { ok: true };

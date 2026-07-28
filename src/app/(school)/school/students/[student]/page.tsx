@@ -3,32 +3,15 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
-import { getStudentDossier } from "@/lib/school-db";
+import { getStudentDossier } from "@/lib/school/dossier";
 import { listSchoolClassNames } from "@/lib/content-db";
 import { splitFullName } from "@/lib/staff-types";
 import { currentTrimester } from "@/lib/trimester";
 import { DeleteStudentButton } from "./DeleteStudentButton";
 import { EditStudentButton } from "./EditStudentButton";
-
-function ageFrom(birth: string | null): string {
-  if (!birth) return "—";
-  const d = new Date(birth);
-  if (isNaN(d.getTime())) return "—";
-  const now = new Date();
-  let age = now.getFullYear() - d.getFullYear();
-  const m = now.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
-  return age >= 0 && age < 100 ? `${age} ans` : "—";
-}
-
-function fmtDate(birth: string | null): string {
-  if (!birth) return "—";
-  const d = new Date(birth);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
-}
-
-const sexLabel = (s: string | null) => (s === "M" ? "Masculin" : s === "F" ? "Féminin" : "—");
+import { TrimesterGrades } from "./detail/TrimesterGrades";
+import { SectionTitle, InfoRow } from "./detail/ui";
+import { ageFrom, fmtDate, sexLabel } from "./detail/format";
 
 export default async function StudentDossierPage({ params }: { params: { student: string } }) {
   const [d, classNames] = await Promise.all([
@@ -232,83 +215,7 @@ export default async function StudentDossierPage({ params }: { params: { student
       )}
 
       {/* Cotations regroupées par trimestre (dossiers) */}
-      {d.trimesters.length === 0 ? (
-        <div className="ek-card" style={{ padding: 18 }}>
-          <SectionTitle fr="Cotations par trimestre" en="Grades by term" />
-          <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
-            <T fr="Pas encore de notes saisies." en="No grades yet." />
-          </div>
-        </div>
-      ) : (
-        d.trimesters.map((tri) => {
-          const current = tri.index === currentTrimester();
-          return (
-            <div key={tri.index} className="ek-card" style={{ padding: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Icon name="file" size={14} style={{ color: "var(--ink-3)" }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--font-display)" }}>
-                    <T fr={tri.fr} en={tri.en} />
-                  </span>
-                  {current && (
-                    <span className="ek-chip info" style={{ fontSize: 10 }}>
-                      <T fr="En cours" en="Current" />
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
-                  <T fr="Moyenne" en="Average" />{" "}
-                  <strong style={{ color: tri.overallAvg >= 14 ? "#1D6650" : tri.overallAvg >= 10 ? "#C28728" : "#C03A2B" }}>
-                    {tri.overallAvg.toFixed(1)}/20
-                  </strong>
-                </div>
-              </div>
-              <div className="ek-tablewrap">
-                <div style={{ minWidth: 480 }}>
-                  {tri.subjects.map((s, i) => (
-                    <div
-                      key={s.name}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "2fr 2fr 0.7fr",
-                        padding: "10px 0",
-                        alignItems: "center",
-                        borderTop: i > 0 ? "1px solid var(--divider)" : "none",
-                        fontSize: 12.5,
-                      }}
-                    >
-                      <div style={{ fontWeight: 600, color: "var(--ink)" }}>{s.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                        {s.items.length} évaluation(s)
-                      </div>
-                      <div style={{ textAlign: "right", fontWeight: 700, fontFamily: "var(--font-display)", color: s.avg >= 14 ? "#1D6650" : s.avg >= 10 ? "#C28728" : "#C03A2B" }}>
-                        {s.avg.toFixed(1)}<span style={{ fontSize: 10, color: "var(--ink-3)" }}>/20</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          );
-        })
-      )}
-    </div>
-  );
-}
-
-function SectionTitle({ fr, en }: { fr: string; en: string }) {
-  return (
-    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>
-      <T fr={fr} en={en} />
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", fontSize: 13, borderTop: "1px solid var(--divider)" }}>
-      <span style={{ color: "var(--ink-3)" }}>{label}</span>
-      <span style={{ color: "var(--ink)", fontWeight: 600 }}>{value}</span>
-    </div>
+      <TrimesterGrades d={d} />
+</div>
   );
 }

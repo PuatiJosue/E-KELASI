@@ -1,6 +1,6 @@
 "use server";
 
-import { listTeacherClasses, listStudentsInClass } from "@/lib/teacher-db";
+import { listTeacherClasses, listStudentsInClass } from "@/lib/teacher/classes";
 import type { SearchResult } from "@/components/SearchBox";
 
 export async function searchTeacher(q: string): Promise<SearchResult[]> {

@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 
 export type AttendanceItem = { studentId: string; status: string };
 
@@ -12,14 +12,6 @@ type Result =
   | { ok: false; message: string };
 
 const VALID = ["present", "absent", "late", "justified"];
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 export async function saveAttendanceAction(args: {
   date: string;
@@ -52,7 +44,7 @@ export async function saveAttendanceAction(args: {
     }));
   if (rows.length === 0) return { ok: false, message: "Aucune présence à enregistrer." };
 
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc
     .from("student_attendance")
     .upsert(rows, { onConflict: "student_id,date" });

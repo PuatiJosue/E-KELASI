@@ -2,7 +2,7 @@ import { PageHeader } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { AdminBookForm } from "@/components/admin/AdminBookForm";
 import { DeletePlatformBook } from "@/components/admin/DeletePlatformBook";
 

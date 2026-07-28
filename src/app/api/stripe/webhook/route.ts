@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { schoolPriceCents } from "@/lib/school-price";
 
 // Achat d'un livre (paiement unique) : marque l'achat 'paid' et notifie le parent.
@@ -15,7 +15,7 @@ async function handleBookPurchase(session: Stripe.Checkout.Session) {
   const parentId = session.metadata.parent_id;
   if (!bookId || !parentId) return;
 
-  const supabase = service();
+  const supabase = serviceClient();
   // Réconcilie la ligne créée au checkout (par ID de session), sinon en crée une.
   const { data: existing } = await supabase
     .from("library_purchases")
@@ -45,14 +45,6 @@ async function handleBookPurchase(session: Stripe.Checkout.Session) {
   });
 }
 
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
 function planFromMetadata(sub: Stripe.Subscription): "essentiel" | "famille" | "premium" {
   const p = (sub.metadata?.plan ?? "").toLowerCase();
   if (p === "famille" || p === "premium") return p;
@@ -64,7 +56,7 @@ function planFromMetadata(sub: Stripe.Subscription): "essentiel" | "famille" | "
 async function handleSchoolSubscription(sub: Stripe.Subscription): Promise<boolean> {
   const schoolId = sub.metadata?.school_id;
   if (!schoolId) return false;
-  const supabase = service();
+  const supabase = serviceClient();
   const active = ["active", "trialing", "past_due"].includes(sub.status);
   await supabase.from("schools").update({ status: active ? "active" : "suspended" }).eq("id", schoolId);
   if (active) {
@@ -88,7 +80,7 @@ async function upsertSubscription(sub: Stripe.Subscription) {
   // Abonnement école ? → traité à part, on ne touche pas la table parents.
   if (await handleSchoolSubscription(sub)) return;
 
-  const supabase = service();
+  const supabase = serviceClient();
   const parentId = sub.metadata?.supabase_user_id;
   if (!parentId) return;
 
@@ -120,7 +112,7 @@ async function upsertSubscription(sub: Stripe.Subscription) {
 }
 
 async function recordPayment(invoice: Stripe.Invoice, status: "paid" | "failed") {
-  const supabase = service();
+  const supabase = serviceClient();
   // Robustesse multi-versions : l'ID d'abonnement sur la facture a changé d'emplacement
   // selon la version API (top-level `subscription`, puis `parent.subscription_details`,
   // sinon au niveau des lignes).

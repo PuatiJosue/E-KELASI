@@ -1,34 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { serviceClient } from "@/lib/supabase/service";
+import { isLiveMode } from "@/lib/env";
 import { classLabel } from "@/lib/classes";
+import { requireSchoolAdminId } from "@/lib/auth/guards";
 
 const norm = (s: string) =>
   (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
-async function callerSchoolId(): Promise<string | null> {
-  const session = createClient();
-  const { data: { user } } = await session.auth.getUser();
-  if (!user) return null;
-  const { data: staff } = await session
-    .from("school_staff")
-    .select("school_id")
-    .eq("user_id", user.id)
-    .eq("role", "school_admin")
-    .maybeSingle();
-  return staff?.school_id ?? null;
-}
 
 export type PendingStudent = {
   id: string;
@@ -52,9 +31,9 @@ export type PendingStudent = {
 
 export async function getPendingStudents(): Promise<PendingStudent[]> {
   if (!isLiveMode()) return [];
-  const schoolId = await callerSchoolId();
+  const schoolId = await requireSchoolAdminId();
   if (!schoolId) return [];
-  const svc = service();
+  const svc = serviceClient();
   const { data: students } = await svc
     .from("students")
     .select("id, full_name, first_name, middle_name, last_name, sex, birth_date, class_name, option, address, created_at, created_by")
@@ -124,10 +103,10 @@ export async function getPendingStudents(): Promise<PendingStudent[]> {
 export async function attachToExisting(pendingStudentId: string, existingStudentId: string): Promise<{ ok: boolean; message?: string }> {
   if (!pendingStudentId || !existingStudentId) return { ok: false, message: "Paramètres invalides." };
   if (!isLiveMode()) return { ok: true };
-  const schoolId = await callerSchoolId();
+  const schoolId = await requireSchoolAdminId();
   if (!schoolId) return { ok: false, message: "Réservé à la direction." };
 
-  const svc = service();
+  const svc = serviceClient();
   const cols = "id, full_name, first_name, middle_name, last_name, sex, birth_date, class_name, grade_level, option, address, avatar_url";
   const { data: pend } = await svc.from("students").select(cols).eq("id", pendingStudentId).eq("school_id", schoolId).eq("status", "pending").maybeSingle();
   const { data: exist } = await svc.from("students").select(cols).eq("id", existingStudentId).eq("school_id", schoolId).maybeSingle();
@@ -188,10 +167,10 @@ export async function attachToExisting(pendingStudentId: string, existingStudent
 export async function setStudentValidation(studentId: string, approve: boolean, reason?: string): Promise<{ ok: boolean; message?: string }> {
   if (!studentId) return { ok: false, message: "Élève invalide." };
   if (!isLiveMode()) return { ok: true };
-  const schoolId = await callerSchoolId();
+  const schoolId = await requireSchoolAdminId();
   if (!schoolId) return { ok: false, message: "Réservé à la direction." };
 
-  const svc = service();
+  const svc = serviceClient();
   const { data: st } = await svc.from("students").select("id, full_name, created_by").eq("id", studentId).eq("school_id", schoolId).maybeSingle();
   if (!st) return { ok: false, message: "Élève introuvable." };
 

@@ -10,7 +10,7 @@ import { MobileMenuButton } from "@/components/Shell";
 import { LogoutButton } from "@/components/LogoutButton";
 import { SearchBox } from "@/components/SearchBox";
 import { searchSchool } from "@/app/(school)/school/search-actions";
-import type { MySchool, SchoolRequestCounts } from "@/lib/school-db";
+import type { MySchool, SchoolRequestCounts } from "@/lib/school/profile";
 
 const LABELS: Record<string, { fr: string; en: string }> = {
   overview: { fr: "Vue d'ensemble",     en: "Overview" },

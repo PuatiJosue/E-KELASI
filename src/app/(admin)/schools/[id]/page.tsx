@@ -4,7 +4,7 @@ import { PageHeader, KPI } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
 import { SchoolArchiveButton } from "@/components/admin/SchoolArchiveButton";
 import { SchoolBillingCard } from "@/components/admin/SchoolBillingCard";
-import { getSchoolDossier } from "@/lib/db";
+import { getSchoolDossier } from "@/lib/admin/school-dossier";
 
 const STATUS_LABEL: Record<string, { fr: string; cls: string }> = {
   active: { fr: "Active", cls: "success" },

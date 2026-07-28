@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/KPI";
-import { listTeacherClasses, listStudentsInClass, getStudentAttendanceForDate } from "@/lib/teacher-db";
+import { listTeacherClasses, listStudentsInClass } from "@/lib/teacher/classes";
+import { getStudentAttendanceForDate } from "@/lib/teacher/attendance";
 import { AttendanceForm } from "@/components/teacher/AttendanceForm";
 
 export default async function AttendancePage({

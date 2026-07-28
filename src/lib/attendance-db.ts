@@ -1,17 +1,9 @@
 // Couche données — présences/absences du personnel (Lot D3). Service role, scope école.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 import { classLabel } from "@/lib/classes";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 export type StaffLite = { id: string; name: string; category: string };
 export type DayAttendance = Record<string, { status: string; comment: string | null }>;
@@ -31,7 +23,7 @@ export async function listActiveStaff(): Promise<StaffLite[]> {
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("staff_members")
       .select("id, full_name, category")
@@ -49,7 +41,7 @@ export async function getAttendanceForDate(date: string): Promise<DayAttendance>
   try {
     const school = await getMySchool();
     if (!school) return {};
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("staff_attendance")
       .select("staff_id, status, comment")
@@ -79,7 +71,7 @@ export async function listStudentsForAttendance(): Promise<StudentLite[]> {
 export async function listStudentsForAttendanceOf(schoolId: string): Promise<StudentLite[]> {
   if (!isLiveMode() || !schoolId) return [];
   try {
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("students")
       .select("id, full_name, class_name, option, matricule, sex")
@@ -112,7 +104,7 @@ export async function getStudentAttendanceForDate(date: string): Promise<Student
 export async function getStudentAttendanceForDateOf(schoolId: string, date: string): Promise<StudentDayAttendance> {
   if (!isLiveMode() || !schoolId) return {};
   try {
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("student_attendance")
       .select("student_id, status")
@@ -131,7 +123,7 @@ export async function getAttendanceReport(from: string, to: string): Promise<Att
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const [staff, { data: rows }] = await Promise.all([
       listActiveStaff(),
       svc

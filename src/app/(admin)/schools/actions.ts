@@ -2,9 +2,9 @@
 
 import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { createUserErrorMessage } from "@/lib/auth-errors";
 
 type Result =
@@ -18,14 +18,6 @@ function generateCode(): string {
   let s = "";
   for (let i = 0; i < 8; i++) s += CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)];
   return s.slice(0, 4) + "-" + s.slice(4); // ex: XK3F-7P9M
-}
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
 }
 
 function slugify(s: string) {
@@ -83,7 +75,7 @@ export async function inviteSchoolAction(formData: FormData): Promise<Result> {
     return { ok: false, message: "Action réservée au super admin." };
   }
 
-  const svc = service();
+  const svc = serviceClient();
 
   // 1) Crée la fiche école (slug unique, plan standard par défaut).
   const slug = slugify(name) + "-" + crypto.randomBytes(2).toString("hex");
@@ -182,7 +174,7 @@ export async function setSchoolArchivedAction(
     return { ok: false, message: "Action réservée au super admin." };
   }
 
-  const { error } = await service()
+  const { error } = await serviceClient()
     .from("schools")
     .update({ status: archived ? "churned" : "active", updated_at: new Date().toISOString() })
     .eq("id", schoolId);
@@ -211,7 +203,7 @@ export async function redeemSchoolCodeAction(args: {
 
   if (!isLiveMode()) return { ok: true };
 
-  const admin = service();
+  const admin = serviceClient();
 
   // 1. Vérifie le code (encore non consommé).
   const { data: row, error: rowErr } = await admin

@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { TeamManager, type Member } from "@/components/admin/TeamManager";
 
 async function getTeam(): Promise<Member[]> {

@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
-import { RubriqueFraisTab, type ClassOption } from "./FraisScolairesTab";
-import { TresorerieTab } from "./TresorerieTab";
+import { RubriqueFraisTab } from "./frais/RubriqueFraisTab";
+import type { ClassOption } from "./frais/types";
+import { TresorerieTab } from "./tresorerie/TresorerieTab";
 import { AlertsBell } from "./AlertsBell";
 import { ReportsPanel } from "./ReportsPanel";
 import type { SchoolBranding } from "./finance-ui";
 import type { FeesOverview } from "@/lib/finance/fees";
-import type { TreasuryOverview, CashState } from "@/lib/finance/treasury";
+import type { TreasuryOverview } from "@/lib/finance/treasury";
+import type { CashState } from "@/lib/finance/cash-session";
 import type { FinanceAlert } from "@/lib/finance/alerts";
 
 const TABS = [

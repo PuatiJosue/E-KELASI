@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/KPI";
-import { getMySchool, listSchoolStudents } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
+import { listSchoolStudents } from "@/lib/school/people";
 import { PromotionManager } from "@/components/school/PromotionManager";
 import { getLastPromotionInfo } from "@/app/(school)/school/promotion/actions";
 import { schoolYearLabel } from "@/lib/trimester";

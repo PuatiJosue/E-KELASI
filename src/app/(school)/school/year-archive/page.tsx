@@ -1,21 +1,13 @@
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { PageHeader } from "@/components/KPI";
-import { getMySchool } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
 import { schoolYearLabel } from "@/lib/trimester";
 import { getArchiveYears } from "@/lib/year-archive-db";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { ArchivageManager } from "./ArchivageManager";
 
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
-
 async function counts(schoolId: string): Promise<{ grades: number; homework: number }> {
-  const svc = service();
+  const svc = serviceClient();
   const [{ data: students }, { data: subjects }] = await Promise.all([
     svc.from("students").select("id").eq("school_id", schoolId),
     svc.from("subjects").select("id").eq("school_id", schoolId),

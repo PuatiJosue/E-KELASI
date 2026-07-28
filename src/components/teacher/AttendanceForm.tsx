@@ -6,7 +6,8 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
-import type { StudentRow, StudentAttendanceMap } from "@/lib/teacher-db";
+import type { StudentRow } from "@/lib/teacher/classes";
+import type { StudentAttendanceMap } from "@/lib/teacher/attendance";
 import { saveAttendanceAction } from "@/app/(teacher)/teacher/attendance/actions";
 
 type ClassOption = { key: string; label: string; className: string; option: string | null };

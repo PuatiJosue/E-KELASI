@@ -5,7 +5,7 @@ import { Shell } from "@/components/Shell";
 import { SurveillantSidebar } from "@/components/surveillant/Sidebar";
 import { SurveillantTopbar } from "@/components/surveillant/Topbar";
 import { getSurveillantContext } from "@/lib/surveillant-db";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { SuspendedNotice } from "@/components/SuspendedNotice";
 
 export const dynamic = "force-dynamic";

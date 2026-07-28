@@ -1,7 +1,8 @@
 import { KPI, PageHeader } from "@/components/KPI";
 import { MRRChart, Donut } from "@/components/Charts";
 import { T } from "@/lib/i18n";
-import { getOverview, getCommsFlowThisMonth, type PlanSlice } from "@/lib/db";
+import { getOverview, type PlanSlice } from "@/lib/admin/overview";
+import { getCommsFlowThisMonth } from "@/lib/admin/comms";
 import { createClient } from "@/lib/supabase/server";
 
 const PLAN_META: Record<PlanSlice["plan"], { label: string; color: string }> = {

@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/KPI";
-import { listSchoolStudents } from "@/lib/school-db";
+import { listSchoolStudents } from "@/lib/school/people";
 import { listSchoolClassNames } from "@/lib/content-db";
 import { StudentsBrowser } from "./StudentsBrowser";
 import { AddStudentButton } from "@/components/school/AddStudentButton";

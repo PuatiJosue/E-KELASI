@@ -2,7 +2,8 @@ import { KPI, PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
-import { listRecentPayments, getOverview } from "@/lib/db";
+import { listRecentPayments } from "@/lib/admin/billing";
+import { getOverview } from "@/lib/admin/overview";
 
 export default async function BillingPage() {
   const [payments, overview] = await Promise.all([listRecentPayments(), getOverview()]);

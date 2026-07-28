@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
-import { listSchoolTeachers } from "@/lib/school-db";
+import { listSchoolTeachers } from "@/lib/school/people";
 
 export default async function SchoolTeachers() {
   const teachers = await listSchoolTeachers();

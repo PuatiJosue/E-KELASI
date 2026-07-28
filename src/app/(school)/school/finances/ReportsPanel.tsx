@@ -6,9 +6,9 @@ import { Avatar } from "@/components/Avatar";
 import { SexBadge } from "@/components/SexBadge";
 import { Modal, Labeled, Chip, MoneyLines, SearchInput, Toolbar, STUDENT_STATUS, COLORS, modalInp, iconBtn, type SchoolBranding } from "./finance-ui";
 import { money, escHtml, openPrint, downloadCsv, buildInvoiceHtml, reportHead, REPORT_CSS } from "./finance-export";
-import { loadClassReport, loadStudentReport } from "./actions-v2";
+import { loadClassReport, loadStudentReport } from "./actions/loaders";
 import { classKey } from "@/lib/classes";
-import type { ClassOption } from "./FraisScolairesTab";
+import type { ClassOption } from "./frais/types";
 import type { ClassReport, StudentReport, CurAmounts } from "@/lib/finance/reports";
 
 type Key = keyof CurAmounts;

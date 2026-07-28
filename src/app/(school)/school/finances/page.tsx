@@ -1,12 +1,14 @@
 import { getFeesOverview } from "@/lib/finance/fees";
-import { getTreasuryOverview, getCashState } from "@/lib/finance/treasury";
+import { getTreasuryOverview } from "@/lib/finance/treasury";
+import { getCashState } from "@/lib/finance/cash-session";
 import { getFinanceAlerts } from "@/lib/finance/alerts";
-import { getMySchool, listSchoolStudents } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
+import { listSchoolStudents } from "@/lib/school/people";
 import { classLabel, normOption, classKey } from "@/lib/classes";
 import { schoolYearLabel } from "@/lib/trimester";
 import { FinanceModule } from "./FinanceModule";
 import type { SchoolBranding } from "./finance-ui";
-import type { ClassOption } from "./FraisScolairesTab";
+import type { ClassOption } from "./frais/types";
 
 export default async function SchoolFinances() {
   const [school, students, feesScolaire, feesAutre, treasury, cashState] = await Promise.all([

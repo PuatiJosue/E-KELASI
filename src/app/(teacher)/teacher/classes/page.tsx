@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/KPI";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
-import { listTeacherClasses } from "@/lib/teacher-db";
+import { listTeacherClasses } from "@/lib/teacher/classes";
 
 export default async function ClassesPage() {
   const classes = await listTeacherClasses();

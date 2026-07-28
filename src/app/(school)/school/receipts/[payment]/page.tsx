@@ -1,6 +1,6 @@
 import { SchoolLetterhead } from "@/components/school/SchoolLetterhead";
 import { PrintButton } from "@/components/school/PrintButton";
-import { getPaymentForReceipt } from "@/lib/finance-db";
+import { getPaymentForReceipt } from "@/lib/finance/receipts";
 
 export const dynamic = "force-dynamic";
 

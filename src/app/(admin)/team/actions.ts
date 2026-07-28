@@ -2,17 +2,9 @@
 
 import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { isLiveMode } from "@/lib/env";
 
 // Alphabet sans caractères ambigus — identique aux codes écoles/profs.
 const CODE_ALPHABET = "ACDEFGHJKMNPQRTVWXY3479";
@@ -43,7 +35,7 @@ export async function inviteAdminAction(args: { fullName: string }): Promise<
   const adminId = await requireSuperAdmin();
   if (!adminId) return { ok: false, message: "Action réservée au super admin." };
 
-  const svc = service();
+  const svc = serviceClient();
   for (let tries = 0; tries < 5; tries++) {
     const code = generateCode();
     const { error } = await svc.from("admin_access_codes").insert({
@@ -79,7 +71,7 @@ export async function redeemAdminCodeAction(args: {
 
   if (!isLiveMode()) return { ok: true };
 
-  const admin = service();
+  const admin = serviceClient();
   const { data: row, error: rowErr } = await admin
     .from("admin_access_codes")
     .select("code, full_name, redeemed_at")
@@ -130,7 +122,7 @@ export async function updateMemberAction(args: {
   const adminId = await requireSuperAdmin();
   if (!adminId) return { ok: false, message: "Action réservée au super admin." };
 
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc
     .from("profiles")
     .update({
@@ -161,7 +153,7 @@ export async function uploadMemberDocAction(formData: FormData): Promise<
   const adminId = await requireSuperAdmin();
   if (!adminId) return { ok: false, message: "Action réservée au super admin." };
 
-  const svc = service();
+  const svc = serviceClient();
   try {
     const bytes = Buffer.from(await file.arrayBuffer());
     const safeName = (file.name || "document").replace(/[^\w.\-]/g, "_");
@@ -192,7 +184,7 @@ export async function deleteMemberDocAction(id: string): Promise<
   if (!isLiveMode()) return { ok: true };
   const adminId = await requireSuperAdmin();
   if (!adminId) return { ok: false, message: "Action réservée au super admin." };
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc.from("profile_documents").delete().eq("id", id);
   if (error) return { ok: false, message: "Suppression impossible." };
   revalidatePath("/team");

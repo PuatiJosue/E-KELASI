@@ -4,17 +4,9 @@
 // (soft delete) pour la traçabilité. Sert au détail d'un frais, aux factures et aux
 // rapports par élève.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 
 export type FeePayment = {
   id: string;
@@ -68,7 +60,7 @@ export async function listFeePayments(feeId: string, studentId?: string): Promis
   try {
     const school = await getMySchool();
     if (!school || !feeId) return [];
-    const svc = service();
+    const svc = serviceClient();
     let q = svc.from("fee_payments").select(SELECT).eq("school_id", school.id).eq("fee_id", feeId);
     if (studentId) q = q.eq("student_id", studentId);
     const { data } = await q.order("paid_at", { ascending: false });
@@ -84,7 +76,7 @@ export async function listStudentFeePayments(studentId: string): Promise<FeePaym
   try {
     const school = await getMySchool();
     if (!school || !studentId) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("fee_payments").select(SELECT)
       .eq("school_id", school.id).eq("student_id", studentId)

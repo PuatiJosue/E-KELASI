@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/KPI";
-import { getClassDirectory, listSchoolTeachers, getClassReportMatrix } from "@/lib/school-db";
+import { getClassDirectory, getClassReportMatrix } from "@/lib/school/classes";
+import { listSchoolTeachers } from "@/lib/school/people";
 import { listAssignments, listFormOptions } from "@/lib/courses-db";
 import { ClassesTabs } from "./ClassesTabs";
 

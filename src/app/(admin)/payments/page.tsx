@@ -1,7 +1,8 @@
 import { PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
 import { T } from "@/lib/i18n";
-import { listPendingMobileMoney, listProcessedMobileMoney, listPendingBookPurchases } from "@/lib/db";
+import { listPendingMobileMoney, listProcessedMobileMoney } from "@/lib/admin/mobile-money";
+import { listPendingBookPurchases } from "@/lib/admin/book-purchases";
 import { MobileMoneyActions } from "@/components/admin/MobileMoneyActions";
 import { BookPurchaseActions } from "@/components/admin/BookPurchaseActions";
 

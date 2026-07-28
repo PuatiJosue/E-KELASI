@@ -4,7 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
-import { listStudentsInClass } from "@/lib/teacher-db";
+import { listStudentsInClass } from "@/lib/teacher/classes";
 import { classLabel, normOption } from "@/lib/classes";
 import { TRIMESTERS, currentTrimester, trimesterMeta } from "@/lib/trimester";
 

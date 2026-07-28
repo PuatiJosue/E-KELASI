@@ -5,20 +5,12 @@
 // payé / solde sont calculés depuis la source unique (fee_payments) et SÉPARÉS
 // PAR DEVISE (USD / CDF…) — jamais additionnés entre devises.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
 import { classLabel, normOption } from "@/lib/classes";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { schoolYearLabel } from "@/lib/trimester";
 import type { FeeStudentStatus } from "./fees";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 const statusOf = (expected: number, paid: number): FeeStudentStatus =>
   paid <= 0 ? "impaye" : expected - paid <= 0.001 ? "paye" : "partiel";
@@ -83,7 +75,7 @@ function feeAppliesToClass(f: any, className: string, option: string | null): bo
   return f.class_name === className && normOption(f.option) === normOption(option);
 }
 
-async function schoolFees(svc: ReturnType<typeof service>, schoolId: string, year: string) {
+async function schoolFees(svc: ReturnType<typeof serviceClient>, schoolId: string, year: string) {
   const { data } = await svc
     .from("fees")
     .select("id, kind, label, class_name, option, school_year, total_amount, currency")
@@ -108,7 +100,7 @@ export async function getClassReport(className: string, option: string | null, y
   try {
     const school = await getMySchool();
     if (!school) return empty;
-    const svc = service();
+    const svc = serviceClient();
     const yr2 = year || school.currentYear || schoolYearLabel();
 
     const [{ data: students }, fees] = await Promise.all([
@@ -163,7 +155,7 @@ export async function getStudentReport(studentId: string, year?: string): Promis
   try {
     const school = await getMySchool();
     if (!school) return null;
-    const svc = service();
+    const svc = serviceClient();
     const yr = year || school.currentYear || schoolYearLabel();
 
     const { data: s } = await svc.from("students").select("id, full_name, matricule, class_name, option, sex").eq("id", studentId).eq("school_id", school.id).maybeSingle();

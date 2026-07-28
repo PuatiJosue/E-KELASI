@@ -4,7 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
-import { listSchoolStudents } from "@/lib/school-db";
+import { listSchoolStudents } from "@/lib/school/people";
 
 export default async function SchoolReports() {
   const students = await listSchoolStudents();

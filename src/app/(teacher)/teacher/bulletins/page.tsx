@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
-import { listTeacherClasses, listStudentsInClass } from "@/lib/teacher-db";
+import { listTeacherClasses, listStudentsInClass } from "@/lib/teacher/classes";
 
 export const dynamic = "force-dynamic";
 

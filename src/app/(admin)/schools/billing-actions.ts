@@ -1,21 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { serviceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
-import { isLiveMode } from "@/lib/db";
+import { isLiveMode } from "@/lib/env";
 import { schoolPriceCents } from "@/lib/school-price";
 import { SCHOOL_PAYMENT_METHODS, type SchoolPaymentMethod } from "@/lib/school-payment-methods";
+import type { Result } from "@/lib/result";
 
-type Result = { ok: true } | { ok: false; message: string };
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
 
 function currentPeriod(): string {
   return new Date().toISOString().slice(0, 7);
@@ -56,7 +48,7 @@ export async function markSchoolPaid(
   const amountCents = Number.isFinite(raw) && raw > 0 && raw <= 100_000_000 ? raw : schoolPriceCents();
   const period = /^\d{4}-\d{2}$/.test(opts.period ?? "") ? opts.period! : currentPeriod();
 
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await (svc.from("school_payments").upsert as any)(
     {
       school_id: schoolId,
@@ -89,7 +81,7 @@ export async function unmarkSchoolPaid(schoolId: string, period: string): Promis
   const auth = await assertSuperAdmin();
   if (!auth.ok) return { ok: false, message: "Réservé au super admin." };
 
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc
     .from("school_payments")
     .delete()
@@ -108,7 +100,7 @@ export async function setSchoolSuspended(schoolId: string, suspend: boolean): Pr
   const auth = await assertSuperAdmin();
   if (!auth.ok) return { ok: false, message: "Réservé au super admin." };
 
-  const svc = service();
+  const svc = serviceClient();
   const { error } = await svc
     .from("schools")
     .update({ status: suspend ? "suspended" : "active" })

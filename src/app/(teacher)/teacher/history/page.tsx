@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/KPI";
-import { listTeacherGradeHistory } from "@/lib/teacher-db";
+import { listTeacherGradeHistory } from "@/lib/teacher/grades";
 import { GradeHistoryTable } from "@/components/teacher/GradeHistoryTable";
 
 export default async function GradeHistoryPage() {

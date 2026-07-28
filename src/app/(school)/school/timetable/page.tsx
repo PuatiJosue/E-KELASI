@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/KPI";
 import { listTimetable, listSchoolClassNames } from "@/lib/content-db";
-import { getMySchool } from "@/lib/school-db";
+import { getMySchool } from "@/lib/school/profile";
 import { TimetableManager } from "./TimetableManager";
 
 export default async function SchoolTimetable() {

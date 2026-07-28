@@ -1,16 +1,8 @@
 // Couche données — documents officiels (Lot E2). Service role.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { getMySchool } from "@/lib/school-db";
-import { isLiveMode } from "@/lib/db";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
+import { getMySchool } from "@/lib/school/profile";
+import { isLiveMode } from "@/lib/env";
 
 export type StudentDocument = {
   id: string;
@@ -29,7 +21,7 @@ export async function listStudentDocuments(studentId: string): Promise<StudentDo
   try {
     const school = await getMySchool();
     if (!school) return [];
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("student_documents")
       .select("id, type, title, period, signed_by, signature_url, verify_code, issued_at")
@@ -55,7 +47,7 @@ export async function listStudentDocuments(studentId: string): Promise<StudentDo
 export async function getDocumentByCode(code: string) {
   if (!isLiveMode()) return null;
   try {
-    const svc = service();
+    const svc = serviceClient();
     const { data } = await svc
       .from("student_documents")
       .select("title, period, signed_by, issued_at, data, students(full_name), schools(name, city)")

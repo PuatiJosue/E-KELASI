@@ -2,15 +2,7 @@
 // Les profs ne peuvent que LIRE la table subjects (RLS) : la création passe
 // donc par le service-role, après vérification de l'appartenance à l'école.
 
-import { createClient as createServiceClient } from "@supabase/supabase-js";
-
-function service() {
-  return createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-}
+import { serviceClient } from "@/lib/supabase/service";
 
 // Abréviation lisible : initiales des deux premiers mots, sinon 4 lettres.
 function shortFromName(name: string): string {
@@ -36,7 +28,7 @@ function escapeIlike(s: string): string {
 export async function resolveOrCreateSubjectId(schoolId: string, rawName: string): Promise<string | null> {
   const name = rawName.trim();
   if (!name) return null;
-  const svc = service();
+  const svc = serviceClient();
 
   const { data: rows } = await svc
     .from("subjects")
