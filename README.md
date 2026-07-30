@@ -195,6 +195,16 @@ chaleureux, Bricolage Grotesque + Plus Jakarta Sans, mode clair/sombre.
 
 ---
 
+## Licence
+
+Code **propriétaire, consultable** — voir [`LICENSE`](LICENSE).
+
+Ce dépôt est public pour permettre la lecture et l'évaluation du travail. Le
+code n'est pas libre : toute réutilisation, même partielle, demande une
+autorisation écrite. E-KLASS est un produit exploité en production.
+
+---
+
 ## Scripts
 
 | Script | Description |
