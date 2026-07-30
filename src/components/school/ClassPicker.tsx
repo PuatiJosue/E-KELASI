@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { pluralFr, pluralEn } from "@/lib/plural";
 import { Icon } from "@/components/Icon";
 import { T } from "@/lib/i18n";
 import { cycleOf } from "@/lib/promotion";
@@ -116,7 +117,7 @@ export function ClassPicker({
                         {c.name}
                       </span>
                       <span style={{ fontSize: 11, color: on ? "rgba(255,255,255,0.85)" : "var(--ink-3)" }}>
-                        {c.count} <T fr="élèves" en="students" />
+                        <T fr={pluralFr(c.count, "élève")} en={pluralEn(c.count, "student")} />
                       </span>
                     </span>
                   </button>

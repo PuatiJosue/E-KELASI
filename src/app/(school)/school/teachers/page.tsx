@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { pluralFr } from "@/lib/plural";
 import { PageHeader } from "@/components/KPI";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
@@ -15,7 +16,7 @@ export default async function SchoolTeachers() {
       <PageHeader
         title={{ fr: "Équipe pédagogique", en: "Teaching staff" }}
         sub={{
-          fr: `${teacherCount} professeurs · ${adminCount} membre(s) direction`,
+          fr: `${pluralFr(teacherCount, "professeur")} · ${adminCount} membre(s) direction`,
           en: `${teacherCount} teachers · ${adminCount} admin(s)`,
         }}
         right={

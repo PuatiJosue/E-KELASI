@@ -1,3 +1,4 @@
+import { pluralFr, pluralEn } from "@/lib/plural";
 import { PageHeader } from "@/components/KPI";
 import { listSchoolStudents } from "@/lib/school/people";
 import { listSchoolClassNames } from "@/lib/content-db";
@@ -14,8 +15,8 @@ export default async function SchoolStudents() {
       <PageHeader
         title={{ fr: "Annuaire des classes", en: "Class directory" }}
         sub={{
-          fr: `${students.length} élèves dans ${classes} classes`,
-          en: `${students.length} students in ${classes} classes`,
+          fr: `${pluralFr(students.length, "élève")} dans ${pluralFr(classes, "classe")}`,
+          en: `${pluralEn(students.length, "student")} in ${pluralEn(classes, "class", "classes")}`,
         }}
         right={
           <>

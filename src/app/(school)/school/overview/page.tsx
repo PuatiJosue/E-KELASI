@@ -3,6 +3,7 @@ import { KPI, PageHeader } from "@/components/KPI";
 import { Bars, Donut, PerfChart } from "@/components/Charts";
 import { Icon } from "@/components/Icon";
 import { AgendaCard } from "@/components/school/AgendaCard";
+import { pluralFr, pluralEn } from "@/lib/plural";
 import { T } from "@/lib/i18n";
 import { getMySchool } from "@/lib/school/profile";
 import { getSchoolKpis, getGradeDistribution, getSchoolPerformance6m } from "@/lib/school/kpis";
@@ -87,7 +88,7 @@ export default async function SchoolOverview() {
 
       {/* KPI */}
       <div className="ek-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14 }}>
-        <KPI icon="graduation" tint="blue" label={<T fr="Élèves" en="Students" />} value={String(kpis.students)} sub={<T fr={`${kpis.classes} classes`} en={`${kpis.classes} classes`} />} />
+        <KPI icon="graduation" tint="blue" label={<T fr="Élèves" en="Students" />} value={String(kpis.students)} sub={<T fr={pluralFr(kpis.classes, "classe")} en={pluralEn(kpis.classes, "class", "classes")} />} />
         <KPI icon="users" tint="violet" label={<T fr="Professeurs" en="Teachers" />} value={String(kpis.teachers)} sub={<T fr="Dans votre école" en="In your school" />} />
         <KPI icon="users" tint="green" label={<T fr="Parents abonnés" en="Paying parents" />} value={String(kpis.parentsPaying)} sub={<T fr="Essai + actifs" en="Trial + active" />} />
         <KPI icon="clipboard" tint="amber" label={<T fr="Notes saisies ce mois" en="Grades this month" />} value={String(kpis.gradesThisMonth)} sub={<T fr="Par tous les profs" en="By all teachers" />} />

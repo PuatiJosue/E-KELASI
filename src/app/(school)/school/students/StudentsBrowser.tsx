@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
+import { pluralFr } from "@/lib/plural";
 import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
 import { ClassPicker } from "@/components/school/ClassPicker";
@@ -139,7 +140,7 @@ export function StudentsBrowser({ students }: { students: SchoolStudentRow[] }) 
                 {activeClass.split(" ").map((w) => w[0]).join("").slice(0, 2)}
               </div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>{activeClass}</div>
-              <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{current.length} élèves</div>
+              <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{pluralFr(current.length, "élève")}</div>
             </div>
             <div className="ek-tablewrap">
               <div style={{ minWidth: 520 }}>
