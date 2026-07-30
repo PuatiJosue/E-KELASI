@@ -7,8 +7,34 @@ l'élève — inscriptions, notes, bulletins, présences, finances et messagerie
 **Next.js 14** (App Router, Server Components & Server Actions) · **TypeScript**
 strict · **Tailwind** · **Supabase** (Postgres + Auth + Storage, RLS) · **Stripe**
 
+**[🌍 Application en ligne — e-kelasi.vercel.app](https://e-kelasi.vercel.app)**
+· déployée sur Vercel, base Supabase à Paris
+*(l'accès demande un compte : chaque espace est protégé par rôle)*
+
 > Ce dépôt contient l'application web. L'application mobile parents (Expo /
 > React Native) vit dans [`mobile/`](mobile/).
+
+---
+
+## Aperçu
+
+<p align="center">
+  <img src="docs/screenshots/emploi-du-temps.png" width="880" alt="Emploi du temps — calendrier hebdomadaire d'une classe, blocs colorés par matière">
+</p>
+
+<p align="center"><em>Emploi du temps — édition en calendrier hebdomadaire, publication aux enseignants et aux parents</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/finances.png" width="880" alt="Module Finance — frais scolaires, montants attendus et encaissés, taux de recouvrement">
+</p>
+
+<p align="center"><em>Finance — frais par classe, encaissements et taux de recouvrement, calculés à partir des paiements</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/annuaire-classes.png" width="880" alt="Annuaire des classes — niveaux du primaire et des humanités avec effectifs">
+</p>
+
+<p align="center"><em>Annuaire des classes — niveaux du système scolaire congolais, du primaire aux humanités</em></p>
 
 ---
 
@@ -102,6 +128,7 @@ src/
 └── lib/
     ├── env.ts               # isLiveMode() — bascule démo ↔ Supabase
     ├── result.ts            # type Result des server actions
+    ├── plural.ts            # accord des libellés comptés (fr/en)
     ├── auth/guards.ts       # gardes d'autorisation (requireSchoolAdmin…)
     ├── supabase/
     │   ├── client.ts        # client navigateur
