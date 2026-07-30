@@ -2,23 +2,28 @@
 
 import { useTransition } from "react";
 import { Icon } from "@/components/Icon";
-import { T } from "@/lib/i18n";
+import { useLang } from "@/lib/i18n";
 import { signOutAction } from "@/app/login/signout";
 
-export function LogoutButton({ label, block }: { label?: string; block?: boolean }) {
+/** `withLabel` affiche le libellé à côté de l'icône ; il est traduit ici. */
+export function LogoutButton({ withLabel, block }: { withLabel?: boolean; block?: boolean }) {
+  const lang = useLang();
   const [pending, startTransition] = useTransition();
+  const en = lang === "en";
+  const label = en ? "Sign out" : "Déconnexion";
+  const title = en ? "Sign out" : "Se déconnecter";
 
   const onClick = () => {
-    if (!confirm("Se déconnecter ?")) return;
+    if (!confirm(en ? "Sign out?" : "Se déconnecter ?")) return;
     startTransition(() => signOutAction());
   };
 
-  if (label) {
+  if (withLabel) {
     return (
       <button
         onClick={onClick}
         disabled={pending}
-        title="Se déconnecter"
+        title={title}
         style={{
           width: block ? "100%" : "auto",
           height: 36,
@@ -48,7 +53,7 @@ export function LogoutButton({ label, block }: { label?: string; block?: boolean
     <button
       onClick={onClick}
       disabled={pending}
-      title="Se déconnecter"
+      title={title}
       style={{
         width: 32,
         height: 32,

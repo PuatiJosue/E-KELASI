@@ -3,13 +3,14 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
-import { T } from "@/lib/i18n";
+import { T, useLang } from "@/lib/i18n";
 import type { SchoolEvent } from "@/lib/agenda-db";
 import { createSchoolEvent, deleteSchoolEvent } from "@/app/(school)/school/overview/agenda-actions";
 
 const DOTS = ["#4F66E8", "#8B5CF6", "#16A34A", "#D97706", "#14B8A6"];
 
 export function AgendaCard({ events }: { events: SchoolEvent[] }) {
+  const en = useLang() === "en";
   const router = useRouter();
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
@@ -45,7 +46,7 @@ export function AgendaCard({ events }: { events: SchoolEvent[] }) {
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          title="Ajouter un événement"
+          title={en ? "Add an event" : "Ajouter un événement"}
           style={{ width: 30, height: 30, borderRadius: 9, border: "1px solid var(--border)", background: open ? "var(--brand-soft)" : "var(--surface)", color: open ? "var(--brand-600)" : "var(--ink-2)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
         >
           <Icon name={open ? "close" : "plus"} size={15} stroke={2.4} />

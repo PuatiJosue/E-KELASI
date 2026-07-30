@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useLang } from "@/lib/i18n";
 import { saveBulletinDraft } from "@/lib/bulletin-actions";
 
 type Row = { branche: string; max: string; obtenu: string };
@@ -44,6 +45,7 @@ export function BulletinTable({
   const [rows, setRows] = useState<Row[]>(
     initialRows.length > 0 ? initialRows : [blank, { ...blank }, { ...blank }]
   );
+  const en = useLang() === "en";
   const [place, setPlace] = useState(initialPlace);
   const [mention, setMention] = useState(initialMention);
   // Totaux & pourcentage : calculés automatiquement à partir des lignes, mais
@@ -137,7 +139,7 @@ export function BulletinTable({
 
       <div className="report-toolbar" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <button onClick={addRow} style={{ fontSize: 12, fontWeight: 600, color: "#E0701E", background: "none", border: "1px dashed #E0701E", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>
-          + Ajouter une ligne
+          {en ? "+ Add a row" : "+ Ajouter une ligne"}
         </button>
         {save ? (
           <>
@@ -146,9 +148,9 @@ export function BulletinTable({
               disabled={pending}
               style={{ fontSize: 12.5, fontWeight: 700, color: "#fff", background: "#1D6650", border: "none", borderRadius: 8, padding: "7px 14px", cursor: pending ? "default" : "pointer", opacity: pending ? 0.6 : 1 }}
             >
-              {pending ? "Enregistrement…" : "Enregistrer"}
+              {pending ? (en ? "Saving…" : "Enregistrement…") : (en ? "Save" : "Enregistrer")}
             </button>
-            {saved && <span style={{ fontSize: 12, color: "#1D6650", fontWeight: 600 }}>✓ Enregistré</span>}
+            {saved && <span style={{ fontSize: 12, color: "#1D6650", fontWeight: 600 }}>{en ? "✓ Saved" : "✓ Enregistré"}</span>}
             {err && <span style={{ fontSize: 12, color: "#C03A2B", fontWeight: 600 }}>{err}</span>}
           </>
         ) : null}

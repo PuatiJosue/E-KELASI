@@ -200,7 +200,7 @@ export function SchoolSidebar({ school, userName, counts }: { school: MySchool |
             <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>Direction</div>
           </div>
         </div>
-        <LogoutButton label="Se déconnecter" block />
+        <LogoutButton withLabel block />
       </div>
     </div>
   );

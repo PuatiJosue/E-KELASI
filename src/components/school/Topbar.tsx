@@ -30,6 +30,7 @@ const AUTO_REFRESH_MS = 60_000;
 
 export function SchoolTopbar({ school, pending }: { school: MySchool | null; pending?: SchoolRequestCounts }) {
   const lang = useLang();
+  const en = lang === "en";
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const key = pathname.split("/").filter(Boolean)[1] ?? "overview";
@@ -91,7 +92,7 @@ export function SchoolTopbar({ school, pending }: { school: MySchool | null; pen
       {/* Recherche fonctionnelle (élèves + classes) — le conteneur sert d'espaceur. */}
       <div style={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
         <div className="ek-hide-mobile" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-          <SearchBox action={searchSchool} placeholder="Rechercher un élève, une classe…" />
+          <SearchBox action={searchSchool} placeholder={en ? "Search a student, a class…" : "Rechercher un élève, une classe…"} />
         </div>
       </div>
 
@@ -99,7 +100,7 @@ export function SchoolTopbar({ school, pending }: { school: MySchool | null; pen
       <button
         type="button"
         onClick={refresh}
-        title={auto ? "Actualiser maintenant (auto activé)" : "Actualiser maintenant"}
+        title={en ? (auto ? "Refresh now (auto on)" : "Refresh now") : (auto ? "Actualiser maintenant (auto activé)" : "Actualiser maintenant")}
         style={{
           display: "flex", alignItems: "center", gap: 6,
           height: 34, padding: "0 10px", borderRadius: 9,
@@ -114,7 +115,7 @@ export function SchoolTopbar({ school, pending }: { school: MySchool | null; pen
       <button
         type="button"
         onClick={() => setAuto((a) => !a)}
-        title={auto ? "Désactiver l'actualisation automatique" : "Activer l'actualisation automatique"}
+        title={en ? (auto ? "Turn off auto-refresh" : "Turn on auto-refresh") : (auto ? "Désactiver l'actualisation automatique" : "Activer l'actualisation automatique")}
         style={{
           width: 34, height: 34, borderRadius: 9,
           border: `1px solid ${auto ? "var(--brand)" : "var(--border)"}`,
@@ -133,7 +134,7 @@ export function SchoolTopbar({ school, pending }: { school: MySchool | null; pen
         <button
           type="button"
           onClick={() => setNotifOpen((o) => !o)}
-          title={total > 0 ? `${total} demande(s) en attente` : "Notifications"}
+          title={total > 0 ? (en ? `${total} pending request(s)` : `${total} demande(s) en attente`) : "Notifications"}
           style={{
             position: "relative",
             width: 34,
@@ -227,7 +228,7 @@ export function SchoolTopbar({ school, pending }: { school: MySchool | null; pen
         )}
       </div>
       <span className="ek-hide-mobile" style={{ display: "flex" }}>
-        <LogoutButton label="Déconnexion" />
+        <LogoutButton withLabel />
       </span>
     </div>
   );

@@ -51,7 +51,7 @@ export function TeacherTopbar() {
 
       <div style={{ flex: 1, display: "flex", justifyContent: "center", minWidth: 0 }}>
         <div className="ek-hide-mobile" style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-          <SearchBox action={searchTeacher} placeholder="Rechercher une classe, un élève…" />
+          <SearchBox action={searchTeacher} placeholder={lang === "en" ? "Search a class, a student…" : "Rechercher une classe, un élève…"} />
         </div>
       </div>
 
