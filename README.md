@@ -1,5 +1,7 @@
 # E-KLASS
 
+[![CI](https://github.com/PuatiJosue/E-KELASI/actions/workflows/ci.yml/badge.svg)](https://github.com/PuatiJosue/E-KELASI/actions/workflows/ci.yml)
+
 Plateforme SaaS de suivi scolaire pour les établissements de RDC : elle relie la
 direction, les professeurs, les surveillants et les parents autour du dossier de
 l'élève — inscriptions, notes, bulletins, présences, finances et messagerie.
@@ -168,7 +170,11 @@ npm test            # vitest
 npm run build       # build de production
 ```
 
-État actuel : **0 erreur** TypeScript, **0 erreur** ESLint, build vert.
+Ces quatre commandes tournent en intégration continue à chaque push et sur
+chaque pull request ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) —
+le badge en haut du README reflète leur résultat. Le build s'exécute sans
+secret : `isLiveMode()` fait basculer l'app sur les données de démonstration
+quand les clés Supabase sont absentes.
 
 Les tests couvrent aujourd'hui les utilitaires purs (classes, promotion, import
 d'élèves, trimestres). **Les écrans ne sont pas encore testés** — c'est la
@@ -191,7 +197,7 @@ chaleureux, Bricolage Grotesque + Plus Jakarta Sans, mode clair/sombre.
       aujourd'hui seuls `tsc` et le build protègent des régressions d'interface
 - [ ] Typer le client `service_role` avec `Database` (volontairement non typé
       aujourd'hui : certaines tables ne sont pas couvertes par les types générés)
-- [ ] Mettre en place une CI (typecheck + lint + tests à chaque push)
+- [x] Intégration continue — typecheck, lint, tests et build à chaque push
 
 ---
 

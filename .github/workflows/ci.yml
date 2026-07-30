@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Une seule exécution par branche : un nouveau push annule la précédente.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Types · Lint · Tests · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérifier les types
+        run: npm run typecheck
+
+      - name: Analyser le code
+        run: npm run lint
+
+      - name: Lancer les tests
+        run: npm test
+
+      # Sans clés Supabase, isLiveMode() renvoie false et l'app se rabat sur
+      # les données de démonstration : le build passe sans secret.
+      - name: Compiler en production
+        run: npm run build
