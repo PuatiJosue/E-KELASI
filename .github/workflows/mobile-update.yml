@@ -58,6 +58,38 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
+      # `eas update` ne lit PAS le bloc `env` des profils de build d'eas.json :
+      # sans cette étape, le bundle part sans EXPO_PUBLIC_SUPABASE_URL, isLiveMode
+      # passe à false et l'app sert les données de démonstration (mock.ts).
+      # On recopie donc le profil dans l'environnement du job.
+      - name: Charger les variables du profil EAS
+        env:
+          PROFILE: ${{ inputs.channel || 'preview' }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const profile = process.env.PROFILE;
+            const build = JSON.parse(fs.readFileSync("eas.json", "utf8")).build ?? {};
+            const vars = build[profile]?.env ?? {};
+            const names = Object.keys(vars);
+            if (!names.length) {
+              console.error(`Profil « ${profile} » sans bloc env dans eas.json.`);
+              process.exit(1);
+            }
+            for (const [k, v] of Object.entries(vars)) {
+              if (String(v).includes("\n")) { console.error(`${k} contient un saut de ligne.`); process.exit(1); }
+              fs.appendFileSync(process.env.GITHUB_ENV, `${k}=${v}\n`);
+            }
+            console.log("Variables chargées :", names.join(", "));
+          '
+
+      # Garde-fou : plutôt échouer que publier un bundle en mode démonstration.
+      - name: Vérifier la configuration Supabase
+        run: |
+          test -n "$EXPO_PUBLIC_SUPABASE_URL" || { echo "EXPO_PUBLIC_SUPABASE_URL vide — publication annulée."; exit 1; }
+          test -n "$EXPO_PUBLIC_SUPABASE_ANON_KEY" || { echo "EXPO_PUBLIC_SUPABASE_ANON_KEY vide — publication annulée."; exit 1; }
+          echo "Cible Supabase : $EXPO_PUBLIC_SUPABASE_URL"
+
       # Le message passe par l'environnement, jamais par interpolation directe
       # dans la commande : un message de commit peut contenir n'importe quoi.
       - name: Publier la mise à jour
