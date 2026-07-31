@@ -1,0 +1,69 @@
+name: App parents — mise à jour OTA
+
+# Publie le bundle JS de l'app parents sur EAS Update. Les téléphones déjà
+# installés le récupèrent au lancement suivant : pas de nouveau build, pas de
+# passage par les stores.
+#
+# ATTENTION — une OTA ne suffit PAS si le changement touche le natif :
+# nouveau module ou plugin Expo, montée de version du SDK / React Native,
+# google-services.json, icônes, permissions… ou si `version` change dans
+# mobile/app.json. Dans ces cas il faut relancer `eas build`.
+#
+# `runtimeVersion` suit `version` (policy "appVersion") : tant que `version`
+# reste 1.2.0, les mises à jour atteignent les installations existantes.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+  # Publication manuelle — c'est par ici qu'on pousse en production.
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Canal EAS"
+        required: true
+        default: preview
+        type: choice
+        options: [preview, production]
+
+concurrency:
+  group: mobile-update-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: eas update
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      # Jeton à créer sur expo.dev (Access Tokens) puis à déposer dans
+      # Settings → Secrets and variables → Actions → EXPO_TOKEN.
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      # Le message passe par l'environnement, jamais par interpolation directe
+      # dans la commande : un message de commit peut contenir n'importe quoi.
+      - name: Publier la mise à jour
+        env:
+          CHANNEL: ${{ inputs.channel || 'preview' }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          MESSAGE="$(printf '%s' "${COMMIT_MESSAGE:-Publication manuelle}" | head -n 1)"
+          eas update --channel "$CHANNEL" --message "$MESSAGE" --non-interactive
