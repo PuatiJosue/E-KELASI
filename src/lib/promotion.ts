@@ -1,9 +1,12 @@
 // Logique pure du « passage de classe » (système congolais). Aucune dépendance
 // serveur : utilisable côté client (écran de promotion) comme serveur (action).
 
-// Séquence canonique des niveaux, de la 1re primaire à la 4e des humanités.
+// Séquence canonique des niveaux, de la 1re maternelle à la 4e des humanités.
 // `label` = class_name canonique écrit dans students.class_name / grade_level.
-export const PROMOTION_LEVELS: { key: string; label: string; group: "primaire" | "secondaire" }[] = [
+export const PROMOTION_LEVELS: { key: string; label: string; group: "maternelle" | "primaire" | "secondaire" }[] = [
+  { key: "m1", label: "1re maternelle", group: "maternelle" },
+  { key: "m2", label: "2e maternelle", group: "maternelle" },
+  { key: "m3", label: "3e maternelle", group: "maternelle" },
   { key: "p1", label: "1re année primaire", group: "primaire" },
   { key: "p2", label: "2e année primaire", group: "primaire" },
   { key: "p3", label: "3e année primaire", group: "primaire" },
@@ -30,6 +33,11 @@ const norm = (s: string) => (s || "").toLowerCase().normalize("NFD").replace(/[�
 export function levelKeyOf(raw: string): string | null {
   const s = norm(raw);
   const digit = s.match(/(\d+)/)?.[1] ?? "";
+  // Maternelle : 3 années. Sans chiffre (« Maternelle Étoile »), le niveau
+  // reste indéterminé — la classe est traitée à la main.
+  if (s.includes("maternel")) {
+    return digit && +digit >= 1 && +digit <= 3 ? `m${digit}` : null;
+  }
   if (s.includes("primaire")) {
     if (digit && +digit >= 1 && +digit <= 6) return `p${digit}`;
     if (digit === "7") return "b7";

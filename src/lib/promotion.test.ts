@@ -2,6 +2,14 @@ import { describe, it, expect } from "vitest";
 import { nextClassFor, proposeDecision, levelKeyOf, cycleOf, PROMOTION_LEVELS } from "./promotion";
 
 describe("levelKeyOf", () => {
+  it("reconnaît les niveaux de la maternelle", () => {
+    expect(levelKeyOf("1re maternelle")).toBe("m1");
+    expect(levelKeyOf("1ère maternelle")).toBe("m1");
+    expect(levelKeyOf("3e maternelle")).toBe("m3");
+    // Une section de maternelle sans niveau chiffré reste indéterminée.
+    expect(levelKeyOf("Maternelle Étoile")).toBeNull();
+  });
+
   it("reconnaît les niveaux du primaire", () => {
     expect(levelKeyOf("1re année primaire")).toBe("p1");
     expect(levelKeyOf("6e année primaire")).toBe("p6");
@@ -27,6 +35,11 @@ describe("levelKeyOf", () => {
 });
 
 describe("nextClassFor", () => {
+  it("progresse dans la maternelle puis entre au primaire", () => {
+    expect(nextClassFor("1re maternelle")).toEqual({ kind: "promote", nextClass: "2e maternelle", enteringHumanities: false });
+    expect(nextClassFor("3e maternelle")).toEqual({ kind: "promote", nextClass: "1re année primaire", enteringHumanities: false });
+  });
+
   it("passe au niveau supérieur dans le primaire", () => {
     expect(nextClassFor("1re année primaire")).toEqual({ kind: "promote", nextClass: "2e année primaire", enteringHumanities: false });
     expect(nextClassFor("6e année primaire")).toEqual({ kind: "promote", nextClass: "7e année du primaire", enteringHumanities: false });

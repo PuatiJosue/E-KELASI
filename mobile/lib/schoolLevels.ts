@@ -2,6 +2,14 @@
 
 export const CLASS_GROUPS: { group: string; items: string[] }[] = [
   {
+    group: "Maternelle",
+    items: [
+      "1re maternelle",
+      "2e maternelle",
+      "3e maternelle",
+    ],
+  },
+  {
     group: "Primaire",
     items: [
       "1re année primaire",
