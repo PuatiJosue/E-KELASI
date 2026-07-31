@@ -26,6 +26,8 @@ export function StudentAttendanceManager({
   schoolName,
   basePath = "/school/student-attendance",
   saveAction = setStudentAttendance,
+  clearAction,
+  commentAction,
 }: {
   students: StudentLite[];
   date: string;
@@ -33,8 +35,18 @@ export function StudentAttendanceManager({
   schoolName: string;
   /** Route de la page qui affiche ce tableau (navigation par date). */
   basePath?: string;
-  /** Action d'enregistrement — la direction et le surveillant ont la leur. */
-  saveAction?: (studentId: string, date: string, status: string) => Promise<SaveResult>;
+  /**
+   * Action d'enregistrement — la direction et le surveillant ont la leur.
+   * Le motif est renvoyé tel quel pour ne pas le perdre au changement de statut.
+   */
+  saveAction?: (studentId: string, date: string, status: string, comment?: string) => Promise<SaveResult>;
+  /**
+   * Correction d'un pointage erroné (retour à « non pointé »). Fournie par la
+   * direction seule : sans elle, recliquer un statut actif ne fait rien.
+   */
+  clearAction?: (studentId: string, date: string) => Promise<SaveResult>;
+  /** Motif de la correction. Fourni par la direction seule ; sinon pas de colonne. */
+  commentAction?: (studentId: string, date: string, comment: string) => Promise<SaveResult>;
 }) {
   const router = useRouter();
   const lang = useLang();
@@ -55,16 +67,21 @@ export function StudentAttendanceManager({
   const [selected, setSelected] = useState<string>(classes[0]?.name ?? "");
   const current = classes.find((c) => c.name === selected)?.list ?? [];
 
+  // La colonne « Motif » n'existe que pour la direction.
+  const grid = commentAction ? "0.5fr 2.2fr 2.6fr 2fr" : GRID;
+
   const changeDate = (d: string) => {
     const sp = new URLSearchParams({ date: d });
     router.push(`${basePath}?${sp.toString()}`);
   };
 
-  const mark = (studentId: string, status: string) => {
-    setMarks((prev) => ({ ...prev, [studentId]: status }));
+  // Enregistrement optimiste : on applique la correction à l'écran, puis on
+  // remonte l'erreur et on resynchronise si le serveur refuse.
+  const run = (studentId: string, optimistic: () => void, save: () => Promise<SaveResult>) => {
+    optimistic();
     setSavingId(studentId);
     startTransition(async () => {
-      const r = await saveAction(studentId, date, status);
+      const r = await save();
       setSavingId(null);
       if (!r.ok) {
         alert(r.message);
@@ -73,11 +90,40 @@ export function StudentAttendanceManager({
     });
   };
 
+  const mark = (studentId: string, status: string) => {
+    // Recliquer le statut déjà actif annule le pointage (correction d'une erreur).
+    if (marks[studentId]?.status === status) {
+      if (!clearAction) return;
+      run(
+        studentId,
+        () => setMarks((prev) => { const next = { ...prev }; delete next[studentId]; return next; }),
+        () => clearAction(studentId, date)
+      );
+      return;
+    }
+    run(
+      studentId,
+      () => setMarks((prev) => ({ ...prev, [studentId]: { status, comment: prev[studentId]?.comment ?? null } })),
+      () => saveAction(studentId, date, status, marks[studentId]?.comment ?? undefined)
+    );
+  };
+
+  const comment = (studentId: string, text: string) => {
+    if (!commentAction || !marks[studentId]) return;
+    const value = text.trim() || null;
+    if ((marks[studentId].comment ?? null) === value) return; // rien n'a changé
+    run(
+      studentId,
+      () => setMarks((prev) => ({ ...prev, [studentId]: { ...prev[studentId], comment: value } })),
+      () => commentAction(studentId, date, text)
+    );
+  };
+
   // Compteurs sur la classe sélectionnée.
   const counts = useMemo(() => {
     const c = { present: 0, late: 0, absent: 0, justified: 0 };
     for (const s of current) {
-      const st = marks[s.id];
+      const st = marks[s.id]?.status;
       if (st && st in c) (c as any)[st]++;
     }
     return c;
@@ -88,7 +134,7 @@ export function StudentAttendanceManager({
   });
 
   const exportCsv = () => {
-    const header = ["N°", "Nom et prénoms", "Sexe", "Classe", "Date", "Statut"];
+    const header = ["N°", "Nom et prénoms", "Sexe", "Classe", "Date", "Statut", "Motif"];
     const lines = [
       header,
       ...current.map((s, i) => [
@@ -97,7 +143,8 @@ export function StudentAttendanceManager({
         s.sex === "M" ? "M" : s.sex === "F" ? "F" : "—",
         s.className,
         dateFr,
-        labelOf(marks[s.id] ?? "")?.fr ?? "—",
+        labelOf(marks[s.id]?.status ?? "")?.fr ?? "—",
+        marks[s.id]?.comment ?? "",
       ]),
     ];
     const csv = lines.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -113,9 +160,10 @@ export function StudentAttendanceManager({
   const exportPdf = () => {
     const rows = current
       .map((s, i) => {
-        const st = labelOf(marks[s.id] ?? "");
+        const st = labelOf(marks[s.id]?.status ?? "");
         const sx = s.sex === "M" ? "M" : s.sex === "F" ? "F" : "—";
-        return `<tr><td class="num">${i + 1}</td><td>${escapeHtml(s.name)}</td><td class="num" style="text-align:center">${sx}</td><td style="color:${st?.color ?? "#888"};font-weight:600">${st?.fr ?? "—"}</td></tr>`;
+        const motif = escapeHtml(marks[s.id]?.comment ?? "");
+        return `<tr><td class="num">${i + 1}</td><td>${escapeHtml(s.name)}</td><td class="num" style="text-align:center">${sx}</td><td style="color:${st?.color ?? "#888"};font-weight:600">${st?.fr ?? "—"}</td><td class="motif">${motif}</td></tr>`;
       })
       .join("");
     const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Présences — ${escapeHtml(selected)}</title>
@@ -129,12 +177,13 @@ export function StudentAttendanceManager({
   td{padding:8px 10px;border-bottom:1px solid #e5e7eb}
   td.num{color:#888;width:48px}
   td.mat{font-family:'Courier New',monospace;color:#444;width:96px;white-space:nowrap}
+  td.motif{color:#555;font-style:italic}
   .totals{margin-top:16px;font-size:12px;display:flex;gap:18px;flex-wrap:wrap}
   .totals b{font-weight:700}
 </style></head><body>
   <h1>${escapeHtml(schoolName)}</h1>
   <div class="sub">Liste de présence — ${escapeHtml(selected)} · ${dateFr} · ${current.length} élève(s)</div>
-  <table><thead><tr><th>N°</th><th>Nom et prénoms</th><th>Sexe</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>N°</th><th>Nom et prénoms</th><th>Sexe</th><th>Statut</th><th>Motif</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="totals">
     <span>Présents : <b>${counts.present}</b></span>
     <span>Retards : <b>${counts.late}</b></span>
@@ -191,17 +240,27 @@ export function StudentAttendanceManager({
           </div>
         </div>
 
+        {clearAction && (
+          <div style={{ padding: "8px 18px", fontSize: 11.5, color: "var(--ink-3)", background: "var(--surface-2)", borderBottom: "1px solid var(--divider)" }}>
+            <T
+              fr="Correction : recliquez le statut actif pour annuler le pointage (retour à « non pointé »)."
+              en="Correction: click the active status again to undo the entry (back to “not marked”)."
+            />
+          </div>
+        )}
+
         <div className="ek-tablewrap">
-          <div style={{ minWidth: 640 }}>
-            <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "10px 18px", fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.05em", background: "var(--surface-2)" }}>
+          <div style={{ minWidth: commentAction ? 860 : 640 }}>
+            <div style={{ display: "grid", gridTemplateColumns: grid, padding: "10px 18px", fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.05em", background: "var(--surface-2)" }}>
               <div>N°</div>
               <div><T fr="Nom et prénoms" en="Full name" /></div>
               <div><T fr="Statut" en="Status" /></div>
+              {commentAction && <div><T fr="Motif" en="Reason" /></div>}
             </div>
             {current.map((s, i) => {
-              const cur = marks[s.id];
+              const cur = marks[s.id]?.status;
               return (
-                <div key={s.id} style={{ display: "grid", gridTemplateColumns: GRID, padding: "10px 18px", alignItems: "center", borderTop: "1px solid var(--divider)" }}>
+                <div key={s.id} style={{ display: "grid", gridTemplateColumns: grid, padding: "10px 18px", alignItems: "center", gap: 10, borderTop: "1px solid var(--divider)" }}>
                   <div style={{ color: "var(--ink-3)", fontSize: 12, fontFamily: "var(--font-display)" }}>{i + 1}</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
                     <span style={{ fontWeight: 600, color: "var(--ink)", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
@@ -215,6 +274,7 @@ export function StudentAttendanceManager({
                           key={st.key}
                           onClick={() => mark(s.id, st.key)}
                           disabled={pending && savingId === s.id}
+                          title={on && clearAction ? "Cliquez pour annuler ce pointage" : undefined}
                           style={{
                             padding: "5px 11px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
                             border: `1px solid ${on ? st.color : "var(--border)"}`,
@@ -227,6 +287,14 @@ export function StudentAttendanceManager({
                       );
                     })}
                   </div>
+                  {commentAction && (
+                    <CommentInput
+                      key={`${s.id}:${marks[s.id]?.comment ?? ""}`}
+                      value={marks[s.id]?.comment ?? ""}
+                      disabled={!cur}
+                      onCommit={(v) => comment(s.id, v)}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -251,6 +319,35 @@ export function StudentAttendanceManager({
 }
 
 const GRID = "0.5fr 2.4fr 2.6fr";
+
+// Motif de la correction — enregistré à la sortie du champ (ou sur Entrée).
+function CommentInput({
+  value,
+  disabled,
+  onCommit,
+}: {
+  value: string;
+  disabled: boolean;
+  onCommit: (v: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  return (
+    <input
+      value={text}
+      disabled={disabled}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => onCommit(text)}
+      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+      placeholder={disabled ? "—" : "Motif…"}
+      title={disabled ? "Pointez d'abord un statut." : "Motif de l'absence, du retard ou de la justification"}
+      style={{
+        width: "100%", padding: "6px 9px", borderRadius: 8, fontSize: 12.5,
+        border: "1px solid var(--border)", background: disabled ? "transparent" : "var(--surface)",
+        color: "var(--ink)", opacity: disabled ? 0.5 : 1,
+      }}
+    />
+  );
+}
 
 function Dot({ color, label }: { color: string; label: string }) {
   return (

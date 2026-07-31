@@ -4,6 +4,7 @@ import { getMySchool } from "@/lib/school/profile";
 import { listSchoolClassNames } from "@/lib/content-db";
 import { StudentAttendanceManager } from "@/components/school/StudentAttendanceManager";
 import { AddStudentButton } from "@/components/school/AddStudentButton";
+import { clearStudentAttendance, setStudentAttendanceComment } from "./actions";
 
 export default async function SchoolStudentAttendance({
   searchParams,
@@ -25,8 +26,8 @@ export default async function SchoolStudentAttendance({
       <PageHeader
         title={{ fr: "Présences des élèves", en: "Student attendance" }}
         sub={{
-          fr: "Sélectionnez la classe, pointez chaque élève, puis exportez la liste en Excel ou PDF.",
-          en: "Select the class, mark each student, then export the list as Excel or PDF.",
+          fr: "Sélectionnez la classe, pointez ou corrigez chaque élève, puis exportez la liste en Excel ou PDF.",
+          en: "Select the class, mark or correct each student, then export the list as Excel or PDF.",
         }}
         right={<AddStudentButton classNames={classNames} />}
       />
@@ -36,6 +37,8 @@ export default async function SchoolStudentAttendance({
         date={date}
         attendance={attendance}
         schoolName={school?.name ?? "École"}
+        clearAction={clearStudentAttendance}
+        commentAction={setStudentAttendanceComment}
       />
     </div>
   );

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
-import { setAttendance } from "./actions";
+import { setAttendance, setAttendanceComment, clearAttendance } from "./actions";
 import type { StaffLite, DayAttendance, AttReportRow } from "@/lib/attendance-db";
 
 const STATUSES: { key: string; label: string; color: string }[] = [
@@ -27,29 +27,70 @@ export function AttendanceManager({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [savingId, setSavingId] = useState<string | null>(null);
+  // Copie locale : la correction s'affiche immédiatement, le serveur confirme.
+  const [marks, setMarks] = useState<DayAttendance>(attendance);
+
+  // Changement de date/période : les pointages viennent du serveur.
+  useEffect(() => { setMarks(attendance); }, [attendance]);
 
   const go = (params: Record<string, string>) => {
     const sp = new URLSearchParams({ date, from, to, ...params });
     router.push(`/school/attendance?${sp.toString()}`);
   };
 
-  const mark = (staffId: string, status: string) => {
+  const run = (staffId: string, optimistic: () => void, save: () => Promise<{ ok: boolean; message?: string }>) => {
+    optimistic();
     setSavingId(staffId);
     startTransition(async () => {
-      const r = await setAttendance(staffId, date, status);
+      const r = await save();
       setSavingId(null);
       if (r.ok) router.refresh();
-      else alert(r.message);
+      else {
+        alert(r.message);
+        router.refresh();
+      }
     });
+  };
+
+  const mark = (staffId: string, status: string) => {
+    // Recliquer le statut actif annule le pointage : l'agent redevient
+    // « non pointé » et sort du calcul de régularité.
+    if (marks[staffId]?.status === status) {
+      run(
+        staffId,
+        () => setMarks((prev) => { const next = { ...prev }; delete next[staffId]; return next; }),
+        () => clearAttendance(staffId, date)
+      );
+      return;
+    }
+    run(
+      staffId,
+      () => setMarks((prev) => ({ ...prev, [staffId]: { status, comment: prev[staffId]?.comment ?? null } })),
+      () => setAttendance(staffId, date, status, marks[staffId]?.comment ?? undefined)
+    );
+  };
+
+  const comment = (staffId: string, text: string) => {
+    if (!marks[staffId]) return;
+    const value = text.trim() || null;
+    if ((marks[staffId].comment ?? null) === value) return; // rien n'a changé
+    run(
+      staffId,
+      () => setMarks((prev) => ({ ...prev, [staffId]: { ...prev[staffId], comment: value } })),
+      () => setAttendanceComment(staffId, date, text)
+    );
   };
 
   return (
     <>
       {/* Registre du jour */}
       <div className="ek-card" style={{ padding: 18 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6, flexWrap: "wrap" }}>
           <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>Registre du jour</div>
           <input type="date" value={date} onChange={(e) => go({ date: e.target.value })} style={{ ...inp, width: 170, marginLeft: "auto" }} />
+        </div>
+        <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginBottom: 14 }}>
+          Correction : recliquez le statut actif pour annuler le pointage (l&apos;agent sort alors du calcul de régularité).
         </div>
 
         {staff.length === 0 ? (
@@ -59,11 +100,11 @@ export function AttendanceManager({
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {staff.map((s) => {
-              const cur = attendance[s.id]?.status;
+              const cur = marks[s.id]?.status;
               return (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: "1px solid var(--divider)" }}>
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: "1px solid var(--divider)", flexWrap: "wrap" }}>
                   <Avatar name={s.name} size={32} />
-                  <div style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{s.name}</div>
+                  <div style={{ flex: 1, minWidth: 140, fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{s.name}</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {STATUSES.map((st) => {
                       const on = cur === st.key;
@@ -72,6 +113,7 @@ export function AttendanceManager({
                           key={st.key}
                           onClick={() => mark(s.id, st.key)}
                           disabled={pending && savingId === s.id}
+                          title={on ? "Cliquez pour annuler ce pointage" : undefined}
                           style={{
                             padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
                             border: `1px solid ${on ? st.color : "var(--border)"}`,
@@ -84,6 +126,12 @@ export function AttendanceManager({
                       );
                     })}
                   </div>
+                  <CommentInput
+                    key={`${s.id}:${marks[s.id]?.comment ?? ""}`}
+                    value={marks[s.id]?.comment ?? ""}
+                    disabled={!cur}
+                    onCommit={(v) => comment(s.id, v)}
+                  />
                 </div>
               );
             })}
@@ -131,6 +179,36 @@ export function AttendanceManager({
         </div>
       </div>
     </>
+  );
+}
+
+// Motif du pointage (congé, mission, retard justifié…) — enregistré à la
+// sortie du champ, ou sur Entrée.
+function CommentInput({
+  value,
+  disabled,
+  onCommit,
+}: {
+  value: string;
+  disabled: boolean;
+  onCommit: (v: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  return (
+    <input
+      value={text}
+      disabled={disabled}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => onCommit(text)}
+      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+      placeholder={disabled ? "—" : "Motif…"}
+      title={disabled ? "Pointez d'abord un statut." : "Motif de l'absence, du retard ou de la justification"}
+      style={{
+        width: 200, padding: "6px 9px", borderRadius: 8, fontSize: 12.5,
+        border: "1px solid var(--border)", background: disabled ? "transparent" : "var(--surface)",
+        color: "var(--ink)", opacity: disabled ? 0.5 : 1,
+      }}
+    />
   );
 }
 
