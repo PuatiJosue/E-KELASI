@@ -4,6 +4,11 @@ name: App parents — mise à jour OTA
 # installés le récupèrent au lancement suivant : pas de nouveau build, pas de
 # passage par les stores.
 #
+# Tout push sur main touchant mobile/ part DIRECTEMENT en production, sans
+# validation humaine. Les deux barrières ci-dessous en tiennent lieu : le
+# typecheck, et le contrôle de la configuration Supabase. Si l'une échoue,
+# rien n'est publié et les téléphones gardent la version précédente.
+#
 # ATTENTION — une OTA ne suffit PAS si le changement touche le natif :
 # nouveau module ou plugin Expo, montée de version du SDK / React Native,
 # google-services.json, icônes, permissions… ou si `version` change dans
@@ -17,15 +22,15 @@ on:
     branches: [main]
     paths:
       - "mobile/**"
-  # Publication manuelle — c'est par ici qu'on pousse en production.
+  # Publication à la demande — sert surtout à viser le canal preview.
   workflow_dispatch:
     inputs:
       channel:
         description: "Canal EAS"
         required: true
-        default: preview
+        default: production
         type: choice
-        options: [preview, production]
+        options: [production, preview]
 
 concurrency:
   group: mobile-update-${{ github.ref }}
@@ -39,6 +44,10 @@ jobs:
       run:
         working-directory: mobile
 
+    env:
+      # Un push automatique vise la production ; le déclenchement manuel choisit.
+      CHANNEL: ${{ inputs.channel || 'production' }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -48,7 +57,7 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
-      # Jeton à créer sur expo.dev (Access Tokens) puis à déposer dans
+      # Jeton du robot github-actions, créé sur expo.dev puis déposé dans
       # Settings → Secrets and variables → Actions → EXPO_TOKEN.
       - uses: expo/expo-github-action@v8
         with:
@@ -58,17 +67,19 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
+      # Barrière 1 — du code qui ne compile pas ne part pas sur les téléphones.
+      - name: Vérifier les types
+        run: npm run typecheck
+
       # `eas update` ne lit PAS le bloc `env` des profils de build d'eas.json :
       # sans cette étape, le bundle part sans EXPO_PUBLIC_SUPABASE_URL, isLiveMode
       # passe à false et l'app sert les données de démonstration (mock.ts).
       # On recopie donc le profil dans l'environnement du job.
       - name: Charger les variables du profil EAS
-        env:
-          PROFILE: ${{ inputs.channel || 'preview' }}
         run: |
           node -e '
             const fs = require("fs");
-            const profile = process.env.PROFILE;
+            const profile = process.env.CHANNEL;
             const build = JSON.parse(fs.readFileSync("eas.json", "utf8")).build ?? {};
             const vars = build[profile]?.env ?? {};
             const names = Object.keys(vars);
@@ -83,18 +94,21 @@ jobs:
             console.log("Variables chargées :", names.join(", "));
           '
 
-      # Garde-fou : plutôt échouer que publier un bundle en mode démonstration.
+      # Barrière 2 — plutôt échouer que publier un bundle en mode démonstration.
       - name: Vérifier la configuration Supabase
         run: |
           test -n "$EXPO_PUBLIC_SUPABASE_URL" || { echo "EXPO_PUBLIC_SUPABASE_URL vide — publication annulée."; exit 1; }
           test -n "$EXPO_PUBLIC_SUPABASE_ANON_KEY" || { echo "EXPO_PUBLIC_SUPABASE_ANON_KEY vide — publication annulée."; exit 1; }
-          echo "Cible Supabase : $EXPO_PUBLIC_SUPABASE_URL"
+          case "$EXPO_PUBLIC_SUPABASE_URL" in
+            http://127.0.0.1*|http://localhost*|http://192.168.*|http://10.*)
+              echo "URL Supabase locale ($EXPO_PUBLIC_SUPABASE_URL) — publication annulée."; exit 1 ;;
+          esac
+          echo "Canal : $CHANNEL — cible Supabase : $EXPO_PUBLIC_SUPABASE_URL"
 
       # Le message passe par l'environnement, jamais par interpolation directe
       # dans la commande : un message de commit peut contenir n'importe quoi.
       - name: Publier la mise à jour
         env:
-          CHANNEL: ${{ inputs.channel || 'preview' }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           MESSAGE="$(printf '%s' "${COMMIT_MESSAGE:-Publication manuelle}" | head -n 1)"
