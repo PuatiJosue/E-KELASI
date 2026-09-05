@@ -142,7 +142,7 @@ export function FeeFormModal({ kind, existing, classes, year, onClose, onDone }:
         )}
       </div>
 
-      {existing?.hasPayments && <div style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.4 }}>Cette rubrique contient déjà des paiements. La modification reste possible (une confirmation sera demandée) ; la suppression est désactivée — utilisez l’archivage.</div>}
+      {existing?.hasPayments && <div style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.4 }}>Cette rubrique contient déjà des paiements. La modification reste possible (une confirmation sera demandée). La suppression reste possible aussi, mais elle efface définitivement les paiements — préférez l’archivage pour simplement masquer la rubrique.</div>}
       {error && <div style={errBox}>{error}</div>}
       <ModalActions onClose={onClose} onSubmit={submit} pending={pending} submitLabel={existing ? "Enregistrer" : "Créer le frais"} />
     </Modal>

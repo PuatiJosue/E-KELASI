@@ -10,9 +10,20 @@ import type { Fee } from "@/lib/finance/fees";
 // ── Ligne d’un frais ─────────────────────────────────────────────────
 export function FeeRow({ fee, first, onOpen, onEdit, onChanged }: { fee: Fee; first: boolean; onOpen: () => void; onEdit: () => void; onChanged: () => void }) {
   const [pending, start] = useTransition();
+  // Suppression possible même quand la rubrique porte des paiements : on efface
+  // alors TOUT (paiements, tranches, montants ajustés) pour recommencer à zéro.
+  // Double garde-fou : confirmation détaillée, puis saisie du mot SUPPRIMER.
   const del = () => {
-    if (!confirm(`Supprimer le frais « ${fee.label} » ?`)) return;
-    start(async () => { const r = await deleteFee(fee.id); if (!r.ok) alert(r.message); else onChanged(); });
+    if (fee.hasPayments) {
+      const warn =
+        `Supprimer définitivement la rubrique « ${fee.label} » ?\n\n` +
+        `Tous les paiements déjà encaissés (${money(fee.collected, fee.currency)}), les tranches et les montants ajustés par élève seront EFFACÉS et n'apparaîtront plus dans la trésorerie ni dans les rapports.\n\n` +
+        `Cette action est irréversible. Pour seulement masquer la rubrique, utilisez l'archivage.`;
+      if (!confirm(warn)) return;
+      const typed = prompt(`Confirmez en tapant SUPPRIMER (rubrique « ${fee.label} »)`);
+      if ((typed ?? "").trim().toUpperCase() !== "SUPPRIMER") return;
+    } else if (!confirm(`Supprimer le frais « ${fee.label} » ?`)) return;
+    start(async () => { const r = await deleteFee(fee.id, fee.hasPayments); if (!r.ok) alert(r.message); else onChanged(); });
   };
   const arch = () => start(async () => { const r = await archiveFee(fee.id, !fee.archived); if (!r.ok) alert(r.message); else onChanged(); });
   return (
@@ -33,7 +44,7 @@ export function FeeRow({ fee, first, onOpen, onEdit, onChanged }: { fee: Fee; fi
       <button onClick={onOpen} className="ek-btn ek-btn-outline" style={{ height: 32, fontSize: 12 }}>Paiements</button>
       <button onClick={onEdit} title="Modifier" style={iconBtn}><Icon name="edit" size={15} /></button>
       <button onClick={arch} disabled={pending} title={fee.archived ? "Réactiver" : "Archiver"} style={iconBtn}><Icon name={fee.archived ? "refresh" : "eyeOff"} size={15} /></button>
-      <button onClick={del} disabled={pending || fee.hasPayments} title={fee.hasPayments ? "Suppression désactivée : des paiements existent (utilisez l’archivage)" : "Supprimer"} style={{ ...iconBtn, opacity: fee.hasPayments ? 0.4 : 1, cursor: fee.hasPayments ? "not-allowed" : "pointer" }}><Icon name="trash" size={15} /></button>
+      <button onClick={del} disabled={pending} title={fee.hasPayments ? "Supprimer la rubrique ET tous ses paiements (irréversible)" : "Supprimer"} style={{ ...iconBtn, color: fee.hasPayments ? "var(--danger)" : undefined }}><Icon name="trash" size={15} /></button>
     </div>
   );
 }

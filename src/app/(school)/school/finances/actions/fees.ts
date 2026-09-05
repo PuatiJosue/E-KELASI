@@ -104,16 +104,40 @@ export async function updateFee(input: {
   return { ok: true };
 }
 
-export async function deleteFee(id: string): Promise<Result> {
+// Suppression d'une rubrique (frais). Sans `force`, une rubrique qui porte des
+// paiements est protégée. Avec `force` (double confirmation dans l'UI), TOUT est
+// supprimé — tranches, montants ajustés et paiements, y compris les paiements
+// annulés — pour repartir de zéro. La cascade est assurée en base
+// (fee_installments / fee_overrides / fee_payments → fees ON DELETE CASCADE) ;
+// on garde une trace de l'opération dans le journal d'audit.
+export async function deleteFee(id: string, force = false): Promise<Result> {
   if (!id) return { ok: false, message: "Frais invalide." };
   if (!isLiveMode()) return { ok: true };
   const c = await requireSchoolAdmin();
   if (!c) return { ok: false, message: "Réservé à la direction." };
   const svc = serviceClient();
-  if (await feePaymentCount(svc, c.schoolId, id) > 0)
+
+  const activePayments = await feePaymentCount(svc, c.schoolId, id);
+  if (activePayments > 0 && !force)
     return { ok: false, message: "Suppression impossible : des paiements existent. Archivez plutôt le frais." };
+
+  // Libellé + nombre total de paiements (annulés compris) pour l'audit : après
+  // le DELETE, plus rien n'est lisible.
+  const { data: fee } = await svc.from("fees").select("label").eq("id", id).eq("school_id", c.schoolId).maybeSingle();
+  const { count: allPayments } = await svc
+    .from("fee_payments").select("id", { count: "exact", head: true })
+    .eq("school_id", c.schoolId).eq("fee_id", id);
+
   const { error } = await svc.from("fees").delete().eq("id", id).eq("school_id", c.schoolId);
   if (error) return { ok: false, message: "Suppression impossible." };
+
+  if ((allPayments ?? 0) > 0) {
+    await (svc.from("finance_audit").insert as any)({
+      school_id: c.schoolId, entity_type: "fee", entity_id: id, action: "delete", actor: c.userId,
+      reason: `Suppression définitive de la rubrique « ${(fee as any)?.label ?? id} » avec ${allPayments} paiement(s) enregistré(s).`,
+    });
+  }
+
   revalidatePath("/school/finances");
   return { ok: true };
 }
