@@ -42,7 +42,9 @@ export const MOCK = {
   weekly: [13, 14, 13.5, 15, 14.2, 15.8, 14.8],
 };
 
-export type Homework = (typeof MOCK.homework)[number];
+/** Pièce jointe déposée par le prof sur un devoir (fichier ou photo). */
+export type HomeworkAttachment = { url: string; name: string; isImage: boolean };
+export type Homework = (typeof MOCK.homework)[number] & { attachments?: HomeworkAttachment[] };
 export type Grade = (typeof MOCK.grades)[number];
 export type Message = (typeof MOCK.messages)[number];
 export type NotificationKind = "grade" | "message" | "hw" | "school" | "reminder";

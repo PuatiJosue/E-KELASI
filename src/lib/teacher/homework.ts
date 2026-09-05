@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/env";
+import { parseAttachments, type Attachment } from "@/lib/attachments";
 
 export type HomeworkRow = {
   id: string;
@@ -11,6 +12,7 @@ export type HomeworkRow = {
   dueAt: string;
   status: string;
   overdue: boolean;
+  attachments: Attachment[];   // énoncé, feuille d'exercices ou photo jointe
 };
 
 export async function listTeacherHomework(): Promise<HomeworkRow[]> {
@@ -21,7 +23,7 @@ export async function listTeacherHomework(): Promise<HomeworkRow[]> {
     if (!user) return [];
     const { data } = await supabase
       .from("homework")
-      .select("id, title, class_name, due_at, status, subjects(name)")
+      .select("id, title, class_name, due_at, status, attachments, subjects(name)")
       .eq("teacher_id", user.id)
       .is("archived_at", null)
       .order("due_at", { ascending: false });
@@ -34,6 +36,7 @@ export async function listTeacherHomework(): Promise<HomeworkRow[]> {
       dueAt: new Date(h.due_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }),
       status: h.status,
       overdue: new Date(h.due_at).getTime() < now,
+      attachments: parseAttachments(h.attachments),
     }));
   } catch {
     return [];

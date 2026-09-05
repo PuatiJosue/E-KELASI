@@ -74,7 +74,24 @@ export default async function HomeworkListPage() {
                   borderBottom: i < items.length - 1 ? "1px solid var(--divider)" : "none",
                 }}
               >
-                <div style={{ fontWeight: 600, color: "var(--ink)" }}>{h.title}</div>
+                <div style={{ fontWeight: 600, color: "var(--ink)" }}>
+                  {h.title}
+                  {h.attachments.length > 0 && (
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
+                      {h.attachments.map((a, k) => (
+                        <a
+                          key={k}
+                          href={a.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 600, color: "var(--brand-600)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        >
+                          <Icon name={a.isImage ? "camera" : "paperclip"} size={12} /> {a.name}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div style={{ color: "var(--ink-2)" }}>{h.subjectName}</div>
                 <div style={{ color: "var(--ink-2)" }}>{h.className}</div>
                 <div style={{ color: "var(--ink-3)" }}>{h.dueAt}</div>

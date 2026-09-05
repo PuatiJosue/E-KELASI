@@ -115,6 +115,7 @@ export type Database = {
       grades: {
         Row: {
           archived_at: string | null
+          attachments: Json
           coefficient: number
           comment: string | null
           created_at: string
@@ -129,6 +130,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          attachments?: Json
           coefficient?: number
           comment?: string | null
           created_at?: string
@@ -143,6 +145,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          attachments?: Json
           coefficient?: number
           comment?: string | null
           created_at?: string
@@ -182,6 +185,7 @@ export type Database = {
       homework: {
         Row: {
           archived_at: string | null
+          attachments: Json
           class_name: string
           created_at: string
           description: string | null
@@ -194,6 +198,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          attachments?: Json
           class_name: string
           created_at?: string
           description?: string | null
@@ -206,6 +211,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          attachments?: Json
           class_name?: string
           created_at?: string
           description?: string | null

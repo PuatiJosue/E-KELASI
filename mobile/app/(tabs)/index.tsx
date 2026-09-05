@@ -1,6 +1,6 @@
 // Accueil — en-tête, salutation, grille de fonctions, « Mes enfants ».
 
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -305,6 +305,21 @@ export function HomeworkCard({ hw }: { hw: Homework }) {
           <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Chip tone="warn" icon={<Icon name="clock" size={11} color={t.warning} />} label={hw.due} />
           </View>
+
+          {/* Énoncé, feuille d'exercices ou photo jointe par le professeur. */}
+          {(hw.attachments ?? []).map((a, i) => (
+            <Pressable
+              key={i}
+              onPress={() => Linking.openURL(a.url)}
+              hitSlop={6}
+              style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6 }}
+            >
+              <Icon name={a.isImage ? "camera" : "paperclip"} size={13} color={t.brand600} />
+              <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: t.brand600, fontFamily: fonts.bodyBold }}>
+                {a.name}
+              </Text>
+            </Pressable>
+          ))}
         </View>
       </View>
     </Card>

@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { T } from "@/lib/i18n";
 import type { TeacherSubject } from "@/lib/teacher/profile";
+import { AttachmentPicker } from "@/components/AttachmentPicker";
+import { fileToBase64 } from "@/lib/attachments";
 import { createHomeworkAction } from "@/app/(teacher)/teacher/homework/actions";
 
 export function NewHomeworkForm({ classes, subjects }: { classes: string[]; subjects: TeacherSubject[] }) {
@@ -20,6 +22,7 @@ export function NewHomeworkForm({ classes, subjects }: { classes: string[]; subj
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState(defaultDueAt);
+  const [files, setFiles] = useState<File[]>([]);
 
   const onSubmit = () => {
     setError(null);
@@ -28,12 +31,16 @@ export function NewHomeworkForm({ classes, subjects }: { classes: string[]; subj
       return;
     }
     startTransition(async () => {
+      const attachments = await Promise.all(
+        files.map(async (f) => ({ name: f.name, type: f.type, dataBase64: await fileToBase64(f) }))
+      );
       const res = await createHomeworkAction({
         className,
         subjectName: subjectName.trim(),
         title: title.trim(),
         description: description.trim() || null,
         dueAt: new Date(dueAt).toISOString(),
+        attachments,
       });
       if (res.ok) router.push("/teacher/homework");
       else setError(res.message);
@@ -69,6 +76,16 @@ export function NewHomeworkForm({ classes, subjects }: { classes: string[]; subj
       <Row label={<T fr="Échéance" en="Due date" />}>
         <input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} style={inputStyle} />
       </Row>
+
+      {/* Énoncé scanné, feuille d'exercices, photo de la page du manuel… */}
+      <AttachmentPicker
+        files={files}
+        onChange={setFiles}
+        onError={setError}
+        disabled={pending}
+        label={<T fr="Pièces jointes (optionnel)" en="Attachments (optional)" />}
+        hint={<T fr="Énoncé, feuille d'exercices ou photo · 10 Mo max" en="Worksheet, exercise sheet or photo · 10 MB max" />}
+      />
 
       {error && (
         <div style={{ padding: 10, borderRadius: 8, background: "rgba(192,58,43,0.08)", color: "var(--danger)", fontSize: 12.5, fontWeight: 600 }}>

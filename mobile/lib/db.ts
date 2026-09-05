@@ -3,7 +3,7 @@
 // or queries Supabase live when env vars are present and a session exists.
 
 import { supabase, isLiveMode } from "./supabase";
-import { MOCK, type Grade, type Homework, type Message, type Notification, type Subject } from "./mock";
+import { MOCK, type Grade, type Homework, type HomeworkAttachment, type Message, type Notification, type Subject } from "./mock";
 
 // ── Types ─────────────────────────────────────────────────────────────
 export type Child = {
@@ -507,6 +507,19 @@ export async function listPlatformVideos(): Promise<CourseVideoItem[]> {
 }
 
 // ── Homework ─────────────────────────────────────────────────────────
+// Pièces jointes du prof (colonne jsonb `homework.attachments`) : on ne fait
+// pas confiance au contenu et on ignore silencieusement ce qui est mal formé.
+function parseAttachments(value: any): HomeworkAttachment[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((a) => a && typeof a === "object" && typeof a.url === "string" && a.url)
+    .map((a) => ({
+      url: String(a.url),
+      name: typeof a.name === "string" && a.name ? a.name : "Pièce jointe",
+      isImage: a.isImage === true || (typeof a.type === "string" && a.type.startsWith("image/")),
+    }));
+}
+
 export async function listHomework(className?: string, schoolId?: string | null): Promise<Homework[]> {
   if (!isLiveMode || !supabase) return MOCK.homework;
   try {
@@ -516,7 +529,7 @@ export async function listHomework(className?: string, schoolId?: string | null)
     // (subjects.school_id) pour ne pas mélanger les classes homonymes d'écoles différentes.
     let q = supabase
       .from("homework")
-      .select("title, due_at, status, subjects!inner(name, school_id), profiles(full_name)")
+      .select("title, due_at, status, attachments, subjects!inner(name, school_id), profiles(full_name)")
       .eq("class_name", cls)
       .is("archived_at", null);
     if (schoolId) q = q.eq("subjects.school_id", schoolId);
@@ -528,6 +541,7 @@ export async function listHomework(className?: string, schoolId?: string | null)
       due: fmtDue(new Date(h.due_at)),
       status: h.status as Homework["status"],
       teacher: h.profiles?.full_name ?? "",
+      attachments: parseAttachments(h.attachments),
     }));
   } catch {
     return [];

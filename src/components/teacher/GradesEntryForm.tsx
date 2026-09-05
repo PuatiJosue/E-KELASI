@@ -7,6 +7,8 @@ import { Icon } from "@/components/Icon";
 import { SexBadge } from "@/components/SexBadge";
 import { T } from "@/lib/i18n";
 import { Selector, ComboField, TextField } from "./grades-form/fields";
+import { AttachmentPicker } from "@/components/AttachmentPicker";
+import { fileToBase64 } from "@/lib/attachments";
 import type { StudentRow } from "@/lib/teacher/classes";
 import type { TeacherSubject } from "@/lib/teacher/profile";
 import { submitGradesAction, type GradeInput } from "@/app/(teacher)/teacher/grades/actions";
@@ -41,6 +43,7 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialOp
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [sendPdf, setSendPdf] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
 
   const filledCount = Object.values(scores).filter((s) => s.trim() !== "").length;
 
@@ -86,6 +89,9 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialOp
     }
 
     startTransition(async () => {
+      const attachments = await Promise.all(
+        files.map(async (f) => ({ name: f.name, type: f.type, dataBase64: await fileToBase64(f) }))
+      );
       const res = await submitGradesAction({
         subjectName: subjectName.trim(),
         kind,
@@ -94,13 +100,16 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialOp
         gradedAt,
         items,
         sendPdf,
+        attachments,
       });
       if (res.ok) {
         const base = `${items.length} note${items.length > 1 ? "s" : ""} enregistrée${items.length > 1 ? "s" : ""}.`;
         const pdfPart = sendPdf && res.pdfsSent ? ` ${res.pdfsSent} note${res.pdfsSent > 1 ? "s" : ""} PDF envoyée${res.pdfsSent > 1 ? "s" : ""}.` : "";
-        setSuccess(base + pdfPart);
+        const filePart = files.length > 0 ? ` ${files.length} pièce${files.length > 1 ? "s" : ""} jointe${files.length > 1 ? "s" : ""} envoyée${files.length > 1 ? "s" : ""}.` : "";
+        setSuccess(base + pdfPart + filePart);
         setScores({});
         setSendPdf(false);
+        setFiles([]);
         router.refresh();
       } else {
         setError(res.message);
@@ -136,6 +145,18 @@ export function GradesEntryForm({ classes, subjects, initialClassName, initialOp
             options={TRIMESTERS.map((m) => ({ value: String(m.index), label: m.short }))}
           />
           <TextField label={<T fr="Date" en="Date" />} value={gradedAt} onChange={onChangeDate} type="date" />
+        </div>
+
+        {/* Sujet, corrigé ou photo de l'évaluation — joints à toutes les notes saisies. */}
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--divider)" }}>
+          <AttachmentPicker
+            files={files}
+            onChange={setFiles}
+            onError={setError}
+            disabled={pending}
+            label={<T fr="Pièces jointes de l'évaluation (optionnel)" en="Assessment attachments (optional)" />}
+            hint={<T fr="Sujet, corrigé ou photo de la copie · envoyé aux parents · 10 Mo max" en="Paper, answer key or photo · sent to parents · 10 MB max" />}
+          />
         </div>
       </div>
 

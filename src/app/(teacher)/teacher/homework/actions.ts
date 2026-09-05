@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isLiveMode } from "@/lib/env";
 import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
+import { uploadAttachments } from "@/lib/attachments-server";
+import type { AttachmentInput } from "@/lib/attachments";
 import type { Result } from "@/lib/result";
 
 type Args = {
@@ -12,6 +14,7 @@ type Args = {
   title: string;
   description: string | null;
   dueAt: string;
+  attachments?: AttachmentInput[];   // fichier(s) et/ou photo(s) joints au devoir
 };
 
 
@@ -35,6 +38,12 @@ export async function createHomeworkAction(args: Args): Promise<Result> {
   const subjectId = await resolveOrCreateSubjectId(staff.school_id, args.subjectName);
   if (!subjectId) return { ok: false, message: "Matière invalide." };
 
+  // Pièces jointes (fichier / photo) : envoyées avant l'insertion pour que le
+  // devoir naisse déjà complet. Un échec d'envoi bloque la création : le prof
+  // corrige (fichier trop lourd…) plutôt que de publier un devoir amputé.
+  const { files: attachments, error: attachErr } = await uploadAttachments(`homework/${user.id}`, args.attachments);
+  if (attachErr) return { ok: false, message: attachErr };
+
   const { data: hw, error } = await supabase
     .from("homework")
     .insert({
@@ -45,6 +54,7 @@ export async function createHomeworkAction(args: Args): Promise<Result> {
       description: args.description,
       due_at: args.dueAt,
       status: "todo",
+      attachments,
     })
     .select("id")
     .single();
@@ -73,10 +83,13 @@ export async function createHomeworkAction(args: Args): Promise<Result> {
         const parentIds = [...new Set((links ?? []).map((l: any) => l.parent_id))];
         if (parentIds.length > 0) {
           const dueDate = new Date(args.dueAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+          const first = attachments[0];
           const rows = parentIds.map((pid) => ({
             user_id: pid as string,
             kind: "hw" as const,
-            body: `Nouveau devoir : ${args.title} · à rendre le ${dueDate}`,
+            body: `Nouveau devoir : ${args.title} · à rendre le ${dueDate}${first ? ` · 📎 ${first.name}` : ""}`,
+            // Le parent ouvre la pièce jointe directement depuis sa notification.
+            payload: first ? { file_url: first.url, kind: "homework_doc" } : null,
           }));
           await supabase.from("notifications").insert(rows);
         }

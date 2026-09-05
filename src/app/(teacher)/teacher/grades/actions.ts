@@ -8,6 +8,8 @@ import { resolveOrCreateSubjectId } from "@/lib/subjects-db";
 import { formatDateFr } from "@/lib/grade-report";
 import { renderNotePdf } from "@/lib/note-pdf";
 import { classLabel } from "@/lib/classes";
+import { uploadAttachments } from "@/lib/attachments-server";
+import type { AttachmentInput } from "@/lib/attachments";
 
 export type GradeInput = { studentId: string; score: number };
 
@@ -19,6 +21,7 @@ type SubmitArgs = {
   gradedAt: string;
   items: GradeInput[];
   sendPdf?: boolean;
+  attachments?: AttachmentInput[];   // sujet, corrigé ou photo de l'évaluation
 };
 
 type Result =
@@ -53,6 +56,11 @@ export async function submitGradesAction(args: SubmitArgs): Promise<Result> {
   const subjectId = await resolveOrCreateSubjectId(staff.school_id, args.subjectName);
   if (!subjectId) return { ok: false, message: "Matière invalide." };
 
+  // Pièces jointes de l'évaluation (sujet, corrigé, photo de la copie) : un seul
+  // envoi pour toute la saisie, la même liste est rattachée à chaque note.
+  const { files: attachments, error: attachErr } = await uploadAttachments(`grades/${user.id}`, args.attachments);
+  if (attachErr) return { ok: false, message: attachErr };
+
   const rows = args.items.map((it) => ({
     student_id: it.studentId,
     subject_id: subjectId,
@@ -62,6 +70,7 @@ export async function submitGradesAction(args: SubmitArgs): Promise<Result> {
     max_score: args.maxScore,
     coefficient: args.coefficient,
     graded_at: args.gradedAt,
+    attachments,
   }));
 
   const { error } = await supabase.from("grades").insert(rows);
@@ -77,6 +86,7 @@ export async function submitGradesAction(args: SubmitArgs): Promise<Result> {
       .select("parent_id, student_id, students(full_name)")
       .in("student_id", args.items.map((i) => i.studentId));
 
+    const first = attachments[0];
     const textNotifs = (links ?? [])
       .map((l: any) => {
         const item = args.items.find((i) => i.studentId === l.student_id);
@@ -84,7 +94,9 @@ export async function submitGradesAction(args: SubmitArgs): Promise<Result> {
         return {
           user_id: l.parent_id,
           kind: "grade" as const,
-          body: `Nouvelle note pour ${l.students?.full_name ?? "votre enfant"} : ${item.score}/${args.maxScore} (${args.kind})`,
+          body: `Nouvelle note pour ${l.students?.full_name ?? "votre enfant"} : ${item.score}/${args.maxScore} (${args.kind})${first ? ` · 📎 ${first.name}` : ""}`,
+          // Pièce jointe de l'évaluation ouvrable depuis la notification parent.
+          payload: first ? { file_url: first.url, kind: "grade_doc" } : null,
         };
       })
       .filter(Boolean);

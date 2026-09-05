@@ -5,6 +5,7 @@ import { isLiveMode } from "@/lib/env";
 import { trimesterOf, schoolYearLabel } from "@/lib/trimester";
 import { formatDateFr } from "@/lib/grade-report";
 import { classLabel } from "@/lib/classes";
+import { parseAttachments, type Attachment } from "@/lib/attachments";
 
 export type GradeRow = {
   id: string;
@@ -62,6 +63,7 @@ export type GradeHistoryRow = {
   coefficient: number;
   out20: number;         // note ramenée sur 20
   mention: string;       // appréciation dérivée de out20
+  attachments: Attachment[]; // sujet, corrigé ou photo joints à la saisie
 };
 
 function mentionFor(out20: number): string {
@@ -82,7 +84,7 @@ export async function listTeacherGradeHistory(): Promise<GradeHistoryRow[]> {
     if (!user) return [];
     const { data } = await supabase
       .from("grades")
-      .select("id, kind, score, max_score, coefficient, graded_at, students(full_name, class_name, option), subjects(name)")
+      .select("id, kind, score, max_score, coefficient, graded_at, attachments, students(full_name, class_name, option), subjects(name)")
       .eq("teacher_id", user.id)
       .is("archived_at", null)
       .order("graded_at", { ascending: false });
@@ -106,6 +108,7 @@ export async function listTeacherGradeHistory(): Promise<GradeHistoryRow[]> {
         coefficient: Number(g.coefficient) || 1,
         out20,
         mention: mentionFor(out20),
+        attachments: parseAttachments(g.attachments),
       };
     });
   } catch {

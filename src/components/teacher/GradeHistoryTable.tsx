@@ -257,7 +257,22 @@ td{padding:7px 8px;border-bottom:1px solid #e5e7eb}td.c{text-align:center}</styl
                     <Td center>
                       <span style={{ fontWeight: 700, fontFamily: "var(--font-display)", color: r.out20 >= 10 ? "#1D6650" : "#C03A2B" }}>{r.out20}</span>
                     </Td>
-                    <Td><span style={{ color: "var(--ink-3)" }}>{r.mention}</span></Td>
+                    <Td>
+                      <span style={{ color: "var(--ink-3)" }}>{r.mention}</span>
+                      {r.attachments.map((a, k) => (
+                        <a
+                          key={k}
+                          href={a.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={a.name}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 8, fontSize: 11.5, fontWeight: 600, color: "var(--brand-600)" }}
+                        >
+                          <Icon name={a.isImage ? "camera" : "paperclip"} size={12} />
+                          {a.isImage ? frEn("photo", "photo") : frEn("fichier", "file")}
+                        </a>
+                      ))}
+                    </Td>
                   </div>
                 ))
               )}
