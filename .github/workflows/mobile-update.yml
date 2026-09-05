@@ -22,6 +22,10 @@ on:
     branches: [main]
     paths:
       - "mobile/**"
+      # Le pipeline se valide lui-même : sans cette ligne, un push qui ne
+      # corrige que ce fichier ne déclenche aucune publication, et la
+      # correction reste invérifiable jusqu'au prochain changement mobile.
+      - ".github/workflows/mobile-update.yml"
   # Publication à la demande — sert surtout à viser le canal preview.
   workflow_dispatch:
     inputs:
@@ -57,12 +61,14 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
-      # Jeton du robot github-actions, créé sur expo.dev puis déposé dans
-      # Settings → Secrets and variables → Actions → EXPO_TOKEN.
-      - uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      # eas-cli est installé avec npm, et non via expo/expo-github-action :
+      # cette action passe par `yarn global add`, qui échoue sur l'image du
+      # runner (« /usr/local/bin/yarn failed with exit code 1 ») avant même
+      # d'atteindre l'authentification. Le jeton du robot github-actions (créé
+      # sur expo.dev, déposé dans Settings → Secrets and variables → Actions →
+      # EXPO_TOKEN) est lu nativement par eas-cli depuis l'environnement.
+      - name: Installer eas-cli
+        run: npm install --global eas-cli@latest
 
       - name: Installer les dépendances
         run: npm ci
@@ -109,6 +115,7 @@ jobs:
       # dans la commande : un message de commit peut contenir n'importe quoi.
       - name: Publier la mise à jour
         env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           MESSAGE="$(printf '%s' "${COMMIT_MESSAGE:-Publication manuelle}" | head -n 1)"
